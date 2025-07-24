@@ -11,7 +11,7 @@ import {
   CardDescription
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, BarChart, Percent, Activity, Edit, Save } from "lucide-react";
+import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,15 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+
+interface RecentMatch {
+  id: number;
+  winner: string;
+  loser: string;
+  score: string;
+  date: string;
+}
 
 export default function PlayerProfilePage() {
   const [player, setPlayer] = useState<Player | null>(null);
@@ -30,6 +39,7 @@ export default function PlayerProfilePage() {
   const [editedWins, setEditedWins] = useState(0);
   const [editedLosses, setEditedLosses] = useState(0);
   const [editedAverageBreak, setEditedAverageBreak] = useState(0);
+  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -52,6 +62,12 @@ export default function PlayerProfilePage() {
         setEditedWins(wins);
         setEditedLosses(losses);
         setEditedAverageBreak(averageBreak);
+        
+        const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
+        const playerMatches = allRecentResults.filter(
+            (match) => match.winner === foundPlayer.name || match.loser === foundPlayer.name
+        );
+        setRecentMatches(playerMatches);
       }
     }
   }, [id]);
@@ -262,9 +278,45 @@ export default function PlayerProfilePage() {
            </div>
         </CardContent>
       </Card>
-        <Link href="/players" passHref>
-            <Button variant="outline" className="w-full md:w-auto">Back to Players List</Button>
-        </Link>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Swords />
+            Recent Matches
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentMatches.length > 0 ? (
+            <ul className="space-y-4">
+              {recentMatches.map((match) => {
+                const isWinner = match.winner === player.name;
+                const opponent = isWinner ? match.loser : match.winner;
+                return (
+                  <li key={match.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                     <div className="flex items-center gap-4">
+                        <Badge variant={isWinner ? "default" : "destructive"}>
+                           {isWinner ? "WIN" : "LOSS"}
+                        </Badge>
+                        <div>
+                           <span>vs {opponent}</span>
+                           <p className="text-sm text-muted-foreground">{match.date}</p>
+                        </div>
+                     </div>
+                     <span className="font-bold text-lg">{match.score}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No recent matches found.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Link href="/players" passHref>
+          <Button variant="outline" className="w-full md:w-auto">Back to Players List</Button>
+      </Link>
     </div>
   );
 }
