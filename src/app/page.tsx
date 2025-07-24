@@ -160,15 +160,15 @@ export default function DashboardPage() {
                   <CarouselItem key={match.id} className="w-full">
                     <div className="p-1">
                       <div className="p-4 rounded-lg bg-muted/50">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
-                          <div className="flex items-center gap-2">
-                              <span className="relative flex h-3 w-3">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                              </span>
-                              <span className="text-sm font-medium text-green-400">Live</span>
-                          </div>
+                        <div className="relative text-center mb-2">
+                            <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
+                            <div className="absolute right-0 top-0 flex items-center gap-2">
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                </span>
+                                <span className="text-sm font-medium text-green-400">Live</span>
+                            </div>
                         </div>
                         <div className="grid grid-cols-3 items-center text-center">
                           <div className="flex items-center justify-end gap-4">
