@@ -44,8 +44,25 @@ export default function AdminSettings() {
   }, []);
 
   const handlePlayerChange = (id: number, field: keyof Player, value: any) => {
-    const updatedPlayers = players.map(p => p.id === id ? { ...p, [field]: value } : p);
-    setPlayers(updatedPlayers);
+    setPlayers(prevPlayers => {
+        const updatedPlayers = prevPlayers.map(p => {
+            if (p.id === id) {
+                const updatedPlayer = { ...p, [field]: value };
+                
+                if (field === 'wins' || field === 'losses') {
+                    const wins = field === 'wins' ? value : updatedPlayer.wins ?? 0;
+                    const losses = field === 'losses' ? value : updatedPlayer.losses ?? 0;
+                    const matchesPlayed = wins + losses;
+                    updatedPlayer.matchesPlayed = matchesPlayed;
+                    updatedPlayer.winRate = matchesPlayed > 0 ? ((wins / matchesPlayed) * 100).toFixed(1) + '%' : '0%';
+                }
+                
+                return updatedPlayer;
+            }
+            return p;
+        });
+        return updatedPlayers;
+    });
   };
 
   const handleTournamentChange = (id: number, field: keyof Tournament, value: any) => {
@@ -103,17 +120,19 @@ export default function AdminSettings() {
                 <CardDescription>Edit player details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
-                    <span>Name</span>
+                  <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                    <span className="col-span-2">Name</span>
                     <span>Highest Break</span>
-                    <span>Matches Played</span>
+                    <span>Wins</span>
+                    <span>Losses</span>
                     <span>Actions</span>
                   </div>
                 {players.map(player => (
-                    <div key={player.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
-                    <Input value={player.name} onChange={e => handlePlayerChange(player.id, 'name', e.target.value)} />
+                    <div key={player.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                    <Input className="col-span-2" value={player.name} onChange={e => handlePlayerChange(player.id, 'name', e.target.value)} />
                     <Input value={player.highestBreak} type="number" onChange={e => handlePlayerChange(player.id, 'highestBreak', parseInt(e.target.value))} />
-                    <Input value={player.matchesPlayed} type="number" onChange={e => handlePlayerChange(player.id, 'matchesPlayed', parseInt(e.target.value))} />
+                    <Input value={player.wins ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'wins', parseInt(e.target.value))} />
+                    <Input value={player.losses ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'losses', parseInt(e.target.value))} />
                     <Button variant="destructive" size="icon" onClick={() => handleDelete(player.id, 'players', setPlayers)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 ))}

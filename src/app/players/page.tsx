@@ -32,6 +32,9 @@ export interface Player {
   highestBreak: number;
   avatar: string;
   initials: string;
+  wins?: number;
+  losses?: number;
+  averageBreak?: number;
 }
 
 const initialPlayers: Player[] = [
@@ -80,6 +83,9 @@ export default function PlayersPage() {
         initials: newPlayer.name.split(' ').map(n => n[0]).join(''),
         matchesPlayed: 0,
         winRate: "0%",
+        wins: 0,
+        losses: 0,
+        averageBreak: 0,
       }];
       saveToStorage('players', newPlayers);
       return newPlayers;

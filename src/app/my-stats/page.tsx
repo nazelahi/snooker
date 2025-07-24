@@ -38,6 +38,10 @@ export default function MyStatsPage() {
   const [editedName, setEditedName] = useState("");
   const [editedAvatar, setEditedAvatar] = useState("");
   const [avatarPreview, setAvatarPreview] = useState("");
+  const [editedWins, setEditedWins] = useState(0);
+  const [editedLosses, setEditedLosses] = useState(0);
+  const [editedAverageBreak, setEditedAverageBreak] = useState(0);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,8 +54,10 @@ export default function MyStatsPage() {
       let statsToSet;
       if (player) {
         const winRateValue = parseFloat(player.winRate) || 0;
-        const wins = Math.round(player.matchesPlayed * (winRateValue / 100));
-        const losses = player.matchesPlayed - wins;
+        const wins = player.wins ?? Math.round(player.matchesPlayed * (winRateValue / 100));
+        const losses = player.losses ?? player.matchesPlayed - wins;
+        const averageBreak = player.averageBreak ?? Math.floor(player.highestBreak / 2);
+        
         statsToSet = {
             name: player.name,
             initials: player.initials,
@@ -61,7 +67,7 @@ export default function MyStatsPage() {
             losses: losses,
             winRate: player.winRate,
             highestBreak: player.highestBreak,
-            averageBreak: Math.floor(player.highestBreak / 2),
+            averageBreak: averageBreak,
             tournamentsWon: player.skillLevel === 'Pro' ? 2 : (player.skillLevel === 'Intermediate' ? 1 : 0),
         };
       } else if (userData.name) {
@@ -72,6 +78,9 @@ export default function MyStatsPage() {
       setUserStats(statsToSet);
       setEditedName(statsToSet.name);
       setAvatarPreview(statsToSet.avatar);
+      setEditedWins(statsToSet.wins);
+      setEditedLosses(statsToSet.losses);
+      setEditedAverageBreak(statsToSet.averageBreak);
     }
   }, []);
 
@@ -95,11 +104,19 @@ export default function MyStatsPage() {
     const playerIndex = players.findIndex(p => p.name.toLowerCase() === currentUser.name.toLowerCase());
 
     if (playerIndex > -1) {
+        const matchesPlayed = editedWins + editedLosses;
+        const winRate = matchesPlayed > 0 ? ((editedWins / matchesPlayed) * 100).toFixed(1) + '%' : "0%";
+
         const updatedPlayer = { 
             ...players[playerIndex], 
             name: editedName,
             initials: editedName.split(' ').map(n => n[0]).join(''),
             avatar: editedAvatar || players[playerIndex].avatar,
+            wins: editedWins,
+            losses: editedLosses,
+            averageBreak: editedAverageBreak,
+            matchesPlayed: matchesPlayed,
+            winRate: winRate,
         };
         players[playerIndex] = updatedPlayer;
         saveToStorage('players', players);
@@ -113,6 +130,11 @@ export default function MyStatsPage() {
             name: editedName,
             initials: editedName.split(' ').map(n => n[0]).join(''),
             avatar: editedAvatar || prev.avatar,
+            wins: editedWins,
+            losses: editedLosses,
+            averageBreak: editedAverageBreak,
+            matchesPlayed: matchesPlayed,
+            winRate: winRate
         }));
         
         window.dispatchEvent(new Event('storage'));
@@ -136,8 +158,7 @@ export default function MyStatsPage() {
             </div>
         </div>
         <Button onClick={() => setIsEditing(!isEditing)} variant="outline">
-            {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
-            {isEditing ? 'Cancel' : 'Edit Profile'}
+            {isEditing ? 'Cancel' : <><Edit className="mr-2 h-4 w-4" /> Edit Profile</>}
         </Button>
       </div>
 
@@ -145,7 +166,7 @@ export default function MyStatsPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Edit Your Profile</CardTitle>
-                <CardDescription>Update your name and avatar here.</CardDescription>
+                <CardDescription>Update your name, avatar, and performance details here.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -160,6 +181,20 @@ export default function MyStatsPage() {
                             <AvatarFallback>{editedName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarChange} />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="wins">Wins</Label>
+                        <Input id="wins" type="number" value={editedWins} onChange={(e) => setEditedWins(parseInt(e.target.value, 10) || 0)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="losses">Losses</Label>
+                        <Input id="losses" type="number" value={editedLosses} onChange={(e) => setEditedLosses(parseInt(e.target.value, 10) || 0)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="averageBreak">Average Break</Label>
+                        <Input id="averageBreak" type="number" value={editedAverageBreak} onChange={(e) => setEditedAverageBreak(parseInt(e.target.value, 10) || 0)} />
                     </div>
                 </div>
                 <Button onClick={handleSaveChanges}>
@@ -235,7 +270,3 @@ export default function MyStatsPage() {
     </div>
   );
 }
-
-    
-
-    
