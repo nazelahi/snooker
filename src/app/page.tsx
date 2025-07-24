@@ -241,19 +241,18 @@ export default function DashboardPage() {
 
       {notices.length > 0 && (
          <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Megaphone className="text-primary"/>
-                    Notice Board
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
                 <div className="space-y-4">
                     {notices.slice(0, 2).map((notice) => (
                         <div key={notice.id} className="p-4 rounded-lg bg-muted/50">
-                            <h3 className="font-semibold text-lg">{notice.title}</h3>
-                            <p className="text-sm text-muted-foreground mt-1">{notice.content}</p>
-                            <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
+                            <div className="flex items-start gap-3">
+                                <Megaphone className="h-5 w-5 text-primary mt-0.5 shrink-0"/>
+                                <div>
+                                    <h3 className="font-semibold text-lg">{notice.title}</h3>
+                                    <p className="text-sm text-muted-foreground mt-1">{notice.content}</p>
+                                    <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
