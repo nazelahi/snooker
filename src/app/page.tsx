@@ -71,6 +71,8 @@ export default function DashboardPage() {
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
+  const [showAllRecent, setShowAllRecent] = useState(false);
 
   useEffect(() => {
     
@@ -288,7 +290,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
-              {upcomingMatches.map((match) => {
+              {upcomingMatches.slice(0, showAllUpcoming ? upcomingMatches.length : 5).map((match) => {
                 const player1 = getPlayerAvatar(match.player1);
                 const player2 = getPlayerAvatar(match.player2);
                 return (
@@ -316,6 +318,13 @@ export default function DashboardPage() {
               })}
             </ul>
           </CardContent>
+          {upcomingMatches.length > 5 && (
+            <CardFooter>
+              <Button onClick={() => setShowAllUpcoming(!showAllUpcoming)} variant="secondary" className="w-full">
+                {showAllUpcoming ? 'Show Less' : 'View More'}
+              </Button>
+            </CardFooter>
+          )}
         </Card>
         <Card>
           <CardHeader>
@@ -324,7 +333,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
           <ul className="space-y-4">
-              {recentResults.map((match) => {
+              {recentResults.slice(0, showAllRecent ? recentResults.length : 5).map((match) => {
                 const winner = getPlayerAvatar(match.winner);
                 const loser = getPlayerAvatar(match.loser);
                 return (
@@ -351,6 +360,13 @@ export default function DashboardPage() {
               })}
             </ul>
           </CardContent>
+           {recentResults.length > 5 && (
+            <CardFooter>
+                <Button onClick={() => setShowAllRecent(!showAllRecent)} variant="secondary" className="w-full">
+                    {showAllRecent ? 'Show Less' : 'View More'}
+                </Button>
+            </CardFooter>
+          )}
         </Card>
       </div>
 
