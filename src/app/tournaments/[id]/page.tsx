@@ -34,20 +34,6 @@ interface EnrolledPlayer {
   email: string;
 }
 
-const PREDEFINED_RULES = [
-  "Standard knockout rules",
-  "Best of 11 frames",
-  "Round-robin league format",
-  "Each player plays each other once",
-  "2 points for a win, 1 for a draw",
-  "9-ball rules. Race to 7",
-  "Pro-Am knockout tournament",
-  "Amateurs get a handicap",
-  "Final match is best of 19 frames",
-  "All matches must be completed by the specified date",
-];
-
-
 export default function TournamentDetailsPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [editedTournament, setEditedTournament] = useState<Tournament | null>(null);
@@ -56,6 +42,7 @@ export default function TournamentDetailsPage() {
   const [enrolledPlayers, setEnrolledPlayers] = useState<EnrolledPlayer[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<EnrolledPlayer[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [predefinedRules, setPredefinedRules] = useState<string[]>([]);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -64,6 +51,9 @@ export default function TournamentDetailsPage() {
   useEffect(() => {
     const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
     setCurrentUser(userData);
+
+    const storedRules = getFromStorage<string[]>('tournamentRules', []);
+    setPredefinedRules(storedRules);
 
     if (id) {
         const tournaments = getFromStorage<Tournament[]>('tournaments', []);
@@ -345,7 +335,7 @@ export default function TournamentDetailsPage() {
             </h3>
              {isEditing ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border bg-muted/20">
-                    {PREDEFINED_RULES.map((rule, index) => (
+                    {predefinedRules.map((rule, index) => (
                         <div key={rule} className="flex items-start space-x-2">
                             <Checkbox
                                 id={`rule-${index}`}

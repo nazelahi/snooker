@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,25 +25,13 @@ import type { Tournament } from "@/app/tournaments/page";
 import Image from "next/image";
 import { Checkbox } from "./ui/checkbox";
 import { ScrollArea } from "./ui/scroll-area";
+import { getFromStorage } from "@/lib/storage";
 
 interface AddTournamentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddTournament: (tournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers'>) => void;
 }
-
-const PREDEFINED_RULES = [
-  "Standard knockout rules",
-  "Best of 11 frames",
-  "Round-robin league format",
-  "Each player plays each other once",
-  "2 points for a win, 1 for a draw",
-  "9-ball rules. Race to 7",
-  "Pro-Am knockout tournament",
-  "Amateurs get a handicap",
-  "Final match is best of 19 frames",
-  "All matches must be completed by the specified date",
-];
 
 export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: AddTournamentDialogProps) {
   const [name, setName] = useState("");
@@ -53,6 +42,12 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
   const [image, setImage] = useState("");
   const [location, setLocation] = useState("");
   const [imagePreview, setImagePreview] = useState("");
+  const [predefinedRules, setPredefinedRules] = useState<string[]>([]);
+
+  useEffect(() => {
+    const storedRules = getFromStorage<string[]>('tournamentRules', []);
+    setPredefinedRules(storedRules);
+  }, [open]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -177,7 +172,7 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
               Rules
             </Label>
             <div className="col-span-3 space-y-2 border rounded-md p-4">
-                {PREDEFINED_RULES.map(rule => (
+                {predefinedRules.map(rule => (
                     <div key={rule} className="flex items-center space-x-2">
                         <Checkbox 
                             id={`rule-new-${rule}`}

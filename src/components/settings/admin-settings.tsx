@@ -16,10 +16,10 @@ import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import type { Tournament } from "@/app/tournaments/page";
 import type { LiveMatch } from "@/app/tournaments/page";
-import { Trash2 } from "lucide-react";
+import { Trash2, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, Settings } from "lucide-react";
+import { ShieldCheck, Settings, ListChecks } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
@@ -29,11 +29,26 @@ interface SiteSettings {
   description: string;
 }
 
+const PREDEFINED_RULES = [
+  "Standard knockout rules",
+  "Best of 11 frames",
+  "Round-robin league format",
+  "Each player plays each other once",
+  "2 points for a win, 1 for a draw",
+  "9-ball rules. Race to 7",
+  "Pro-Am knockout tournament",
+  "Amateurs get a handicap",
+  "Final match is best of 19 frames",
+  "All matches must be completed by the specified date",
+];
+
 export default function AdminSettings() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({ name: "", description: ""});
+  const [rules, setRules] = useState<string[]>([]);
+  const [newRule, setNewRule] = useState("");
   const { toast } = useToast();
   
   useEffect(() => {
@@ -41,6 +56,12 @@ export default function AdminSettings() {
     setTournaments(getFromStorage<Tournament[]>("tournaments", []));
     setLiveMatches(getFromStorage<LiveMatch[]>("liveMatches", []));
     setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
+    
+    const storedRules = getFromStorage<string[]>("tournamentRules", PREDEFINED_RULES);
+    setRules(storedRules);
+    if(localStorage.getItem('tournamentRules') === null) {
+      saveToStorage('tournamentRules', PREDEFINED_RULES);
+    }
   }, []);
 
   const handlePlayerChange = (id: number, field: keyof Player, value: any) => {
@@ -84,11 +105,31 @@ export default function AdminSettings() {
       toast({ title: "Success", description: `Item removed from ${type}.`});
   };
 
+  const handleRuleChange = (index: number, value: string) => {
+    const updatedRules = [...rules];
+    updatedRules[index] = value;
+    setRules(updatedRules);
+  };
+  
+  const handleAddRule = () => {
+    if (newRule.trim()) {
+      setRules([...rules, newRule.trim()]);
+      setNewRule("");
+    }
+  };
+  
+  const handleDeleteRule = (index: number) => {
+    const updatedRules = rules.filter((_, i) => i !== index);
+    setRules(updatedRules);
+  };
+
+
   const handleSaveChanges = () => {
     saveToStorage("players", players);
     saveToStorage("tournaments", tournaments);
     saveToStorage("liveMatches", liveMatches);
     saveToStorage("siteSettings", siteSettings);
+    saveToStorage("tournamentRules", rules);
     window.dispatchEvent(new Event('storage'));
     toast({
       title: "Saved!",
@@ -107,10 +148,11 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="players" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="players">Manage Players</TabsTrigger>
           <TabsTrigger value="tournaments">Manage Tournaments</TabsTrigger>
           <TabsTrigger value="liveMatches">Manage Live Matches</TabsTrigger>
+          <TabsTrigger value="rules">Manage Rules</TabsTrigger>
           <TabsTrigger value="siteSettings">Site Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="players">
@@ -196,6 +238,31 @@ export default function AdminSettings() {
                     <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 ))}
+                </CardContent>
+            </Card>
+        </TabsContent>
+         <TabsContent value="rules">
+           <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle>Manage Tournament Rules</CardTitle>
+                  <CardDescription>Add, edit, or delete the predefined rules for tournaments.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {rules.map((rule, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                        <Input value={rule} onChange={e => handleRuleChange(index, e.target.value)} />
+                        <Button variant="destructive" size="icon" onClick={() => handleDeleteRule(index)}><Trash2 className="h-4 w-4"/></Button>
+                    </div>
+                  ))}
+                   <div className="flex items-center gap-2 pt-4 border-t">
+                        <Input 
+                          placeholder="Add new rule..." 
+                          value={newRule} 
+                          onChange={e => setNewRule(e.target.value)} 
+                          onKeyDown={e => e.key === 'Enter' && handleAddRule()}
+                        />
+                        <Button onClick={handleAddRule}><PlusCircle className="h-4 w-4 mr-2"/> Add Rule</Button>
+                    </div>
                 </CardContent>
             </Card>
         </TabsContent>
