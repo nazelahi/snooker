@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Trophy, LogIn, Home, Settings, LogOut, User as UserIcon, Swords } from "lucide-react";
+import { Users, Trophy, LogIn, Home, Settings, LogOut, User as UserIcon, Swords, Bell } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -30,7 +30,10 @@ const navItems = [
   { href: "/tournaments", label: "Tournaments", icon: Trophy },
 ];
 
-const settingsItem = { href: "/settings", label: "Settings", icon: Settings };
+const bottomNavItems = [
+  { href: "/notifications", label: "Notifications", icon: Bell, auth: true },
+  { href: "/settings", label: "Settings", icon: Settings, auth: true },
+];
 
 const UserMenu = () => {
     const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean, avatar?: string, initials?: string} | null>(null);
@@ -152,7 +155,10 @@ export default function AppSidebar() {
 
 
   const isActive = (href: string) => {
-    return pathname === href;
+    if (href === "/") {
+        return pathname === href;
+    }
+    return pathname.startsWith(href);
   };
 
   return (
@@ -175,16 +181,20 @@ export default function AppSidebar() {
               </Link>
             </SidebarMenuItem>
           ))}
-          {currentUser && (
-             <SidebarMenuItem>
-              <Link href={settingsItem.href} passHref>
-                <SidebarMenuButton isActive={isActive(settingsItem.href)}>
-                  <settingsItem.icon className="h-5 w-5" />
-                  <span>{settingsItem.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          )}
+          <Separator className="my-2" />
+          {bottomNavItems.map((item) => {
+            if (item.auth && !currentUser) return null;
+            return (
+                <SidebarMenuItem key={item.label}>
+                <Link href={item.href} passHref>
+                    <SidebarMenuButton isActive={isActive(item.href)}>
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                    </SidebarMenuButton>
+                </Link>
+                </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>

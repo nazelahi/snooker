@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Trophy, User as UserIcon, Swords } from "lucide-react";
+import { Home, Users, Trophy, User as UserIcon, Swords, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFromStorage } from "@/lib/storage";
 import { useEffect, useState } from "react";
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/players", label: "Players", icon: Users },
   { href: "/tournaments", label: "Tournaments", icon: Trophy },
   { href: "/my-stats", label: "My Stats", icon: UserIcon, auth: true },
+  { href: "/notifications", label: "Alerts", icon: Bell, auth: true },
 ];
 
 export default function BottomNav() {
@@ -51,7 +52,7 @@ export default function BottomNav() {
             <li key={item.label}>
               <Link href={item.href} passHref>
                 <div className={cn(
-                    "flex flex-col items-center justify-center gap-1 w-20 h-full transition-colors",
+                    "flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors",
                     isActive(item.href) ? "text-primary" : "text-muted-foreground hover:text-primary"
                   )}>
                   <item.icon className="h-6 w-6" />

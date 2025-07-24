@@ -9,6 +9,7 @@ import {
   Trophy,
   LogOut,
   Settings,
+  CheckCheck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export default function Header() {
     const initialData = userData?.isAdmin ? [] : initialUserNotifications;
 
     const storedNotifications = getFromStorage(notificationKey, initialData);
-    setNotifications(storedNotifications);
+    setNotifications(storedNotifications.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     
     if (localStorage.getItem(notificationKey) === null) {
       saveToStorage(notificationKey, initialData);
@@ -84,7 +85,7 @@ export default function Header() {
         const currentKey = getNotificationKey(user);
         const currentInitialData = user?.isAdmin ? [] : initialUserNotifications;
         const stored = getFromStorage(currentKey, currentInitialData);
-        setNotifications(stored);
+        setNotifications(stored.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
         const newSiteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
         setClubName(newSiteSettings.name);
@@ -106,6 +107,14 @@ export default function Header() {
     const updatedNotifications = notifications.map(n => 
         n.id === id ? { ...n, read: true } : n
     );
+    setNotifications(updatedNotifications);
+    saveToStorage(notificationKey, updatedNotifications);
+  };
+  
+  const handleMarkAllRead = () => {
+    if (!currentUser) return;
+    const notificationKey = getNotificationKey(currentUser);
+    const updatedNotifications = notifications.map(n => ({ ...n, read: true }));
     setNotifications(updatedNotifications);
     saveToStorage(notificationKey, updatedNotifications);
   };
@@ -144,10 +153,18 @@ export default function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuLabel className="flex justify-between items-center">
+                <span>Notifications</span>
+                {unreadCount > 0 && (
+                    <Button variant="ghost" size="sm" onClick={handleMarkAllRead} className="h-auto p-1 text-xs">
+                        <CheckCheck className="mr-1 h-3 w-3"/>
+                        Mark all as read
+                    </Button>
+                )}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {notifications.length === 0 ? (
-                 <DropdownMenuItem>
+                 <DropdownMenuItem disabled>
                     <div className="flex flex-col">
                         <p className="text-sm text-muted-foreground">
                         No new notifications.
@@ -170,6 +187,10 @@ export default function Header() {
                     </DropdownMenuItem>
                 ))
             )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/notifications" className="justify-center">View all notifications</Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
