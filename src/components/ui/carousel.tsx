@@ -290,7 +290,7 @@ const CarouselDots = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("flex items-center justify-center gap-2 py-4", className)}
+      className={cn("absolute bottom-2 right-4 flex items-center justify-end gap-2 p-1", className)}
       {...props}
     >
       {scrollSnaps.map((_, index) => (
