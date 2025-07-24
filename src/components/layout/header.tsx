@@ -8,6 +8,7 @@ import {
   User,
   Trophy,
   LogOut,
+  Settings,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,14 +35,14 @@ const initialNotifications: Notification[] = [
 
 export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [currentUser, setCurrentUser] = useState<{name: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const storedNotifications = getFromStorage('notifications', initialNotifications);
     setNotifications(storedNotifications);
     
-    const userData = getFromStorage<{name: string} | null>('userData', null);
+    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
     setCurrentUser(userData);
 
     if (localStorage.getItem('notifications') === null) {
@@ -51,7 +52,7 @@ export default function Header() {
     const handleStorageChange = () => {
         const stored = getFromStorage('notifications', initialNotifications);
         setNotifications(stored);
-        const user = getFromStorage<{name: string} | null>('userData', null);
+        const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
         setCurrentUser(user);
     };
 
@@ -136,11 +137,19 @@ export default function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/my-stats">
+                    <Link href="/tournaments">
                       <Trophy className="mr-2 h-4 w-4" />
-                      <span>My Stats</span>
+                      <span>Tournaments</span>
                     </Link>
                   </DropdownMenuItem>
+                   {currentUser.isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -162,3 +171,5 @@ export default function Header() {
     </header>
   );
 }
+
+    
