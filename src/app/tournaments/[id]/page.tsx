@@ -342,14 +342,14 @@ export default function TournamentDetailsPage() {
             </h3>
              {isEditing ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border bg-muted/20">
-                    {PREDEFINED_RULES.map(rule => (
+                    {PREDEFINED_RULES.map((rule, index) => (
                         <div key={rule} className="flex items-center space-x-2">
                             <Checkbox
-                                id={`rule-${rule}`}
+                                id={`rule-${index}`}
                                 checked={(editedTournament.rules || []).includes(rule)}
                                 onCheckedChange={(checked) => handleRuleChange(rule, !!checked)}
                             />
-                            <Label htmlFor={`rule-${rule}`} className="font-normal">{rule}</Label>
+                            <Label htmlFor={`rule-${index}`} className="font-normal">{rule}</Label>
                         </div>
                     ))}
                 </div>
