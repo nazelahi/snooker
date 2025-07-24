@@ -19,6 +19,8 @@ import type { Tournament } from "@/app/tournaments/page";
 import type { LiveMatch } from "@/app/tournaments/page";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShieldCheck } from "lucide-react";
 
 export default function AdminPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -84,64 +86,100 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold">Admin Panel</h1>
-        <p className="text-muted-foreground">Manage all application data from here.</p>
+      <div className="flex items-center gap-4">
+        <ShieldCheck className="h-10 w-10 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold">Admin Panel</h1>
+          <p className="text-muted-foreground">Manage all application data from a centralized dashboard.</p>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage Players</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {players.map(player => (
-            <div key={player.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
-              <Input value={player.name} onChange={e => handlePlayerChange(player.id, 'name', e.target.value)} />
-              <Input value={player.highestBreak} type="number" onChange={e => handlePlayerChange(player.id, 'highestBreak', parseInt(e.target.value))} />
-              <Input value={player.matchesPlayed} type="number" onChange={e => handlePlayerChange(player.id, 'matchesPlayed', parseInt(e.target.value))} />
-              <Button variant="destructive" size="icon" onClick={() => handleDelete(player.id, 'players', setPlayers)}><Trash2 className="h-4 w-4" /></Button>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="players" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="players">Manage Players</TabsTrigger>
+          <TabsTrigger value="tournaments">Manage Tournaments</TabsTrigger>
+          <TabsTrigger value="liveMatches">Manage Live Matches</TabsTrigger>
+        </TabsList>
+        <TabsContent value="players">
+           <Card className="mt-4">
+                <CardHeader>
+                <CardTitle>Player Data</CardTitle>
+                <CardDescription>Edit player details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                    <span>Name</span>
+                    <span>Highest Break</span>
+                    <span>Matches Played</span>
+                    <span>Actions</span>
+                  </div>
+                {players.map(player => (
+                    <div key={player.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                    <Input value={player.name} onChange={e => handlePlayerChange(player.id, 'name', e.target.value)} />
+                    <Input value={player.highestBreak} type="number" onChange={e => handlePlayerChange(player.id, 'highestBreak', parseInt(e.target.value))} />
+                    <Input value={player.matchesPlayed} type="number" onChange={e => handlePlayerChange(player.id, 'matchesPlayed', parseInt(e.target.value))} />
+                    <Button variant="destructive" size="icon" onClick={() => handleDelete(player.id, 'players', setPlayers)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                ))}
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="tournaments">
+            <Card className="mt-4">
+                <CardHeader>
+                <CardTitle>Tournament Data</CardTitle>
+                <CardDescription>Edit tournament details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                      <span>Name</span>
+                      <span>Players</span>
+                      <span>Status</span>
+                      <span>Rules</span>
+                      <span>Actions</span>
+                  </div>
+                {tournaments.map(tournament => (
+                    <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                    <Input value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
+                    <Input value={tournament.players} type="number" onChange={e => handleTournamentChange(tournament.id, 'players', parseInt(e.target.value))} />
+                    <Input value={tournament.status} onChange={e => handleTournamentChange(tournament.id, 'status', e.target.value)} />
+                    <Input value={tournament.rules} onChange={e => handleTournamentChange(tournament.id, 'rules', e.target.value)} />
+                    <Button variant="destructive" size="icon" onClick={() => handleDelete(tournament.id, 'tournaments', setTournaments)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                ))}
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="liveMatches">
+           <Card className="mt-4">
+                <CardHeader>
+                <CardTitle>Live Match Data</CardTitle>
+                <CardDescription>Edit live match details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                        <span>Player 1</span>
+                        <span>Player 2</span>
+                        <span>Score (P1 - P2)</span>
+                        <span>Actions</span>
+                    </div>
+                {liveMatches.map(match => (
+                    <div key={match.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                    <Input value={match.player1} onChange={e => handleLiveMatchChange(match.id, 'player1', e.target.value)} />
+                    <Input value={match.player2} onChange={e => handleLiveMatchChange(match.id, 'player2', e.target.value)} />
+                    <div className="flex gap-2">
+                        <Input value={match.score1} type="number" onChange={e => handleLiveMatchChange(match.id, 'score1', parseInt(e.target.value))} />
+                        <Input value={match.score2} type="number" onChange={e => handleLiveMatchChange(match.id, 'score2', parseInt(e.target.value))} />
+                    </div>
+                    <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                ))}
+                </CardContent>
+            </Card>
+        </TabsContent>
+      </Tabs>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage Tournaments</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {tournaments.map(tournament => (
-            <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
-              <Input value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
-              <Input value={tournament.players} type="number" onChange={e => handleTournamentChange(tournament.id, 'players', parseInt(e.target.value))} />
-              <Input value={tournament.status} onChange={e => handleTournamentChange(tournament.id, 'status', e.target.value)} />
-              <Input value={tournament.rules} onChange={e => handleTournamentChange(tournament.id, 'rules', e.target.value)} />
-              <Button variant="destructive" size="icon" onClick={() => handleDelete(tournament.id, 'tournaments', setTournaments)}><Trash2 className="h-4 w-4" /></Button>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage Live Matches</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {liveMatches.map(match => (
-            <div key={match.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
-              <Input value={match.player1} onChange={e => handleLiveMatchChange(match.id, 'player1', e.target.value)} />
-              <Input value={match.player2} onChange={e => handleLiveMatchChange(match.id, 'player2', e.target.value)} />
-              <div className="flex gap-2">
-                <Input value={match.score1} type="number" onChange={e => handleLiveMatchChange(match.id, 'score1', parseInt(e.target.value))} />
-                <Input value={match.score2} type="number" onChange={e => handleLiveMatchChange(match.id, 'score2', parseInt(e.target.value))} />
-              </div>
-              <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Button onClick={handleSaveChanges} className="w-full md:w-auto">Save All Changes</Button>
+      <Button onClick={handleSaveChanges} className="w-full md:w-auto self-end mt-4">Save All Changes</Button>
     </div>
   );
 }
