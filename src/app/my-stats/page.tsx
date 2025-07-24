@@ -29,6 +29,7 @@ interface Match {
   loser: string;
   score: string;
   date: string;
+  media?: string[];
   pendingScore?: {
     score1: number;
     score2: number;
@@ -206,6 +207,7 @@ export default function MyStatsPage() {
         loser: myScore > opponentScore ? opponent.name : currentUser.name,
         score: `${myScore}-${opponentScore}`,
         date: new Date().toISOString(),
+        media: [],
         pendingScore: {
             score1: myScore > opponentScore ? myScore : opponentScore,
             score2: myScore > opponentScore ? opponentScore : myScore,
@@ -491,21 +493,23 @@ export default function MyStatsPage() {
                 const opponent = getFromStorage<Player[]>('players', []).find(p => p.name === opponentName);
 
                 return (
-                  <li key={match.id} className="p-4 rounded-lg bg-muted/50">
-                     <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-4">
-                            <Badge variant={isWinner ? "default" : "destructive"}>
-                               {isWinner ? "WIN" : "LOSS"}
-                            </Badge>
-                            <div>
-                               <span>vs <Link href={`/players/${opponent?.id}`} className="hover:underline">{opponentName}</Link></span>
-                               <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
+                  <li key={match.id}>
+                    <Link href={`/match/${match.id}`} className="block p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <Badge variant={isWinner ? "default" : "destructive"}>
+                                {isWinner ? "WIN" : "LOSS"}
+                                </Badge>
+                                <div>
+                                <span>vs <Link href={`/players/${opponent?.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{opponentName}</Link></span>
+                                <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
+                                </div>
                             </div>
-                         </div>
-                         <div className="flex items-center gap-4">
-                            <span className="font-bold text-lg">{match.score}</span>
-                         </div>
-                     </div>
+                            <div className="flex items-center gap-4">
+                                <span className="font-bold text-lg">{match.score}</span>
+                            </div>
+                        </div>
+                    </Link>
                   </li>
                 );
               })}
@@ -547,3 +551,4 @@ export default function MyStatsPage() {
     </div>
   );
 }
+

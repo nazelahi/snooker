@@ -41,6 +41,7 @@ interface Match {
   loser: string;
   score: string;
   date: string;
+  media?: string[];
   pendingScore?: {
     score1: number;
     score2: number;
@@ -511,47 +512,49 @@ export default function PlayerProfilePage() {
 
                 return (
                   <li key={match.id} className="p-4 rounded-lg bg-muted/50">
-                     <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-4">
-                            <Badge variant={isWinner ? "default" : "destructive"}>
-                               {isWinner ? "WIN" : "LOSS"}
-                            </Badge>
-                            <div>
-                               <span>vs <Link href={`/players/${opponent?.id}`} className="hover:underline">{opponentName}</Link></span>
-                               <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
-                            </div>
+                     <Link href={`/match/${match.id}`} className="block">
+                         <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-4">
+                                <Badge variant={isWinner ? "default" : "destructive"}>
+                                {isWinner ? "WIN" : "LOSS"}
+                                </Badge>
+                                <div>
+                                <span>vs <Link href={`/players/${opponent?.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{opponentName}</Link></span>
+                                <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
+                                </div>
+                             </div>
+                             <div className="flex items-center gap-4">
+                                <span className="font-bold text-lg">{match.score}</span>
+                                {(isMyMatch || isAdmin) && !pendingChange && (
+                                    <Button size="sm" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenScoreDialog(match); }}>
+                                        <Edit className="h-4 w-4"/>
+                                    </Button>
+                                )}
+                                {isAdmin && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button size="sm" variant="destructive" title="Delete Match" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the match
+                                                and recalculate player stats.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAdminDeleteMatch(match.id); }}>Continue</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                             </div>
                          </div>
-                         <div className="flex items-center gap-4">
-                            <span className="font-bold text-lg">{match.score}</span>
-                            {(isMyMatch || isAdmin) && !pendingChange && (
-                                <Button size="sm" variant="outline" onClick={() => handleOpenScoreDialog(match)}>
-                                    <Edit className="h-4 w-4"/>
-                                </Button>
-                            )}
-                             {isAdmin && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button size="sm" variant="destructive" title="Delete Match">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the match
-                                            and recalculate player stats.
-                                        </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleAdminDeleteMatch(match.id)}>Continue</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-                         </div>
-                     </div>
+                     </Link>
                      {pendingChange && (
                         <Card className="mt-4 bg-background/50">
                             <CardHeader>
