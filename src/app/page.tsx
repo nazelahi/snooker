@@ -314,8 +314,8 @@ export default function DashboardPage() {
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">+10% from yesterday</p>
+            <div className="text-2xl font-bold">{liveMatches.length}</div>
+            <p className="text-xs text-muted-foreground">Currently live</p>
           </CardContent>
         </Card>
         <Card>
@@ -472,3 +472,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
