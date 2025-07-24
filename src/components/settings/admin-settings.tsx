@@ -276,15 +276,15 @@ export default function AdminSettings() {
                     <CardDescription>Manage upcoming matches. Add new matches or edit existing ones.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
-                        <span className="col-span-2">Player 1</span>
-                        <span className="col-span-2">Player 2</span>
-                        <span>Date & Time</span>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                        <span className="col-span-1">Player 1</span>
+                        <span className="col-span-1">Player 2</span>
+                        <span className="col-span-2">Date & Time</span>
                         <span>Actions</span>
                     </div>
                     {upcomingMatches.map(match => (
-                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center p-2 rounded-lg bg-muted/50">
-                            <div className="col-span-2">
+                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                            <div className="col-span-1">
                                 <Select value={match.player1} onValueChange={value => handleUpcomingMatchChange(match.id, 'player1', value)}>
                                     <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
                                     <SelectContent>
@@ -292,7 +292,7 @@ export default function AdminSettings() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="col-span-2">
+                            <div className="col-span-1">
                                  <Select value={match.player2} onValueChange={value => handleUpcomingMatchChange(match.id, 'player2', value)}>
                                     <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
                                     <SelectContent>
@@ -300,7 +300,7 @@ export default function AdminSettings() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 col-span-2">
                                 <Input type="date" value={match.date} onChange={e => handleUpcomingMatchChange(match.id, 'date', e.target.value)} />
                                 <Input type="time" value={match.time} onChange={e => handleUpcomingMatchChange(match.id, 'time', e.target.value)} />
                             </div>
@@ -372,5 +372,3 @@ export default function AdminSettings() {
     </div>
   );
 }
-
-    
