@@ -71,8 +71,8 @@ export default function DashboardPage() {
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
-  const [showAllRecent, setShowAllRecent] = useState(false);
+  const [upcomingToShow, setUpcomingToShow] = useState(5);
+  const [recentToShow, setRecentToShow] = useState(5);
 
   useEffect(() => {
     
@@ -290,7 +290,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
-              {upcomingMatches.slice(0, showAllUpcoming ? upcomingMatches.length : 5).map((match) => {
+              {upcomingMatches.slice(0, upcomingToShow).map((match) => {
                 const player1 = getPlayerAvatar(match.player1);
                 const player2 = getPlayerAvatar(match.player2);
                 return (
@@ -318,10 +318,10 @@ export default function DashboardPage() {
               })}
             </ul>
           </CardContent>
-          {upcomingMatches.length > 5 && (
+          {upcomingToShow < upcomingMatches.length && (
             <CardFooter>
-              <Button onClick={() => setShowAllUpcoming(!showAllUpcoming)} variant="secondary" className="w-full">
-                {showAllUpcoming ? 'Show Less' : 'View More'}
+              <Button onClick={() => setUpcomingToShow(upcomingToShow + 5)} variant="secondary" className="w-full">
+                View More
               </Button>
             </CardFooter>
           )}
@@ -333,7 +333,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
           <ul className="space-y-4">
-              {recentResults.slice(0, showAllRecent ? recentResults.length : 5).map((match) => {
+              {recentResults.slice(0, recentToShow).map((match) => {
                 const winner = getPlayerAvatar(match.winner);
                 const loser = getPlayerAvatar(match.loser);
                 return (
@@ -360,10 +360,10 @@ export default function DashboardPage() {
               })}
             </ul>
           </CardContent>
-           {recentResults.length > 5 && (
+           {recentToShow < recentResults.length && (
             <CardFooter>
-                <Button onClick={() => setShowAllRecent(!showAllRecent)} variant="secondary" className="w-full">
-                    {showAllRecent ? 'Show Less' : 'View More'}
+                <Button onClick={() => setRecentToShow(recentToShow + 5)} variant="secondary" className="w-full">
+                    View More
                 </Button>
             </CardFooter>
           )}
@@ -420,3 +420,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
