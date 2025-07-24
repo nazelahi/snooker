@@ -551,4 +551,3 @@ export default function MyStatsPage() {
     </div>
   );
 }
-
