@@ -86,6 +86,7 @@ export default function DashboardPage() {
   const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
   const [liveMatchApi, setLiveMatchApi] = useState<CarouselApi>();
   const [mediaApi, setMediaApi] = useState<CarouselApi>();
+  const [noticeApi, setNoticeApi] = useState<CarouselApi>();
 
 
   const fetchDashboardData = () => {
@@ -240,22 +241,36 @@ export default function DashboardPage() {
       )}
 
       {notices.length > 0 && (
-         <Card>
+         <Card className="relative">
             <CardContent className="p-0">
-                <div className="space-y-4">
-                    {notices.slice(0, 2).map((notice) => (
-                        <div key={notice.id} className="p-4 rounded-lg bg-muted/50">
-                            <div className="flex items-start gap-3">
-                                <Megaphone className="h-5 w-5 text-primary mt-0.5 shrink-0"/>
-                                <div>
-                                    <h3 className="font-semibold text-lg">{notice.title}</h3>
-                                    <p className="text-sm text-muted-foreground mt-1">{notice.content}</p>
-                                    <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
+                 <Carousel
+                    setApi={setNoticeApi}
+                    opts={{
+                        align: "start",
+                        loop: true,
+                    }}
+                    className="w-full"
+                >
+                    <CarouselContent>
+                        {notices.map((notice) => (
+                             <CarouselItem key={notice.id} className="w-full">
+                                <div className="p-1">
+                                    <div className="p-4 rounded-lg bg-muted/50">
+                                        <div className="flex items-start gap-3">
+                                            <Megaphone className="h-5 w-5 text-primary mt-0.5 shrink-0"/>
+                                            <div>
+                                                <h3 className="font-semibold text-lg">{notice.title}</h3>
+                                                <p className="text-sm text-muted-foreground mt-1">{notice.content}</p>
+                                                <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                     {notices.length > 1 && noticeApi && <CarouselDots api={noticeApi} />}
+                </Carousel>
             </CardContent>
          </Card>
       )}
@@ -558,5 +573,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
