@@ -108,7 +108,6 @@ export default function PlayersPage() {
                 <TableHead className="text-center">Matches</TableHead>
                 <TableHead className="text-center">Win Rate</TableHead>
                 <TableHead className="text-center">Highest Break</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,7 +119,9 @@ export default function PlayersPage() {
                          <AvatarImage src={player.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
                         <AvatarFallback>{player.initials}</AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{player.name}</span>
+                      <Link href={`/players/${player.id}`} className="font-medium hover:underline">
+                        {player.name}
+                      </Link>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -131,11 +132,6 @@ export default function PlayersPage() {
                   <TableCell className="text-center">{player.matchesPlayed}</TableCell>
                   <TableCell className="text-center">{player.winRate}</TableCell>
                   <TableCell className="text-center font-semibold text-primary">{player.highestBreak}</TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/players/${player.id}`} passHref>
-                      <Button variant="ghost" size="sm">View Profile</Button>
-                    </Link>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
