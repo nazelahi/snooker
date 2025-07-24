@@ -60,7 +60,7 @@ export default function AppSidebar() {
       <SidebarHeader>
         <Link href="/" className="flex items-center gap-2">
           <Icons.logo className="h-8 w-8 text-primary" />
-          <h1 className="text-xl font-semibold text-primary-foreground">{clubName}</h1>
+          <h1 className="text-xl font-semibold text-sidebar-foreground">{clubName}</h1>
         </Link>
       </SidebarHeader>
       <SidebarContent>
