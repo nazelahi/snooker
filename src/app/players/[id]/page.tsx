@@ -393,7 +393,7 @@ export default function PlayerProfilePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Swords />
-            Recent Matches
+            Match History
           </CardTitle>
         </CardHeader>
         <CardContent>
