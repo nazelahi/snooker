@@ -1,9 +1,13 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription
 } from "@/components/ui/card";
 import {
   Table,
@@ -15,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Radio } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddTournamentDialog } from "@/components/add-tournament-dialog";
 
@@ -27,6 +31,14 @@ export interface Tournament {
   status: "Upcoming" | "In Progress" | "Finished";
 }
 
+export interface LiveMatch {
+  id: number;
+  tournamentName: string;
+  player1: string;
+  player2: string;
+  score1: number;
+  score2: number;
+}
 
 const initialTournaments: Tournament[] = [
   { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress" },
@@ -35,16 +47,28 @@ const initialTournaments: Tournament[] = [
   { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming" },
 ];
 
+const initialLiveMatches: LiveMatch[] = [
+    { id: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
+    { id: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
+];
+
 export default function TournamentsPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [isAddTournamentOpen, setIsAddTournamentOpen] = useState(false);
 
   useEffect(() => {
     const storedTournaments = getFromStorage('tournaments', initialTournaments);
     setTournaments(storedTournaments);
 
+    const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
+    setLiveMatches(storedLiveMatches);
+
     if (localStorage.getItem('tournaments') === null) {
       saveToStorage('tournaments', initialTournaments);
+    }
+    if (localStorage.getItem('liveMatches') === null) {
+        saveToStorage('liveMatches', initialLiveMatches);
     }
   }, []);
 
@@ -71,8 +95,44 @@ export default function TournamentsPage() {
           Create Tournament
         </Button>
       </div>
+
+       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Radio className="text-primary animate-pulse" />
+            Live Matches
+          </CardTitle>
+          <CardDescription>Ongoing matches in active tournaments.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {liveMatches.length > 0 ? (
+            <ul className="space-y-4">
+              {liveMatches.map((match) => (
+                <li key={match.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
+                    <div className="font-medium">{match.player1} vs {match.player2}</div>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    <span className="text-primary">{match.score1}</span>
+                    <span> - </span>
+                    <span>{match.score2}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No live matches currently in progress.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+            <CardTitle>All Tournaments</CardTitle>
+             <CardDescription>A list of all tournaments, including upcoming and finished ones.</CardDescription>
+        </CardHeader>
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
