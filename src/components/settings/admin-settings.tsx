@@ -29,18 +29,7 @@ interface SiteSettings {
   description: string;
 }
 
-const PREDEFINED_RULES = [
-  "Standard knockout rules",
-  "Best of 11 frames",
-  "Round-robin league format",
-  "Each player plays each other once",
-  "2 points for a win, 1 for a draw",
-  "9-ball rules. Race to 7",
-  "Pro-Am knockout tournament",
-  "Amateurs get a handicap",
-  "Final match is best of 19 frames",
-  "All matches must be completed by the specified date",
-];
+const PREDEFINED_RULES: string[] = [];
 
 export default function AdminSettings() {
   const [players, setPlayers] = useState<Player[]>([]);
