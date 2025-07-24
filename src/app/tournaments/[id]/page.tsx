@@ -248,7 +248,7 @@ export default function TournamentDetailsPage() {
               <Label htmlFor="tournament-name">Tournament Name</Label>
               <Input
                 id="tournament-name"
-                className="text-4xl font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0"
+                className="text-4xl font-bold -ml-1.5 h-auto p-1.5 border-transparent focus:border-border focus:bg-muted/50 transition-all"
                 value={editedTournament.name}
                 onChange={(e) => setEditedTournament({...editedTournament, name: e.target.value})}
               />
@@ -276,7 +276,7 @@ export default function TournamentDetailsPage() {
                     value={editedTournament.location || ''}
                     onChange={(e) => setEditedTournament({...editedTournament, location: e.target.value})}
                     placeholder="Location"
-                    className="h-8 p-1 border-0 shadow-none focus-visible:ring-0"
+                    className="h-8 -ml-1.5 p-1.5 border-transparent focus:border-border focus:bg-muted/50 transition-all"
                   />
                 ) : (
                    <span>{tournament.location || 'Not specified'}</span>
@@ -291,7 +291,7 @@ export default function TournamentDetailsPage() {
               <Textarea 
                 value={editedTournament.rules}
                 onChange={(e) => setEditedTournament({...editedTournament, rules: e.target.value})}
-                className="whitespace-pre-line"
+                className="whitespace-pre-line border-transparent focus:border-border focus:bg-muted/50 transition-all"
                 rows={5}
               />
              ) : (
