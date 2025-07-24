@@ -22,6 +22,7 @@ import { ShieldCheck, Settings, ListChecks } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
+import type { Notification } from "@/types/notifications";
 
 interface SiteSettings {
   name: string;
@@ -98,9 +99,10 @@ export default function AdminSettings() {
   };
 
   const handleAddUpcomingMatch = () => {
+    let newMatch: UpcomingMatch;
     setUpcomingMatches(prev => {
         const newId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
-        const newMatch: UpcomingMatch = {
+        newMatch = {
             id: newId,
             player1: players[0]?.name || "Player 1",
             player2: players[1]?.name || "Player 2",
@@ -109,6 +111,33 @@ export default function AdminSettings() {
         };
         return [...prev, newMatch];
     });
+
+    setTimeout(() => {
+        const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+        
+        const player1User = allUsers.find(u => u.name === newMatch.player1);
+        const player2User = allUsers.find(u => u.name === newMatch.player2);
+
+        const createNotification = (player: {name: string, email: string}, opponentName: string, date: string, time: string) => {
+            const notifications = getFromStorage<Notification[]>(`notifications_${player.email}`, []);
+            const newNotification: Notification = {
+                id: Date.now().toString() + Math.random(),
+                title: "New Match Scheduled",
+                description: `A new match has been scheduled for you against ${opponentName} on ${new Date(date).toLocaleDateString()} at ${time}.`,
+                read: false,
+                date: new Date().toISOString()
+            };
+            saveToStorage(`notifications_${player.email}`, [newNotification, ...notifications]);
+        };
+
+        if (player1User) {
+            createNotification(player1User, newMatch.player2, newMatch.date, newMatch.time);
+        }
+        if (player2User) {
+            createNotification(player2User, newMatch.player1, newMatch.date, newMatch.time);
+        }
+        window.dispatchEvent(new Event('storage'));
+    }, 0);
   };
 
 
@@ -280,7 +309,7 @@ export default function AdminSettings() {
                         <span className="col-span-1">Player 1</span>
                         <span className="col-span-1">Player 2</span>
                         <span className="col-span-2">Date & Time</span>
-                        <span>Actions</span>
+                        <span className="text-right">Actions</span>
                     </div>
                     {upcomingMatches.map(match => (
                         <div key={match.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
@@ -304,7 +333,9 @@ export default function AdminSettings() {
                                 <Input type="date" value={match.date} onChange={e => handleUpcomingMatchChange(match.id, 'date', e.target.value)} />
                                 <Input type="time" value={match.time} onChange={e => handleUpcomingMatchChange(match.id, 'time', e.target.value)} />
                             </div>
-                            <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'upcomingMatches', setUpcomingMatches)}><Trash2 className="h-4 w-4" /></Button>
+                            <div className="text-right">
+                                <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'upcomingMatches', setUpcomingMatches)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
                         </div>
                     ))}
                     <Button onClick={handleAddUpcomingMatch} variant="outline" className="mt-4">
@@ -372,3 +403,5 @@ export default function AdminSettings() {
     </div>
   );
 }
+
+    
