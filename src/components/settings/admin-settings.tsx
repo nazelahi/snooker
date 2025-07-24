@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,19 +19,28 @@ import type { LiveMatch } from "@/app/tournaments/page";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Settings } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+
+interface SiteSettings {
+  name: string;
+  description: string;
+}
 
 export default function AdminSettings() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>({ name: "", description: ""});
   const { toast } = useToast();
   
   useEffect(() => {
     setPlayers(getFromStorage<Player[]>("players", []));
     setTournaments(getFromStorage<Tournament[]>("tournaments", []));
     setLiveMatches(getFromStorage<LiveMatch[]>("liveMatches", []));
+    setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
   }, []);
 
   const handlePlayerChange = (id: number, field: keyof Player, value: any) => {
@@ -61,6 +71,8 @@ export default function AdminSettings() {
     saveToStorage("players", players);
     saveToStorage("tournaments", tournaments);
     saveToStorage("liveMatches", liveMatches);
+    saveToStorage("siteSettings", siteSettings);
+    window.dispatchEvent(new Event('storage'));
     toast({
       title: "Saved!",
       description: "All changes have been saved to local storage.",
@@ -78,10 +90,11 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="players" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="players">Manage Players</TabsTrigger>
           <TabsTrigger value="tournaments">Manage Tournaments</TabsTrigger>
           <TabsTrigger value="liveMatches">Manage Live Matches</TabsTrigger>
+          <TabsTrigger value="siteSettings">Site Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="players">
            <Card className="mt-4">
@@ -166,6 +179,34 @@ export default function AdminSettings() {
                     <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 ))}
+                </CardContent>
+            </Card>
+        </TabsContent>
+         <TabsContent value="siteSettings">
+           <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle>Site Settings</CardTitle>
+                  <CardDescription>Manage general site information. Click "Save All Changes" when you're done.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="siteName">Club Name</Label>
+                    <Input 
+                      id="siteName" 
+                      value={siteSettings.name} 
+                      onChange={e => setSiteSettings({...siteSettings, name: e.target.value})} 
+                      placeholder="Your Club Name"
+                    />
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="siteDescription">Site Description (Metadata)</Label>
+                    <Textarea 
+                      id="siteDescription" 
+                      value={siteSettings.description} 
+                      onChange={e => setSiteSettings({...siteSettings, description: e.target.value})}
+                       placeholder="A short description for your site."
+                    />
+                  </div>
                 </CardContent>
             </Card>
         </TabsContent>

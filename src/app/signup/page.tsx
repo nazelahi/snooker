@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,12 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [clubName, setClubName] = useState("CueScore");
+
+  useEffect(() => {
+    const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
+    setClubName(storedSettings.name);
+  }, []);
 
   const handleCreateAccount = () => {
     if (!name || !email || !password) {

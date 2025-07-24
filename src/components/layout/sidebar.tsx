@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -29,14 +30,20 @@ const settingsItem = { href: "/settings", label: "Settings", icon: Settings };
 export default function AppSidebar() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+  const [clubName, setClubName] = useState("CueScore");
 
   useEffect(() => {
     const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
     setCurrentUser(userData);
 
+    const siteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
+    setClubName(siteSettings.name);
+
     const handleStorageChange = () => {
         const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
         setCurrentUser(user);
+        const newSiteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
+        setClubName(newSiteSettings.name);
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -53,7 +60,7 @@ export default function AppSidebar() {
       <SidebarHeader>
         <Link href="/" className="flex items-center gap-2">
           <Icons.logo className="h-8 w-8 text-primary" />
-          <h1 className="text-xl font-semibold text-primary-foreground">CueScore</h1>
+          <h1 className="text-xl font-semibold text-primary-foreground">{clubName}</h1>
         </Link>
       </SidebarHeader>
       <SidebarContent>

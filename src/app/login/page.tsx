@@ -1,9 +1,10 @@
 
+
 "use client";
 
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,6 +24,12 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [clubName, setClubName] = useState("CueScore");
+
+  useEffect(() => {
+    const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
+    setClubName(storedSettings.name);
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +81,7 @@ export default function LoginPage() {
         <Card className="mx-auto max-w-sm w-full">
           <CardHeader className="text-center">
             <Icons.logo className="h-12 w-12 mx-auto text-primary" />
-            <CardTitle className="text-2xl mt-4">Welcome to CueScore</CardTitle>
+            <CardTitle className="text-2xl mt-4">Welcome to {clubName}</CardTitle>
             <CardDescription>
               Enter your email below to login to your account
             </CardDescription>
