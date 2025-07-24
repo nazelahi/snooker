@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   Card,
@@ -34,6 +34,8 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
+
 
 const initialPlayerStandings = [
   { rank: 1, name: "Ronnie O'Sullivan", matchesPlayed: 25, wins: 22, losses: 3, avatar: "/avatars/ronnie.png", initials: "RO" },
@@ -76,6 +78,8 @@ export default function DashboardPage() {
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [recentToShow, setRecentToShow] = useState(5);
   const [matchMedia, setMatchMedia] = useState<string[]>([]);
+  const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
+
 
   useEffect(() => {
     
@@ -218,16 +222,17 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
                 {matchMedia.length > 0 ? (
-                    <Carousel
+                     <Carousel
                         opts={{
                             align: "start",
                             loop: true,
                         }}
+                        plugins={[autoplayPlugin.current]}
                         className="w-full"
                     >
                         <CarouselContent>
                             {matchMedia.map((mediaUrl, index) => (
-                                <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                                <CarouselItem key={index}>
                                     <div className="p-1">
                                       <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
                                           {mediaUrl.startsWith('data:image') && (
@@ -241,8 +246,6 @@ export default function DashboardPage() {
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
-                        <CarouselPrevious />
-                        <CarouselNext />
                     </Carousel>
                 ) : (
                     <p className="text-muted-foreground text-center py-4">No match media has been uploaded yet.</p>
