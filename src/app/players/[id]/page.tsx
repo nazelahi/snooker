@@ -559,6 +559,7 @@ export default function PlayerProfilePage() {
                         <Card className="mt-4 bg-background/50">
                             <CardHeader>
                                 <CardTitle className="text-base">Pending Score Change</CardTitle>
+
                                 <CardDescription className="text-xs">
                                     {iAmProposer ? `Waiting for ${opponentName} to approve.` : `${proposerUser?.name || 'Another player'} proposed a new score.`}
                                 </CardDescription>
@@ -615,3 +616,5 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
+    

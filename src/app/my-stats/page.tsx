@@ -493,23 +493,23 @@ export default function MyStatsPage() {
                 const opponent = getFromStorage<Player[]>('players', []).find(p => p.name === opponentName);
 
                 return (
-                  <li key={match.id}>
-                    <Link href={`/match/${match.id}`} className="block p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <Badge variant={isWinner ? "default" : "destructive"}>
-                                {isWinner ? "WIN" : "LOSS"}
-                                </Badge>
+                  <li key={match.id} className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <Badge variant={isWinner ? "default" : "destructive"}>
+                            {isWinner ? "WIN" : "LOSS"}
+                            </Badge>
+                            <Link href={`/match/${match.id}`} className="block">
                                 <div>
-                                <span>vs <Link href={`/players/${opponent?.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{opponentName}</Link></span>
-                                <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
+                                    <span>vs <span className="hover:underline">{opponentName}</span></span>
+                                    <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <span className="font-bold text-lg">{match.score}</span>
-                            </div>
+                            </Link>
                         </div>
-                    </Link>
+                        <div className="flex items-center gap-4">
+                            <span className="font-bold text-lg">{match.score}</span>
+                        </div>
+                    </div>
                   </li>
                 );
               })}
@@ -551,3 +551,5 @@ export default function MyStatsPage() {
     </div>
   );
 }
+
+    
