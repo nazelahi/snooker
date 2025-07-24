@@ -234,7 +234,7 @@ export default function DashboardPage() {
                             {matchMedia.map((mediaUrl, index) => (
                                 <CarouselItem key={index} className="w-full">
                                     <div className="p-1">
-                                      <div className="relative aspect-[2/1] rounded-lg overflow-hidden bg-muted">
+                                      <div className="relative aspect-[3/1] rounded-lg overflow-hidden bg-muted">
                                           {mediaUrl.startsWith('data:image') && (
                                               <Image src={mediaUrl} alt={`Match media ${index + 1}`} layout="fill" objectFit="cover" />
                                           )}
