@@ -40,12 +40,16 @@ export default function PlayerProfilePage() {
     );
   }
 
+  const winRateValue = parseFloat(player.winRate) || 0;
+  const wins = Math.round(player.matchesPlayed * (winRateValue / 100));
+  const losses = player.matchesPlayed - wins;
+
   const userStats = {
     name: player.name,
     initials: player.initials,
     matchesPlayed: player.matchesPlayed,
-    wins: Math.round(player.matchesPlayed * (parseInt(player.winRate)/100)),
-    losses: Math.round(player.matchesPlayed * (1 - parseInt(player.winRate)/100)),
+    wins: wins,
+    losses: losses,
     winRate: player.winRate,
     highestBreak: player.highestBreak,
     averageBreak: Math.floor(player.highestBreak / 2),
@@ -133,3 +137,5 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
+    
