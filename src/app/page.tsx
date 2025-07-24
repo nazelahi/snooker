@@ -241,7 +241,7 @@ export default function DashboardPage() {
 
       {notices.length > 0 && (
          <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-0">
                 <div className="space-y-4">
                     {notices.slice(0, 2).map((notice) => (
                         <div key={notice.id} className="p-4 rounded-lg bg-muted/50">
@@ -558,3 +558,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
