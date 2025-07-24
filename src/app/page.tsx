@@ -171,7 +171,7 @@ export default function DashboardPage() {
             {upcomingTournaments.map(tournament => (
                  <Card key={tournament.id} className="overflow-hidden">
                     <CardHeader className="p-0">
-                        <Image src={`https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                        <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
                     </CardHeader>
                     <CardContent className="p-4">
                         <h3 className="text-lg font-bold">{tournament.name}</h3>
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                     </CardContent>
                     <CardFooter className="p-4 bg-muted/50">
                         <Button variant="outline" asChild>
-                           <Link href="/tournaments">
+                           <Link href={`/tournaments/${tournament.id}`}>
                              View Details <ArrowRight className="ml-2 h-4 w-4"/>
                            </Link>
                         </Button>

@@ -60,7 +60,7 @@ export default function TournamentDetailsPage() {
             Back to Tournaments
         </Button>
       <Card className="overflow-hidden">
-        <Image src={`https://placehold.co/1200x400.png`} data-ai-hint="tournament banner" width={1200} height={400} alt={tournament.name} className="w-full h-64 object-cover"/>
+        <Image src={tournament.image || `https://placehold.co/1200x400.png`} data-ai-hint="tournament banner" width={1200} height={400} alt={tournament.name} className="w-full h-64 object-cover"/>
         <CardHeader>
           <CardTitle className="text-4xl font-bold">{tournament.name}</CardTitle>
           <div className="flex items-center gap-4 text-muted-foreground pt-2">
@@ -99,4 +99,3 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
-

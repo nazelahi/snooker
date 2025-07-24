@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import type { Tournament } from "@/app/tournaments/page";
 import { Textarea } from "./ui/textarea";
+import Image from "next/image";
 
 interface AddTournamentDialogProps {
   open: boolean;
@@ -34,15 +36,32 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
   const [players, setPlayers] = useState(8);
   const [status, setStatus] = useState<"Upcoming" | "In Progress" | "Finished">("Upcoming");
   const [rules, setRules] = useState("");
+  const [image, setImage] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setImage(result);
+        setImagePreview(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = () => {
-    onAddTournament({ name, format, players, status, rules });
+    onAddTournament({ name, format, players, status, rules, image });
     onOpenChange(false);
     setName("");
     setFormat("Knockout");
     setPlayers(8);
     setStatus("Upcoming");
     setRules("");
+    setImage("");
+    setImagePreview("");
   };
 
   return (
@@ -126,6 +145,20 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
               placeholder="Enter tournament rules here..."
             />
           </div>
+           <div className="grid grid-cols-4 items-start gap-4">
+             <Label htmlFor="image" className="text-right pt-2">
+                Image
+             </Label>
+             <div className="col-span-3 space-y-2">
+                {imagePreview && <Image src={imagePreview} alt="Tournament preview" width={200} height={100} className="rounded-md object-cover" />}
+                <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                />
+             </div>
+           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

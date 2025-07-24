@@ -31,6 +31,7 @@ export interface Tournament {
   players: number;
   status: "Upcoming" | "In Progress" | "Finished";
   rules: string;
+  image?: string;
 }
 
 export interface LiveMatch {
@@ -43,10 +44,10 @@ export interface LiveMatch {
 }
 
 const initialTournaments: Tournament[] = [
-  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress", rules: "Standard knockout rules. Best of 11 frames." },
-  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress", rules: "Round-robin league format. Each player plays each other once. 2 points for a win, 1 for a draw." },
-  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished", rules: "9-ball rules. Race to 7." },
-  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming", rules: "Pro-Am knockout tournament. Amateurs get a handicap." },
+  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress", rules: "Standard knockout rules. Best of 11 frames.", image: "https://placehold.co/600x400.png" },
+  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress", rules: "Round-robin league format. Each player plays each other once. 2 points for a win, 1 for a draw.", image: "https://placehold.co/600x400.png" },
+  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished", rules: "9-ball rules. Race to 7.", image: "https://placehold.co/600x400.png" },
+  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming", rules: "Pro-Am knockout tournament. Amateurs get a handicap.", image: "https://placehold.co/600x400.png" },
 ];
 
 const initialLiveMatches: LiveMatch[] = [
