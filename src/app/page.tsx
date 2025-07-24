@@ -31,8 +31,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
 } from "@/components/ui/carousel";
 
 const initialPlayerStandings = [
@@ -174,8 +172,6 @@ export default function DashboardPage() {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
             </Carousel>
           ) : (
             <p className="text-muted-foreground text-center py-4">No live matches currently in progress.</p>
@@ -217,8 +213,6 @@ export default function DashboardPage() {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
-                    <CarouselPrevious />
-                    <CarouselNext />
                 </Carousel>
             ) : (
                  <p className="text-muted-foreground text-center py-4">No upcoming tournaments scheduled.</p>
