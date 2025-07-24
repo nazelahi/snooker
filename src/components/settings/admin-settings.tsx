@@ -28,8 +28,6 @@ interface SiteSettings {
   description: string;
 }
 
-const PREDEFINED_RULES: string[] = [];
-
 export default function AdminSettings() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -45,10 +43,10 @@ export default function AdminSettings() {
     setLiveMatches(getFromStorage<LiveMatch[]>("liveMatches", []));
     setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
     
-    const storedRules = getFromStorage<string[]>("tournamentRules", PREDEFINED_RULES);
+    const storedRules = getFromStorage<string[]>("tournamentRules", []);
     setRules(storedRules);
     if(localStorage.getItem('tournamentRules') === null) {
-      saveToStorage('tournamentRules', PREDEFINED_RULES);
+      saveToStorage('tournamentRules', []);
     }
   }, []);
 
@@ -209,23 +207,33 @@ export default function AdminSettings() {
                 <CardDescription>Edit live match details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                         <span>Player 1</span>
                         <span>Player 2</span>
                         <span>Score (P1 - P2)</span>
                         <span>Actions</span>
                     </div>
-                {liveMatches.map(match => (
-                    <div key={match.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
-                    <Input value={match.player1} onChange={e => handleLiveMatchChange(match.id, 'player1', e.target.value)} />
-                    <Input value={match.player2} onChange={e => handleLiveMatchChange(match.id, 'player2', e.target.value)} />
-                    <div className="flex gap-2">
-                        <Input value={match.score1} type="number" onChange={e => handleLiveMatchChange(match.id, 'score1', parseInt(e.target.value))} />
-                        <Input value={match.score2} type="number" onChange={e => handleLiveMatchChange(match.id, 'score2', parseInt(e.target.value))} />
-                    </div>
-                    <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                ))}
+                    {liveMatches.map(match => (
+                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                            <Select value={match.player1} onValueChange={value => handleLiveMatchChange(match.id, 'player1', value)}>
+                                <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
+                                <SelectContent>
+                                    {players.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                             <Select value={match.player2} onValueChange={value => handleLiveMatchChange(match.id, 'player2', value)}>
+                                <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
+                                <SelectContent>
+                                    {players.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <div className="flex gap-2">
+                                <Input value={match.score1} type="number" onChange={e => handleLiveMatchChange(match.id, 'score1', parseInt(e.target.value))} />
+                                <Input value={match.score2} type="number" onChange={e => handleLiveMatchChange(match.id, 'score2', parseInt(e.target.value))} />
+                            </div>
+                            <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                    ))}
                 </CardContent>
             </Card>
         </TabsContent>
