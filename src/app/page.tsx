@@ -138,6 +138,14 @@ export default function DashboardPage() {
     if (localStorage.getItem('notices') === null) {
         saveToStorage('notices', []);
     }
+
+     const handleStorageChange = () => {
+      const newNotices = getFromStorage('notices', []);
+      setNotices(newNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const getPlayerAvatar = (name: string) => {
