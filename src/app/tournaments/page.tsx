@@ -174,7 +174,11 @@ export default function TournamentsPage() {
             <TableBody>
               {tournaments.map((tournament) => (
                 <TableRow key={tournament.id}>
-                  <TableCell className="font-medium">{tournament.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/tournaments/${tournament.id}`} className="hover:underline">
+                      {tournament.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>{tournament.format}</TableCell>
                   <TableCell className="text-center">{tournament.players}</TableCell>
                   <TableCell>
