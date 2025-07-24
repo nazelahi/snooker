@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import {
   Card,
@@ -33,6 +33,8 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  CarouselDots,
+  CarouselApi,
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 
@@ -79,6 +81,8 @@ export default function DashboardPage() {
   const [recentToShow, setRecentToShow] = useState(5);
   const [matchMedia, setMatchMedia] = useState<string[]>([]);
   const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
+  const [liveMatchApi, setLiveMatchApi] = useState<CarouselApi>()
+  const [mediaApi, setMediaApi] = useState<CarouselApi>()
 
 
   useEffect(() => {
@@ -149,6 +153,7 @@ export default function DashboardPage() {
         <CardContent className="p-0">
           {liveMatches.length > 0 ? (
             <Carousel
+              setApi={setLiveMatchApi}
               opts={{
                 align: "start",
                 loop: true,
@@ -198,6 +203,7 @@ export default function DashboardPage() {
                   </CarouselItem>
                 ))}
               </CarouselContent>
+              {liveMatches.length > 1 && <CarouselDots api={liveMatchApi} />}
             </Carousel>
           ) : (
             <p className="text-muted-foreground text-center py-4">No live matches currently in progress.</p>
@@ -209,6 +215,7 @@ export default function DashboardPage() {
             <CardContent className="p-0">
                 {matchMedia.length > 0 ? (
                      <Carousel
+                        setApi={setMediaApi}
                         opts={{
                             align: "start",
                             loop: true,
@@ -232,6 +239,7 @@ export default function DashboardPage() {
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
+                        {matchMedia.length > 1 && <CarouselDots api={mediaApi} />}
                     </Carousel>
                 ) : (
                     <p className="text-muted-foreground text-center py-4">No match media has been uploaded yet.</p>
