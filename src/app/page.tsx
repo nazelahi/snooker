@@ -2,12 +2,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from "@/components/ui/card";
 import {
   Table,
@@ -19,10 +21,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BarChart, Users, Trophy, ClipboardList, Radio } from "lucide-react";
+import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
-import type { LiveMatch } from "@/app/tournaments/page";
+import type { LiveMatch, Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const initialPlayerStandings = [
   { rank: 1, name: "Ronnie O'Sullivan", matchesPlayed: 25, wins: 22, losses: 3, avatar: "/avatars/ronnie.png", initials: "RO" },
@@ -59,6 +63,7 @@ export default function DashboardPage() {
   const [recentResults, setRecentResults] = useState(initialRecentResults);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
   useEffect(() => {
     const storedStandings = getFromStorage('playerStandings', initialPlayerStandings);
@@ -66,12 +71,15 @@ export default function DashboardPage() {
     const storedResults = getFromStorage('recentResults', initialRecentResults);
     const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
     const storedPlayers = getFromStorage('players', initialPlayers);
+    const storedTournaments = getFromStorage('tournaments', []);
 
     setPlayerStandings(storedStandings);
     setUpcomingMatches(storedMatches);
     setRecentResults(storedResults);
     setLiveMatches(storedLiveMatches);
     setPlayers(storedPlayers);
+    setTournaments(storedTournaments);
+
 
     if (localStorage.getItem('playerStandings') === null) {
       saveToStorage('playerStandings', initialPlayerStandings);
@@ -94,6 +102,8 @@ export default function DashboardPage() {
     const player = players.find(p => p.name === name);
     return player ? {avatar: player.avatar, initials: player.initials} : {avatar: '', initials: name.split(' ').map(n=>n[0]).join('')};
   }
+
+  const upcomingTournaments = tournaments.filter(t => t.status === "Upcoming");
 
   return (
     <div className="flex flex-col gap-8">
@@ -152,6 +162,33 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
       
+       <div className="space-y-4">
+          <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="text-primary" />
+              Upcoming Tournaments
+          </CardTitle>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {upcomingTournaments.map(tournament => (
+                 <Card key={tournament.id} className="overflow-hidden">
+                    <CardHeader className="p-0">
+                        <Image src={`https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                        <h3 className="text-lg font-bold">{tournament.name}</h3>
+                        <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
+                    </CardContent>
+                    <CardFooter className="p-4 bg-muted/50">
+                        <Button variant="outline" asChild>
+                           <Link href="/tournaments">
+                             View Details <ArrowRight className="ml-2 h-4 w-4"/>
+                           </Link>
+                        </Button>
+                    </CardFooter>
+                 </Card>
+            ))}
+          </div>
+      </div>
+      
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -159,7 +196,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">128</div>
+            <div className="text-2xl font-bold">{players.length}</div>
             <p className="text-xs text-muted-foreground">+5 from last month</p>
           </CardContent>
         </Card>
@@ -169,7 +206,7 @@ export default function DashboardPage() {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
+            <div className="text-2xl font-bold">{tournaments.filter(t => t.status === "In Progress").length}</div>
             <p className="text-xs text-muted-foreground">2 Knockout, 2 League</p>
           </CardContent>
         </Card>

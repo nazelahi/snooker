@@ -1,8 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, Users, Trophy, BrainCircuit, LogIn, Home } from "lucide-react";
+import { BarChart2, Users, Trophy, BrainCircuit, LogIn, Home, ShieldCheck } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/players", label: "Players", icon: Users },
   { href: "/tournaments", label: "Tournaments", icon: Trophy },
   { href: "/handicap-advisor", label: "Handicap Advisor", icon: BrainCircuit },
+  { href: "/admin", label: "Admin Panel", icon: ShieldCheck },
 ];
 
 export default function AppSidebar() {
