@@ -146,14 +146,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
        <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Radio className="text-primary animate-pulse" />
-            Live Matches
-          </CardTitle>
-          <CardDescription>Ongoing matches in active tournaments.</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {liveMatches.length > 0 ? (
             <Carousel
               opts={{
