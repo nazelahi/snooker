@@ -88,8 +88,7 @@ export default function DashboardPage() {
   const [mediaApi, setMediaApi] = useState<CarouselApi>();
 
 
-  useEffect(() => {
-    
+  const fetchDashboardData = () => {
     const storedPlayers = getFromStorage('players', initialPlayers);
     const storedMatches = getFromStorage('upcomingMatches', initialUpcomingMatches);
     const storedResults = getFromStorage('recentResults', initialRecentResults);
@@ -121,8 +120,13 @@ export default function DashboardPage() {
         .flat()
         .reverse();
     setMatchMedia(allMedia);
+  }
 
+  useEffect(() => {
+    // Initial data load
+    fetchDashboardData();
 
+    // Set initial values if they don't exist
     if (localStorage.getItem('players') === null) {
         saveToStorage('players', initialPlayers);
     }
@@ -138,10 +142,18 @@ export default function DashboardPage() {
     if (localStorage.getItem('notices') === null) {
         saveToStorage('notices', []);
     }
+    if (localStorage.getItem('tournaments') === null) {
+        saveToStorage('tournaments', []);
+    }
 
-     const handleStorageChange = () => {
-      const newNotices = getFromStorage('notices', []);
-      setNotices(newNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'notices') {
+            const newNotices = getFromStorage('notices', []);
+            setNotices(newNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        } else {
+            // For other changes, we can refetch all data
+            fetchDashboardData();
+        }
     };
 
     window.addEventListener('storage', handleStorageChange);
