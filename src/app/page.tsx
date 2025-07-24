@@ -31,8 +31,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
 } from "@/components/ui/carousel";
 
 const initialPlayerStandings = [
@@ -85,7 +83,13 @@ export default function DashboardPage() {
 
     setPlayers(storedPlayers);
     setPlayerStandings(storedStandings);
-    setUpcomingMatches(storedMatches);
+    const sortedMatches = storedMatches.sort((a, b) => {
+        const dateA = new Date(`${a.date}T${a.time}`);
+        const dateB = new Date(`${b.date}T${b.time}`);
+        return dateA.getTime() - dateB.getTime();
+    });
+    setUpcomingMatches(sortedMatches);
+
     setRecentResults(storedResults);
     setLiveMatches(storedLiveMatches);
     setTournaments(storedTournaments);
@@ -186,8 +190,6 @@ export default function DashboardPage() {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
             </Carousel>
           ) : (
             <p className="text-muted-foreground text-center py-4">No live matches currently in progress.</p>
