@@ -296,11 +296,11 @@ export default function DashboardPage() {
                         <div className="flex-1">
                             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
                                 <div className="flex items-center justify-end gap-2">
-                                    <PlayerLink name={match.player1} />
                                     <Avatar className="h-8 w-8">
                                         <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                         <AvatarFallback>{player1.initials}</AvatarFallback>
                                     </Avatar>
+                                    <PlayerLink name={match.player1} />
                                 </div>
                                 <span className="text-muted-foreground text-sm">vs</span>
                                  <div className="flex items-center justify-start gap-2">
