@@ -355,7 +355,7 @@ export default function TournamentDetailsPage() {
                 </div>
              ) : (
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-4">
-                  {(tournament.rules || []).map(rule => <li key={rule}>{rule}</li>)}
+                  {(Array.isArray(tournament.rules) ? tournament.rules : []).map(rule => <li key={rule}>{rule}</li>)}
                 </ul>
              )}
           </div>
