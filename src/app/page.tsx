@@ -293,26 +293,24 @@ export default function DashboardPage() {
                 const player2 = getPlayerAvatar(match.player2);
                 return (
                     <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                        <div className="flex-1">
-                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
-                                <div className="flex items-center justify-end gap-2">
-                                     <Avatar className="h-8 w-8">
-                                        <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
-                                        <AvatarFallback>{player1.initials}</AvatarFallback>
-                                    </Avatar>
-                                    <PlayerLink name={match.player1} />
-                                </div>
-                                <span className="text-muted-foreground text-sm">vs</span>
-                                 <div className="flex items-center justify-start gap-2">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
-                                        <AvatarFallback>{player2.initials}</AvatarFallback>
-                                    </Avatar>
-                                    <PlayerLink name={match.player2} />
-                                </div>
-                            </div>
+                        <div className="flex items-center gap-2 justify-start w-2/5">
+                             <Avatar className="h-8 w-8">
+                                <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                                <AvatarFallback>{player1.initials}</AvatarFallback>
+                            </Avatar>
+                            <PlayerLink name={match.player1} />
                         </div>
-                      <div className="text-sm text-muted-foreground text-right w-32">{new Date(match.date).toLocaleDateString()} at {match.time}</div>
+                        <div className="flex-1 text-center">
+                            <span className="text-muted-foreground text-sm">vs</span>
+                            <p className="text-xs text-muted-foreground">{new Date(match.date).toLocaleDateString()} at {match.time}</p>
+                        </div>
+                         <div className="flex items-center gap-2 justify-end w-2/5">
+                            <PlayerLink name={match.player2} />
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                                <AvatarFallback>{player2.initials}</AvatarFallback>
+                            </Avatar>
+                        </div>
                     </li>
                 );
               })}
@@ -331,22 +329,22 @@ export default function DashboardPage() {
                 const loser = getPlayerAvatar(match.loser);
                 return (
                     <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center w-full">
-                          <div className="flex items-center justify-end gap-2">
-                               <Avatar className="h-8 w-8">
-                                  <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
-                                  <AvatarFallback>{winner.initials}</AvatarFallback>
-                              </Avatar>
-                              <PlayerLink name={match.winner} />
-                          </div>
-                          <Badge variant="secondary" className="font-bold text-lg">{match.score}</Badge>
-                           <div className="flex items-center justify-start gap-2">
-                              <Avatar className="h-8 w-8">
-                                  <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
-                                  <AvatarFallback>{loser.initials}</AvatarFallback>
-                              </Avatar>
-                              <PlayerLink name={match.loser} />
-                          </div>
+                        <div className="flex items-center gap-2 justify-start w-2/5">
+                           <Avatar className="h-8 w-8">
+                              <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
+                              <AvatarFallback>{winner.initials}</AvatarFallback>
+                          </Avatar>
+                          <PlayerLink name={match.winner} />
+                        </div>
+                        <div className="flex-1 text-center">
+                            <Badge variant="secondary" className="font-bold text-lg">{match.score}</Badge>
+                        </div>
+                       <div className="flex items-center gap-2 justify-end w-2/5">
+                            <PlayerLink name={match.loser} />
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
+                                <AvatarFallback>{loser.initials}</AvatarFallback>
+                            </Avatar>
                       </div>
                     </li>
                 );
