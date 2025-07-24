@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,8 +19,9 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BarChart, Users, Trophy, ClipboardList } from "lucide-react";
+import { BarChart, Users, Trophy, ClipboardList, Radio } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
+import type { LiveMatch } from "@/app/tournaments/page";
 
 const initialPlayerStandings = [
   { rank: 1, name: "Ronnie O'Sullivan", matchesPlayed: 25, wins: 22, losses: 3, avatar: "/avatars/ronnie.png", initials: "RO" },
@@ -38,19 +40,28 @@ const initialRecentResults = [
   { id: 2, winner: "Judd Trump", loser: "Kyren Wilson", score: "6-4", date: "2024-08-09" },
 ];
 
+const initialLiveMatches: LiveMatch[] = [
+    { id: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
+    { id: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
+];
+
 export default function DashboardPage() {
   const [playerStandings, setPlayerStandings] = useState(initialPlayerStandings);
   const [upcomingMatches, setUpcomingMatches] = useState(initialUpcomingMatches);
   const [recentResults, setRecentResults] = useState(initialRecentResults);
+  const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
+
 
   useEffect(() => {
     const storedStandings = getFromStorage('playerStandings', initialPlayerStandings);
     const storedMatches = getFromStorage('upcomingMatches', initialUpcomingMatches);
     const storedResults = getFromStorage('recentResults', initialRecentResults);
+    const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
 
     setPlayerStandings(storedStandings);
     setUpcomingMatches(storedMatches);
     setRecentResults(storedResults);
+    setLiveMatches(storedLiveMatches);
 
     if (localStorage.getItem('playerStandings') === null) {
       saveToStorage('playerStandings', initialPlayerStandings);
@@ -61,11 +72,45 @@ export default function DashboardPage() {
      if (localStorage.getItem('recentResults') === null) {
       saveToStorage('recentResults', initialRecentResults);
     }
+    if (localStorage.getItem('liveMatches') === null) {
+        saveToStorage('liveMatches', initialLiveMatches);
+    }
   }, []);
 
 
   return (
     <div className="flex flex-col gap-8">
+       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Radio className="text-primary animate-pulse" />
+            Live Matches
+          </CardTitle>
+          <CardDescription>Ongoing matches in active tournaments.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {liveMatches.length > 0 ? (
+            <ul className="space-y-4">
+              {liveMatches.map((match) => (
+                <li key={match.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
+                    <div className="font-medium">{match.player1} vs {match.player2}</div>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    <span className="text-primary">{match.score1}</span>
+                    <span> - </span>
+                    <span>{match.score2}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No live matches currently in progress.</p>
+          )}
+        </CardContent>
+      </Card>
+      
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -189,3 +234,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
