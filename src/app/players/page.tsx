@@ -194,7 +194,7 @@ export default function PlayersPage() {
 
        {view === 'grid' && (
         <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {paginatedPlayers.map((player) => (
                 <Card key={player.id} className="overflow-hidden">
                     <CardHeader className="p-0">
