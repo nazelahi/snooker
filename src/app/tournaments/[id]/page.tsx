@@ -285,7 +285,7 @@ export default function TournamentDetailsPage() {
 
       <Card className="overflow-hidden">
         <div className="relative">
-            <Image src={isEditing ? editedTournament.image : tournament.image || `https://placehold.co/1200x400.png`} data-ai-hint="tournament banner" width={1200} height={400} alt={tournament.name} className="w-full h-64 object-cover"/>
+            <Image src={isEditing ? editedTournament.image || `https://placehold.co/1200x400.png`: tournament.image || `https://placehold.co/1200x400.png`} data-ai-hint="tournament banner" width={1200} height={400} alt={tournament.name} className="w-full h-64 object-cover"/>
             {isEditing && (
               <div className="absolute bottom-2 right-2">
                 <Input id="image-upload" type="file" className="hidden" onChange={handleImageChange} accept="image/*"/>
