@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -20,6 +19,7 @@ import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShieldCheck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminSettings() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -123,11 +123,20 @@ export default function AdminSettings() {
                   </div>
                 {tournaments.map(tournament => (
                     <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
-                    <Input value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
-                    <Input value={tournament.players} type="number" onChange={e => handleTournamentChange(tournament.id, 'players', parseInt(e.target.value))} />
-                    <Input value={tournament.status} onChange={e => handleTournamentChange(tournament.id, 'status', e.target.value)} />
-                    <Input value={tournament.rules} onChange={e => handleTournamentChange(tournament.id, 'rules', e.target.value)} />
-                    <Button variant="destructive" size="icon" onClick={() => handleDelete(tournament.id, 'tournaments', setTournaments)}><Trash2 className="h-4 w-4" /></Button>
+                      <Input value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
+                      <Input value={tournament.players} type="number" onChange={e => handleTournamentChange(tournament.id, 'players', parseInt(e.target.value))} />
+                      <Select value={tournament.status} onValueChange={(value: "Upcoming" | "In Progress" | "Finished") => handleTournamentChange(tournament.id, 'status', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Upcoming">Upcoming</SelectItem>
+                          <SelectItem value="In Progress">In Progress</SelectItem>
+                          <SelectItem value="Finished">Finished</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input value={tournament.rules} onChange={e => handleTournamentChange(tournament.id, 'rules', e.target.value)} />
+                      <Button variant="destructive" size="icon" onClick={() => handleDelete(tournament.id, 'tournaments', setTournaments)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 ))}
                 </CardContent>
