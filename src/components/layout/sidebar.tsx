@@ -22,7 +22,6 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/players", label: "Players", icon: Users },
   { href: "/tournaments", label: "Tournaments", icon: Trophy },
-  { href: "/handicap-advisor", label: "Handicap Advisor", icon: BrainCircuit },
 ];
 
 const settingsItem = { href: "/settings", label: "Settings", icon: Settings };

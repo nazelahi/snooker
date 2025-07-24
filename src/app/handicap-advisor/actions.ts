@@ -1,33 +1,97 @@
-"use server";
+"use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { BarChart2, Users, Trophy, BrainCircuit, LogIn, Home, Settings } from "lucide-react";
 import {
-  getHandicapSuggestion,
-  type HandicapAdvisorInput,
-  type HandicapAdvisorOutput,
-} from "@/ai/flows/handicap-advisor";
-import { z } from "zod";
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
+import { Icons } from "@/components/icons";
+import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
+import { getFromStorage } from "@/lib/storage";
 
-const HandicapAdvisorInputSchema = z.object({
-  playerSkillLevel: z.enum(["beginner", "intermediate", "pro"]),
-  matchHistory: z.string().min(1, "Match history cannot be empty."),
-  desiredFairness: z.string().min(1, "Desired fairness cannot be empty."),
-});
+const navItems = [
+  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/players", label: "Players", icon: Users },
+  { href: "/tournaments", label: "Tournaments", icon: Trophy },
+];
 
-export async function getSuggestionAction(
-  input: HandicapAdvisorInput
-): Promise<{ data: HandicapAdvisorOutput | null; error: string | null }> {
-  try {
-    const validatedInput = HandicapAdvisorInputSchema.parse(input);
-    const result = await getHandicapSuggestion(validatedInput);
-    return { data: result, error: null };
-  } catch (error) {
-    console.error("Error in getSuggestionAction:", error);
-    if (error instanceof z.ZodError) {
-      return { data: null, error: error.errors.map(e => e.message).join(', ') };
-    }
-    return {
-      data: null,
-      error: "Failed to get handicap suggestion from AI. Please try again.",
+const settingsItem = { href: "/settings", label: "Settings", icon: Settings };
+
+export default function AppSidebar() {
+  const pathname = usePathname();
+  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+
+  useEffect(() => {
+    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
+    setCurrentUser(userData);
+
+    const handleStorageChange = () => {
+        const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
+        setCurrentUser(user);
     };
-  }
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+
+  const isActive = (href: string) => {
+    return pathname === href;
+  };
+
+  return (
+    <Sidebar>
+      <SidebarHeader>
+        <Link href="/" className="flex items-center gap-2">
+          <Icons.logo className="h-8 w-8 text-primary" />
+          <h1 className="text-xl font-semibold text-primary-foreground">CueScore</h1>
+        </Link>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarMenu>
+          {navItems.map((item) => (
+            <SidebarMenuItem key={item.label}>
+              <Link href={item.href} passHref>
+                <SidebarMenuButton isActive={isActive(item.href)}>
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+          {currentUser && (
+             <SidebarMenuItem>
+              <Link href={settingsItem.href} passHref>
+                <SidebarMenuButton isActive={isActive(settingsItem.href)}>
+                  <settingsItem.icon className="h-5 w-5" />
+                  <span>{settingsItem.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          )}
+        </SidebarMenu>
+      </SidebarContent>
+      <SidebarFooter>
+        <Separator className="my-2" />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <Link href="/login" passHref>
+              <SidebarMenuButton>
+                <LogIn className="h-5 w-5" />
+                <span>Login</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  );
 }
