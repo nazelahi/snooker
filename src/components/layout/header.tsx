@@ -26,6 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Notification } from "@/types/notifications";
 import { useRouter } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import type { Player } from "@/app/players/page";
 
 const initialUserNotifications: Notification[] = [
     { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
@@ -35,7 +37,7 @@ const initialUserNotifications: Notification[] = [
 
 export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean, avatar?: string, initials?: string} | null>(null);
   const router = useRouter();
 
   const getNotificationKey = (user: {email: string, isAdmin?: boolean} | null) => {
@@ -43,10 +45,25 @@ export default function Header() {
     return user.isAdmin ? 'adminNotifications' : `notifications_${user.email}`;
   }
 
-  useEffect(() => {
+  const fetchUserData = () => {
     const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-    setCurrentUser(userData);
+     if (userData) {
+      const players = getFromStorage<Player[]>('players', []);
+      const player = players.find(p => p.name.toLowerCase() === userData.name.toLowerCase());
+      setCurrentUser({
+        ...userData,
+        avatar: player?.avatar,
+        initials: player?.initials || userData.name.split(' ').map(n => n[0]).join('')
+      });
+    } else {
+      setCurrentUser(null);
+    }
+  }
 
+  useEffect(() => {
+    fetchUserData();
+
+    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
     const notificationKey = getNotificationKey(userData);
     const initialData = userData?.isAdmin ? [] : initialUserNotifications;
 
@@ -58,8 +75,8 @@ export default function Header() {
     }
 
     const handleStorageChange = () => {
+        fetchUserData();
         const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-        setCurrentUser(user);
         const currentKey = getNotificationKey(user);
         const currentInitialData = user?.isAdmin ? [] : initialUserNotifications;
         const stored = getFromStorage(currentKey, currentInitialData);
@@ -143,7 +160,14 @@ export default function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
-              <User className="h-5 w-5" />
+              {currentUser ? (
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={currentUser.avatar || ''} alt={currentUser.name} />
+                  <AvatarFallback>{currentUser.initials}</AvatarFallback>
+                </Avatar>
+              ) : (
+                <User className="h-5 w-5" />
+              )}
               <span className="sr-only">Toggle user menu</span>
             </Button>
           </DropdownMenuTrigger>

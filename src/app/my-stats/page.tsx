@@ -53,7 +53,7 @@ const initialStats = {
 
 export default function MyStatsPage() {
   const [userStats, setUserStats] = useState(initialStats);
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{name: string, email: string, avatar?: string} | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddMatchOpen, setIsAddMatchOpen] = useState(false);
   const [editedName, setEditedName] = useState("");
@@ -71,10 +71,12 @@ export default function MyStatsPage() {
   const fetchCurrentUserData = () => {
     const userData = getFromStorage<{name: string, email: string} | null>('userData', null);
     if (userData) {
-      setCurrentUser(userData);
+      
       const players = getFromStorage<Player[]>('players', []);
       setAllPlayers(players);
       const player = players.find(p => p.name.toLowerCase() === userData.name.toLowerCase());
+
+      setCurrentUser({ ...userData, avatar: player?.avatar });
 
       let statsToSet;
       if (player) {
@@ -552,5 +554,4 @@ export default function MyStatsPage() {
     </div>
   );
 }
-
     
