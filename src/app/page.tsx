@@ -257,8 +257,8 @@ export default function DashboardPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                         <AvatarImage src={`https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
-                        <AvatarFallback>{player.initials}</AvatarFallback>
+                         <AvatarImage src={getPlayerAvatar(player.name).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
+                        <AvatarFallback>{getPlayerAvatar(player.name).initials}</AvatarFallback>
                       </Avatar>
                       <span className="font-medium">{player.name}</span>
                     </div>
