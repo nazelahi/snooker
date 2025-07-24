@@ -140,7 +140,7 @@ export default function PlayersPage() {
                 <TableRow>
                     <TableHead>Player</TableHead>
                     <TableHead className="hidden sm:table-cell">Skill Level</TableHead>
-                    <TableHead className="text-center hidden md:table-cell">Matches</TableHead>
+                    <TableHead className="text-center">Matches</TableHead>
                     <TableHead className="text-center">Win Rate</TableHead>
                     <TableHead className="text-center hidden lg:table-cell">Highest Break</TableHead>
                 </TableRow>
@@ -164,7 +164,7 @@ export default function PlayersPage() {
                         {player.skillLevel}
                         </Badge>
                     </TableCell>
-                    <TableCell className="text-center hidden md:table-cell">{player.matchesPlayed}</TableCell>
+                    <TableCell className="text-center">{player.matchesPlayed}</TableCell>
                     <TableCell className="text-center">{player.winRate}</TableCell>
                     <TableCell className="text-center font-semibold text-primary hidden lg:table-cell">{player.highestBreak}</TableCell>
                     </TableRow>
