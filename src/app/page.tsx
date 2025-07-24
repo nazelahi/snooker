@@ -209,7 +209,7 @@ export default function DashboardPage() {
                 >
                     <CarouselContent>
                         {upcomingTournaments.map((tournament) => (
-                            <CarouselItem key={tournament.id} className="w-full md:basis-1/2 lg:basis-1/3">
+                            <CarouselItem key={tournament.id} className="w-full">
                                 <Card className="overflow-hidden">
                                     <CardHeader className="p-0">
                                         <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
@@ -229,8 +229,6 @@ export default function DashboardPage() {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
-                    <CarouselPrevious />
-                    <CarouselNext />
                 </Carousel>
             ) : (
                  <p className="text-muted-foreground text-center py-4">No upcoming tournaments scheduled.</p>
@@ -371,3 +369,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
