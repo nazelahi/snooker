@@ -47,6 +47,7 @@ export default function PlayerProfilePage() {
   const [editedWins, setEditedWins] = useState(0);
   const [editedLosses, setEditedLosses] = useState(0);
   const [editedAverageBreak, setEditedAverageBreak] = useState(0);
+  const [editedHighestBreak, setEditedHighestBreak] = useState(0);
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -71,6 +72,7 @@ export default function PlayerProfilePage() {
       setEditedWins(wins);
       setEditedLosses(losses);
       setEditedAverageBreak(averageBreak);
+      setEditedHighestBreak(foundPlayer.highestBreak);
       
       const allMatches = getFromStorage<Match[]>('recentResults', []);
       const playerMatches = allMatches.filter(
@@ -130,6 +132,7 @@ export default function PlayerProfilePage() {
             wins: editedWins,
             losses: editedLosses,
             averageBreak: editedAverageBreak,
+            highestBreak: editedHighestBreak,
             matchesPlayed: matchesPlayed,
             winRate: winRate,
         };
@@ -348,7 +351,7 @@ export default function PlayerProfilePage() {
                         <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarChange} />
                     </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="wins">Wins</Label>
                         <Input id="wins" type="number" value={editedWins} onChange={(e) => setEditedWins(parseInt(e.target.value, 10) || 0)} />
@@ -361,6 +364,12 @@ export default function PlayerProfilePage() {
                         <Label htmlFor="averageBreak">Average Break</Label>
                         <Input id="averageBreak" type="number" value={editedAverageBreak} onChange={(e) => setEditedAverageBreak(parseInt(e.target.value, 10) || 0)} />
                     </div>
+                    {isAdmin && (
+                        <div className="space-y-2">
+                            <Label htmlFor="highestBreak">Highest Break</Label>
+                            <Input id="highestBreak" type="number" value={editedHighestBreak} onChange={(e) => setEditedHighestBreak(parseInt(e.target.value, 10) || 0)} />
+                        </div>
+                    )}
                 </div>
                 <Button onClick={handleSaveChanges}>
                     <Save className="mr-2 h-4 w-4"/>
@@ -538,5 +547,7 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
+    
 
     
