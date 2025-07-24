@@ -27,7 +27,7 @@ import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Notification } from "@/types/notifications";
 import { useRouter } from 'next/navigation';
 
-const initialNotifications: Notification[] = [
+const initialUserNotifications: Notification[] = [
     { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
     { id: '2', title: "Tournament Update", description: "Round 2 bracket has been generated.", read: false, date: new Date().toISOString() },
     { id: '3', title: "New High Break!", description: "Congratulations on your new high break of 89!", read: true, date: new Date().toISOString() },
@@ -38,12 +38,17 @@ export default function Header() {
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const router = useRouter();
 
+  const getNotificationKey = (user: {email: string, isAdmin?: boolean} | null) => {
+    if (!user) return 'notifications'; // Default for logged-out users
+    return user.isAdmin ? 'adminNotifications' : `notifications_${user.email}`;
+  }
+
   useEffect(() => {
     const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
     setCurrentUser(userData);
 
-    const notificationKey = userData?.isAdmin ? 'adminNotifications' : 'notifications';
-    const initialData = userData?.isAdmin ? [] : initialNotifications;
+    const notificationKey = getNotificationKey(userData);
+    const initialData = userData?.isAdmin ? [] : initialUserNotifications;
 
     const storedNotifications = getFromStorage(notificationKey, initialData);
     setNotifications(storedNotifications);
@@ -55,8 +60,8 @@ export default function Header() {
     const handleStorageChange = () => {
         const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
         setCurrentUser(user);
-        const currentKey = user?.isAdmin ? 'adminNotifications' : 'notifications';
-        const currentInitialData = user?.isAdmin ? [] : initialNotifications;
+        const currentKey = getNotificationKey(user);
+        const currentInitialData = user?.isAdmin ? [] : initialUserNotifications;
         const stored = getFromStorage(currentKey, currentInitialData);
         setNotifications(stored);
     };
@@ -73,7 +78,7 @@ export default function Header() {
   };
 
   const handleNotificationClick = (id: string) => {
-    const notificationKey = currentUser?.isAdmin ? 'adminNotifications' : 'notifications';
+    const notificationKey = getNotificationKey(currentUser);
     const updatedNotifications = notifications.map(n => 
         n.id === id ? { ...n, read: true } : n
     );

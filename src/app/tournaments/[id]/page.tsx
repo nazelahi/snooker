@@ -165,6 +165,16 @@ export default function TournamentDetailsPage() {
         
         setPendingPlayers(updatedPending.map(getPlayerDetails));
         setEnrolledPlayers(updatedRegistered.map(getPlayerDetails));
+        
+        const userNotifications = getFromStorage<Notification[]>(`notifications_${playerEmail}`, []);
+        const newNotification: Notification = {
+          id: Date.now().toString(),
+          title: `Application ${isApproved ? 'Approved' : 'Rejected'}`,
+          description: `Your application for the "${tournament.name}" tournament has been ${isApproved ? 'approved' : 'rejected'}.`,
+          read: false,
+          date: new Date().toISOString(),
+        };
+        saveToStorage(`notifications_${playerEmail}`, [newNotification, ...userNotifications]);
 
         toast({
             title: isApproved ? "Player Approved" : "Player Rejected",
@@ -364,5 +374,3 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
-
-    

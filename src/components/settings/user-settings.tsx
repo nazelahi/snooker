@@ -25,6 +25,11 @@ export default function UserSettings() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
 
+  const getNotificationKey = (user: {email: string} | null) => {
+    if (!user) return 'notifications';
+    return `notifications_${user.email}`;
+  }
+
   useEffect(() => {
     const userData = getFromStorage<{name: string, email: string} | null>('userData', null);
     setCurrentUser(userData);
@@ -40,14 +45,31 @@ export default function UserSettings() {
         t.pendingPlayers?.includes(userData.email)
       );
       setPendingTournaments(userPending);
+
+      const notificationKey = getNotificationKey(userData);
+      const userNotifications = getFromStorage<Notification[]>(notificationKey, []);
+      setNotifications(userNotifications);
     }
     
-    const allNotifications = getFromStorage<Notification[]>('notifications', []);
-    setNotifications(allNotifications);
+    const handleStorageChange = () => {
+      const user = getFromStorage<{name: string, email: string} | null>('userData', null);
+      if (user) {
+        const notificationKey = getNotificationKey(user);
+        const storedNotifications = getFromStorage<Notification[]>(notificationKey, []);
+        setNotifications(storedNotifications);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+
   }, []);
 
   const handleMarkAsRead = (id: string) => {
-    const notificationKey = currentUser ? (getFromStorage<{isAdmin?: boolean}>('userData', {}).isAdmin ? 'adminNotifications' : 'notifications') : 'notifications';
+    if (!currentUser) return;
+    const notificationKey = getNotificationKey(currentUser);
     const updatedNotifications = notifications.map(n => n.id === id ? { ...n, read: true } : n);
     setNotifications(updatedNotifications);
     saveToStorage(notificationKey, updatedNotifications);
@@ -55,7 +77,8 @@ export default function UserSettings() {
   };
 
   const handleClearAllNotifications = () => {
-    const notificationKey = currentUser ? (getFromStorage<{isAdmin?: boolean}>('userData', {}).isAdmin ? 'adminNotifications' : 'notifications') : 'notifications';
+    if (!currentUser) return;
+    const notificationKey = getNotificationKey(currentUser);
     const updatedNotifications = notifications.map(n => ({...n, read: true}));
     setNotifications(updatedNotifications);
     saveToStorage(notificationKey, updatedNotifications);
