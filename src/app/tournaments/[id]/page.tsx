@@ -8,7 +8,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardFooter,
   CardDescription
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -346,7 +345,7 @@ export default function TournamentDetailsPage() {
                         <div key={rule} className="flex items-start space-x-2">
                             <Checkbox
                                 id={`rule-${index}`}
-                                checked={(editedTournament.rules || []).includes(rule)}
+                                checked={editedTournament.rules?.includes(rule)}
                                 onCheckedChange={(checked) => handleRuleChange(rule, !!checked)}
                                 className="mt-1"
                             />
@@ -356,7 +355,7 @@ export default function TournamentDetailsPage() {
                 </div>
              ) : (
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-4">
-                  {(Array.isArray(tournament.rules) ? tournament.rules : []).map((rule, index) => <li key={`${rule}-${index}`}>{rule}</li>)}
+                  {(Array.isArray(tournament.rules) ? tournament.rules : [tournament.rules]).map((rule, index) => rule && <li key={`${rule}-${index}`}>{rule}</li>)}
                 </ul>
              )}
           </div>
@@ -429,3 +428,5 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
+
+    
