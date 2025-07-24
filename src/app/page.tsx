@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
+import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight, Camera } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { LiveMatch, Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
@@ -31,6 +31,8 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
 } from "@/components/ui/carousel";
 
 const initialPlayerStandings = [
@@ -73,6 +75,7 @@ export default function DashboardPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [recentToShow, setRecentToShow] = useState(5);
+  const [matchMedia, setMatchMedia] = useState<string[]>([]);
 
   useEffect(() => {
     
@@ -95,6 +98,12 @@ export default function DashboardPage() {
     setRecentResults(storedResults);
     setLiveMatches(storedLiveMatches);
     setTournaments(storedTournaments);
+
+    const allMedia = storedResults
+        .map(match => match.media || [])
+        .flat()
+        .reverse();
+    setMatchMedia(allMedia);
 
 
     if (localStorage.getItem('players') === null) {
@@ -199,6 +208,48 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
       
+       <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Camera className="text-primary" />
+                    Match Media
+                </CardTitle>
+                <CardDescription>Recent photos and videos from matches.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {matchMedia.length > 0 ? (
+                    <Carousel
+                        opts={{
+                            align: "start",
+                            loop: true,
+                        }}
+                        className="w-full"
+                    >
+                        <CarouselContent>
+                            {matchMedia.map((mediaUrl, index) => (
+                                <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                                    <div className="p-1">
+                                      <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                                          {mediaUrl.startsWith('data:image') && (
+                                              <Image src={mediaUrl} alt={`Match media ${index + 1}`} layout="fill" objectFit="cover" />
+                                          )}
+                                          {mediaUrl.startsWith('data:video') && (
+                                              <video src={mediaUrl} controls className="w-full h-full object-cover" />
+                                          )}
+                                      </div>
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        <CarouselPrevious />
+                        <CarouselNext />
+                    </Carousel>
+                ) : (
+                    <p className="text-muted-foreground text-center py-4">No match media has been uploaded yet.</p>
+                )}
+            </CardContent>
+        </Card>
+
        <div className="space-y-4">
             <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="text-primary" />
@@ -282,7 +333,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Matches</CardTitle>
@@ -337,7 +388,7 @@ export default function DashboardPage() {
                 const winner = getPlayerAvatar(match.winner);
                 const loser = getPlayerAvatar(match.loser);
                 return (
-                    <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                     <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                         <div className="flex items-center gap-2 justify-start w-2/5">
                            <Avatar className="h-8 w-8">
                               <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
@@ -346,7 +397,9 @@ export default function DashboardPage() {
                           <PlayerLink name={match.winner} />
                         </div>
                         <div className="flex-1 text-center">
-                            <Badge variant="secondary" className="font-bold text-lg">{match.score}</Badge>
+                            <Link href={`/match/${match.id}`}>
+                                <Badge variant="secondary" className="font-bold text-lg">{match.score}</Badge>
+                            </Link>
                         </div>
                        <div className="flex items-center gap-2 justify-end w-2/5">
                             <PlayerLink name={match.loser} />

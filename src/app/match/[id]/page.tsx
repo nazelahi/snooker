@@ -162,7 +162,7 @@ export default function MatchDetailsPage() {
                 {match.media && match.media.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {match.media.map((mediaUrl, index) => (
-                            <div key={index} className="relative aspect-video rounded-lg overflow-hidden">
+                            <div key={index} className="relative aspect-video rounded-lg overflow-hidden bg-muted">
                                 {mediaUrl.startsWith('data:image') && (
                                     <Image src={mediaUrl} alt={`Match media ${index + 1}`} layout="fill" objectFit="cover" />
                                 )}
@@ -197,3 +197,5 @@ export default function MatchDetailsPage() {
     </div>
   );
 }
+
+    
