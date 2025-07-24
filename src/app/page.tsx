@@ -132,7 +132,7 @@ export default function DashboardPage() {
             >
               <CarouselContent>
                 {liveMatches.map((match) => (
-                  <CarouselItem key={match.id} className="md:basis-1/2 lg:basis-1/1">
+                  <CarouselItem key={match.id}>
                     <div className="p-1">
                       <div className="p-4 rounded-lg bg-muted/50">
                         <div className="flex justify-between items-center mb-2">
