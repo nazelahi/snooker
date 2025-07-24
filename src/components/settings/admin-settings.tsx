@@ -28,10 +28,19 @@ interface SiteSettings {
   description: string;
 }
 
+interface UpcomingMatch {
+    id: number;
+    player1: string;
+    player2: string;
+    date: string;
+    time: string;
+}
+
 export default function AdminSettings() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
+  const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({ name: "", description: ""});
   const [rules, setRules] = useState<string[]>([]);
   const [newRule, setNewRule] = useState("");
@@ -41,6 +50,7 @@ export default function AdminSettings() {
     setPlayers(getFromStorage<Player[]>("players", []));
     setTournaments(getFromStorage<Tournament[]>("tournaments", []));
     setLiveMatches(getFromStorage<LiveMatch[]>("liveMatches", []));
+    setUpcomingMatches(getFromStorage<UpcomingMatch[]>("upcomingMatches", []));
     setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
     
     const storedRules = getFromStorage<string[]>("tournamentRules", []);
@@ -82,7 +92,27 @@ export default function AdminSettings() {
     setLiveMatches(updatedMatches);
   };
 
-  const handleDelete = <T extends {id: number}>(id: number, type: 'players' | 'tournaments' | 'liveMatches', stateSetter: React.Dispatch<React.SetStateAction<T[]>>) => {
+  const handleUpcomingMatchChange = (id: number, field: keyof UpcomingMatch, value: any) => {
+    const updatedMatches = upcomingMatches.map(m => m.id === id ? { ...m, [field]: value } : m);
+    setUpcomingMatches(updatedMatches);
+  };
+
+  const handleAddUpcomingMatch = () => {
+    setUpcomingMatches(prev => {
+        const newId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
+        const newMatch: UpcomingMatch = {
+            id: newId,
+            player1: players[0]?.name || "Player 1",
+            player2: players[1]?.name || "Player 2",
+            date: new Date().toISOString().split('T')[0],
+            time: "19:00",
+        };
+        return [...prev, newMatch];
+    });
+  };
+
+
+  const handleDelete = <T extends {id: number}>(id: number, type: 'players' | 'tournaments' | 'liveMatches' | 'upcomingMatches', stateSetter: React.Dispatch<React.SetStateAction<T[]>>) => {
       stateSetter(prev => {
         const updated = prev.filter(item => item.id !== id);
         saveToStorage(type, updated);
@@ -114,6 +144,7 @@ export default function AdminSettings() {
     saveToStorage("players", players);
     saveToStorage("tournaments", tournaments);
     saveToStorage("liveMatches", liveMatches);
+    saveToStorage("upcomingMatches", upcomingMatches);
     saveToStorage("siteSettings", siteSettings);
     saveToStorage("tournamentRules", rules);
     window.dispatchEvent(new Event('storage'));
@@ -134,10 +165,11 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="players" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="players">Manage Players</TabsTrigger>
           <TabsTrigger value="tournaments">Manage Tournaments</TabsTrigger>
           <TabsTrigger value="liveMatches">Manage Live Matches</TabsTrigger>
+          <TabsTrigger value="upcomingMatches">Upcoming Matches</TabsTrigger>
           <TabsTrigger value="rules">Manage Rules</TabsTrigger>
           <TabsTrigger value="siteSettings">Site Settings</TabsTrigger>
         </TabsList>
@@ -234,6 +266,50 @@ export default function AdminSettings() {
                             <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                     ))}
+                </CardContent>
+            </Card>
+        </TabsContent>
+         <TabsContent value="upcomingMatches">
+           <Card className="mt-4">
+                <CardHeader>
+                    <CardTitle>Upcoming Match Data</CardTitle>
+                    <CardDescription>Manage upcoming matches. Add new matches or edit existing ones.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                        <span className="col-span-2">Player 1</span>
+                        <span className="col-span-2">Player 2</span>
+                        <span>Date & Time</span>
+                        <span>Actions</span>
+                    </div>
+                    {upcomingMatches.map(match => (
+                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                            <div className="col-span-2">
+                                <Select value={match.player1} onValueChange={value => handleUpcomingMatchChange(match.id, 'player1', value)}>
+                                    <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
+                                    <SelectContent>
+                                        {players.map(p => <SelectItem key={`p1-${p.id}`} value={p.name}>{p.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="col-span-2">
+                                 <Select value={match.player2} onValueChange={value => handleUpcomingMatchChange(match.id, 'player2', value)}>
+                                    <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
+                                    <SelectContent>
+                                        {players.map(p => <SelectItem key={`p2-${p.id}`} value={p.name}>{p.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex gap-2">
+                                <Input type="date" value={match.date} onChange={e => handleUpcomingMatchChange(match.id, 'date', e.target.value)} />
+                                <Input type="time" value={match.time} onChange={e => handleUpcomingMatchChange(match.id, 'time', e.target.value)} />
+                            </div>
+                            <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'upcomingMatches', setUpcomingMatches)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                    ))}
+                    <Button onClick={handleAddUpcomingMatch} variant="outline" className="mt-4">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Upcoming Match
+                    </Button>
                 </CardContent>
             </Card>
         </TabsContent>
