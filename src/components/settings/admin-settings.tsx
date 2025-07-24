@@ -308,26 +308,40 @@ export default function AdminSettings() {
                 <CardDescription>Edit tournament details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
-                      <span>Name</span>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                      <span className="col-span-2">Name</span>
                       <span>Players</span>
                       <span>Status</span>
                       <span>Actions</span>
                   </div>
                 {tournaments.map(tournament => (
-                    <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
-                      <Input value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
+                    <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                      <div className="col-span-2">
+                        <Input value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
+                      </div>
                       <Input value={tournament.players} type="number" onChange={e => handleTournamentChange(tournament.id, 'players', parseInt(e.target.value))} />
-                      <Select value={tournament.status} onValueChange={(value: "Upcoming" | "In Progress" | "Finished") => handleTournamentChange(tournament.id, 'status', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Upcoming">Upcoming</SelectItem>
-                          <SelectItem value="In Progress">In Progress</SelectItem>
-                          <SelectItem value="Finished">Finished</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex flex-col gap-2">
+                        <Select value={tournament.status} onValueChange={(value: "Upcoming" | "In Progress" | "Finished") => handleTournamentChange(tournament.id, 'status', value)}>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="Upcoming">Upcoming</SelectItem>
+                            <SelectItem value="In Progress">In Progress</SelectItem>
+                            <SelectItem value="Finished">Finished</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {tournament.status === 'Finished' && (
+                           <Select value={tournament.winner} onValueChange={(value: string) => handleTournamentChange(tournament.id, 'winner', value)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select winner" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {players.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+                            </SelectContent>
+                           </Select>
+                        )}
+                      </div>
                       <Button variant="destructive" size="icon" onClick={() => handleDelete(tournament.id, 'tournaments', setTournaments)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 ))}

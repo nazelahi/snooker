@@ -16,7 +16,7 @@ import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
-import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList } from "lucide-react";
+import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -65,6 +65,7 @@ export default function TournamentDetailsPage() {
   const [tournamentMatches, setTournamentMatches] = useState<Match[]>([]);
   const [tournamentUpcoming, setTournamentUpcoming] = useState<UpcomingMatch[]>([]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [winnerPlayer, setWinnerPlayer] = useState<Player | null>(null);
 
 
   const params = useParams();
@@ -91,6 +92,10 @@ export default function TournamentDetailsPage() {
         if (foundTournament) {
             if(userData && (foundTournament.registeredPlayers?.includes(userData.email) || foundTournament.pendingPlayers?.includes(userData.email))) {
                 setHasApplied(true);
+            }
+            if (foundTournament.winner) {
+                const winner = players.find(p => p.name === foundTournament.winner);
+                setWinnerPlayer(winner || null);
             }
 
             const allUsers = getFromStorage<{name: string, email: string, password?: string}[]>('users', []);
@@ -244,6 +249,10 @@ export default function TournamentDetailsPage() {
       tournaments[tournamentIndex] = editedTournament;
       saveToStorage('tournaments', tournaments);
       setTournament(editedTournament);
+      if (editedTournament.winner) {
+        const winner = allPlayers.find(p => p.name === editedTournament.winner);
+        setWinnerPlayer(winner || null);
+      }
       toast({
         title: "Success",
         description: "Tournament details have been updated."
@@ -417,6 +426,24 @@ export default function TournamentDetailsPage() {
         </CardFooter>
       </Card>
       
+      {tournament.status === 'Finished' && winnerPlayer && (
+        <Card className="border-amber-400">
+            <CardHeader className="text-center">
+                <Trophy className="mx-auto h-12 w-12 text-amber-400" />
+                <CardTitle className="text-2xl mt-2">Tournament Winner</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+                <Link href={`/players/${winnerPlayer.id}`} className="flex flex-col items-center gap-2 group">
+                    <Avatar className="h-24 w-24 border-2 border-amber-400">
+                        <AvatarImage src={winnerPlayer.avatar || `https://placehold.co/96x96.png`} data-ai-hint="player portrait" alt={winnerPlayer.name} />
+                        <AvatarFallback>{winnerPlayer.initials}</AvatarFallback>
+                    </Avatar>
+                    <h3 className="text-xl font-bold group-hover:underline">{winnerPlayer.name}</h3>
+                </Link>
+            </CardContent>
+        </Card>
+      )}
+
       {tournamentUpcoming.length > 0 && (
          <Card>
             <CardHeader>
@@ -552,5 +579,3 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
-
-    
