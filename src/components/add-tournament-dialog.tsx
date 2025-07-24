@@ -37,6 +37,7 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
   const [status, setStatus] = useState<"Upcoming" | "In Progress" | "Finished">("Upcoming");
   const [rules, setRules] = useState("");
   const [image, setImage] = useState("");
+  const [location, setLocation] = useState("");
   const [imagePreview, setImagePreview] = useState("");
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,7 +54,7 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
   };
 
   const handleSubmit = () => {
-    onAddTournament({ name, format, players, status, rules, image });
+    onAddTournament({ name, format, players, status, rules, image, location });
     onOpenChange(false);
     setName("");
     setFormat("Knockout");
@@ -61,6 +62,7 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
     setStatus("Upcoming");
     setRules("");
     setImage("");
+    setLocation("");
     setImagePreview("");
   };
 
@@ -113,6 +115,18 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
               value={players}
               onChange={(e) => setPlayers(parseInt(e.target.value, 10))}
               className="col-span-3"
+            />
+          </div>
+           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="location" className="text-right">
+              Location
+            </Label>
+            <Input
+              id="location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="col-span-3"
+              placeholder="e.g. Main Hall"
             />
           </div>
            <div className="grid grid-cols-4 items-center gap-4">
