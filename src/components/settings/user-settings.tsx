@@ -89,7 +89,7 @@ export default function UserSettings() {
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
       <div className="flex items-center gap-4">
         <Settings className="h-10 w-10 text-primary" />
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-3xl font-bold">User Settings</h1>
           <p className="text-muted-foreground">Manage your tournament registrations and notifications.</p>
         </div>

@@ -260,7 +260,7 @@ export default function AdminSettings() {
     <div className="max-w-7xl mx-auto flex flex-col gap-8">
       <div className="flex items-center gap-4">
         <ShieldCheck className="h-10 w-10 text-primary" />
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-3xl font-bold">Admin Settings</h1>
           <p className="text-muted-foreground">Manage all application data from a centralized dashboard.</p>
         </div>

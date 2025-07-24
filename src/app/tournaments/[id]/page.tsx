@@ -305,7 +305,8 @@ export default function TournamentDetailsPage() {
       <div className="flex justify-between items-start">
         <Button variant="outline" onClick={() => router.back()} className="w-fit">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Tournaments
+            <span className="hidden md:inline">Back to Tournaments</span>
+            <span className="md:hidden">Back</span>
         </Button>
         {isAdmin && (
            <div className="flex gap-2">
@@ -329,7 +330,7 @@ export default function TournamentDetailsPage() {
 
       <Card className="overflow-hidden">
         <div className="relative">
-            <Image src={isEditing ? editedTournament.image || `https://placehold.co/1200x400.png`: tournament.image || `https://placehold.co/1200x400.png`} data-ai-hint="tournament banner" width={1200} height={400} alt={tournament.name} className="w-full h-64 object-cover"/>
+            <Image src={isEditing ? editedTournament.image || `https://placehold.co/1200x400.png`: tournament.image || `https://placehold.co/1200x400.png`} data-ai-hint="tournament banner" width={1200} height={400} alt={tournament.name} className="w-full h-48 md:h-64 object-cover"/>
             {isEditing && (
               <div className="absolute bottom-2 right-2">
                 <Input id="image-upload" type="file" className="hidden" onChange={handleImageChange} accept="image/*"/>
@@ -344,16 +345,16 @@ export default function TournamentDetailsPage() {
             <div className="flex items-center gap-2">
               <Input
                 id="tournament-name"
-                className="text-4xl font-bold -ml-1.5 h-auto p-1.5 border-border bg-muted/50 transition-all"
+                className="text-2xl md:text-4xl font-bold -ml-1.5 h-auto p-1.5 border-border bg-muted/50 transition-all"
                 value={editedTournament.name}
                 onChange={(e) => setEditedTournament({...editedTournament, name: e.target.value})}
               />
             </div>
           ) : (
-             <CardTitle className="text-4xl font-bold">{tournament.name}</CardTitle>
+             <CardTitle className="text-2xl md:text-4xl font-bold">{tournament.name}</CardTitle>
           )}
          
-          <div className="flex items-center gap-4 text-muted-foreground pt-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-muted-foreground pt-2">
             <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 <span>{tournament.status}</span>

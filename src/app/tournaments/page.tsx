@@ -113,7 +113,7 @@ export default function TournamentsPage() {
   return (
     <div className="flex flex-col gap-8">
        <div className="flex items-center justify-between">
-        <div>
+        <div className="hidden md:block">
             <h1 className="text-3xl font-bold">Tournaments</h1>
             <p className="text-muted-foreground">Create and manage club tournaments.</p>
         </div>

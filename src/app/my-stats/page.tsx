@@ -329,11 +329,11 @@ export default function MyStatsPage() {
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
+            <Avatar className="h-16 w-16 md:h-20 md:w-20">
             <AvatarImage src={userStats.avatar || `https://placehold.co/80x80.png`} data-ai-hint="player portrait" alt={userStats.name} />
             <AvatarFallback>{userStats.initials}</AvatarFallback>
             </Avatar>
-            <div>
+            <div className="hidden md:block">
             <h1 className="text-4xl font-bold">{userStats.name}</h1>
             <p className="text-muted-foreground">Your personal snooker statistics.</p>
             </div>
