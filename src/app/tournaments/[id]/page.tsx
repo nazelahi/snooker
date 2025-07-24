@@ -27,6 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface EnrolledPlayer {
+  id: number;
   name: string;
   avatar: string;
   initials: string;
@@ -82,6 +83,7 @@ export default function TournamentDetailsPage() {
                 const user = allUsers.find(u => u.email === email);
                 const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
                 return {
+                    id: player?.id || 0,
                     name: user?.name || 'Unknown User',
                     avatar: player?.avatar || '',
                     initials: player?.initials || 'UU',
@@ -171,6 +173,7 @@ export default function TournamentDetailsPage() {
             const user = allUsers.find(u => u.email === email);
             const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
             return {
+                id: player?.id || 0,
                 name: user?.name || 'Unknown User',
                 avatar: player?.avatar || '',
                 initials: player?.initials || 'UU',
@@ -389,7 +392,9 @@ export default function TournamentDetailsPage() {
                                       <AvatarImage src={player.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
                                       <AvatarFallback>{player.initials}</AvatarFallback>
                                   </Avatar>
-                                  <span className="font-medium">{player.name}</span>
+                                   <Link href={`/players/${player.id}`} className="font-medium hover:underline">
+                                    {player.name}
+                                  </Link>
                               </div>
                               <div className="flex gap-2">
                                   <Button size="sm" variant="outline" onClick={() => handleApproval(player.email, true)}>
@@ -413,14 +418,14 @@ export default function TournamentDetailsPage() {
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {enrolledPlayers.map((player, index) => (
-                        <div key={index} className="flex flex-col items-center gap-2">
+                    {enrolledPlayers.map((player) => (
+                        <Link key={player.id} href={`/players/${player.id}`} className="flex flex-col items-center gap-2 group">
                             <Avatar className="h-16 w-16">
                                 <AvatarImage src={player.avatar || `https://placehold.co/64x64.png`} data-ai-hint="player portrait" alt={player.name} />
                                 <AvatarFallback>{player.initials}</AvatarFallback>
                             </Avatar>
-                            <span className="text-sm font-medium text-center">{player.name}</span>
-                        </div>
+                            <span className="text-sm font-medium text-center group-hover:underline">{player.name}</span>
+                        </Link>
                     ))}
                 </div>
             </CardContent>

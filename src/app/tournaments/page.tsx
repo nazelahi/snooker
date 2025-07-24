@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Radio, Pencil, Eye } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddTournamentDialog } from "@/components/add-tournament-dialog";
+import type { Player } from "@/app/players/page";
 
 export interface Tournament {
   id: number;
@@ -63,6 +64,7 @@ export default function TournamentsPage() {
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [isAddTournamentOpen, setIsAddTournamentOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
     const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
@@ -73,6 +75,9 @@ export default function TournamentsPage() {
 
     const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
     setLiveMatches(storedLiveMatches);
+
+    const storedPlayers = getFromStorage('players', []);
+    setPlayers(storedPlayers);
 
     if (localStorage.getItem('tournaments') === null) {
       saveToStorage('tournaments', initialTournaments);
@@ -94,6 +99,14 @@ export default function TournamentsPage() {
       return newTournaments;
     });
   };
+
+  const PlayerLink = ({name}: {name: string}) => {
+    const player = players.find(p => p.name === name);
+    if (!player) {
+        return <span className="font-medium">{name}</span>;
+    }
+    return <Link href={`/players/${player.id}`} className="font-medium hover:underline">{name}</Link>
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -125,7 +138,7 @@ export default function TournamentsPage() {
                 <li key={match.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                   <div className="flex flex-col">
                     <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
-                    <div className="font-medium">{match.player1} vs {match.player2}</div>
+                    <div><PlayerLink name={match.player1} /> vs <PlayerLink name={match.player2} /></div>
                   </div>
                   <div className="text-2xl font-bold">
                     <span className="text-primary">{match.score1}</span>

@@ -105,10 +105,19 @@ export default function DashboardPage() {
 
   const getPlayerAvatar = (name: string) => {
     const player = players.find(p => p.name === name);
-    return player ? {avatar: player.avatar, initials: player.initials} : {avatar: '', initials: name.split(' ').map(n=>n[0]).join('')};
+    return player ? {avatar: player.avatar, initials: player.initials, id: player.id} : {avatar: '', initials: name.split(' ').map(n=>n[0]).join(''), id: null};
   }
 
   const upcomingTournaments = tournaments.filter(t => t.status === "Upcoming");
+
+  const PlayerLink = ({name}: {name: string}) => {
+    const player = getPlayerAvatar(name);
+    if (!player.id) {
+        return <span className="font-medium">{name}</span>;
+    }
+    return <Link href={`/players/${player.id}`} className="font-medium hover:underline">{name}</Link>
+  }
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -146,7 +155,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="grid grid-cols-3 items-center text-center">
                           <div className="flex items-center justify-end gap-4">
-                              <span className="font-bold text-lg">{match.player1}</span>
+                              <div className="font-bold text-lg"><PlayerLink name={match.player1} /></div>
                               <Avatar>
                                   <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                   <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
@@ -164,7 +173,7 @@ export default function DashboardPage() {
                                   <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
                                   <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
                               </Avatar>
-                              <span className="font-bold text-lg">{match.player2}</span>
+                              <div className="font-bold text-lg"><PlayerLink name={match.player2} /></div>
                           </div>
                         </div>
                       </div>
@@ -272,7 +281,9 @@ export default function DashboardPage() {
             <ul className="space-y-4">
               {upcomingMatches.map((match) => (
                 <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div className="font-medium">{match.player1} vs {match.player2}</div>
+                  <div className="font-medium">
+                    <PlayerLink name={match.player1} /> vs <PlayerLink name={match.player2} />
+                  </div>
                   <div className="text-sm text-muted-foreground">{match.date} at {match.time}</div>
                 </li>
               ))}
@@ -289,9 +300,9 @@ export default function DashboardPage() {
               {recentResults.map((match) => (
                 <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                   <div>
-                    <span className="font-medium">{match.winner}</span>
+                    <PlayerLink name={match.winner} />
                     <span className="text-muted-foreground"> beat </span>
-                    <span className="font-medium">{match.loser}</span>
+                    <PlayerLink name={match.loser} />
                   </div>
                   <Badge variant="secondary">{match.score}</Badge>
                 </li>
@@ -318,23 +329,32 @@ export default function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {playerStandings.map((player) => (
-                <TableRow key={player.rank}>
-                  <TableCell className="font-medium text-center">{player.rank}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                         <AvatarImage src={getPlayerAvatar(player.name).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
-                        <AvatarFallback>{getPlayerAvatar(player.name).initials}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{player.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">{player.matchesPlayed}</TableCell>
-                  <TableCell className="text-green-400 text-center">{player.wins}</TableCell>
-                  <TableCell className="text-red-400 text-center">{player.losses}</TableCell>
-                </TableRow>
-              ))}
+              {playerStandings.map((player) => {
+                const playerDetails = players.find(p => p.name === player.name);
+                return (
+                    <TableRow key={player.rank}>
+                    <TableCell className="font-medium text-center">{player.rank}</TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-3">
+                        <Avatar>
+                            <AvatarImage src={getPlayerAvatar(player.name).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
+                            <AvatarFallback>{getPlayerAvatar(player.name).initials}</AvatarFallback>
+                        </Avatar>
+                        {playerDetails ? (
+                            <Link href={`/players/${playerDetails.id}`} className="font-medium hover:underline">
+                                {player.name}
+                            </Link>
+                        ) : (
+                            <span className="font-medium">{player.name}</span>
+                        )}
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-center">{player.matchesPlayed}</TableCell>
+                    <TableCell className="text-green-400 text-center">{player.wins}</TableCell>
+                    <TableCell className="text-red-400 text-center">{player.losses}</TableCell>
+                    </TableRow>
+                );
+            })}
             </TableBody>
           </Table>
         </CardContent>
