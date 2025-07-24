@@ -118,14 +118,12 @@ export default function Header() {
         <div className="md:hidden">
             <SidebarTrigger />
         </div>
-        <Link href="/" className="flex items-center gap-2 md:hidden">
-          <Icons.logo className="h-7 w-7 text-primary" />
-        </Link>
       </div>
       
       <div className="flex-1 text-center md:text-left">
-        <Link href="/" className="text-xl font-semibold md:hidden">
-          {clubName}
+        <Link href="/" className="flex items-center justify-center md:justify-start gap-2 text-xl font-semibold md:hidden">
+          <Icons.logo className="h-7 w-7 text-primary" />
+          <span>{clubName}</span>
         </Link>
       </div>
 
