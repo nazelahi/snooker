@@ -142,14 +142,12 @@ export default function Header() {
                       <span>Tournaments</span>
                     </Link>
                   </DropdownMenuItem>
-                   {currentUser.isAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin">
+                   <DropdownMenuItem asChild>
+                      <Link href="/settings">
                         <Settings className="mr-2 h-4 w-4" />
-                        <span>Admin Panel</span>
+                        <span>Settings</span>
                       </Link>
                     </DropdownMenuItem>
-                  )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -171,5 +169,3 @@ export default function Header() {
     </header>
   );
 }
-
-    

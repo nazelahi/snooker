@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, Users, Trophy, BrainCircuit, LogIn, Home, ShieldCheck } from "lucide-react";
+import { BarChart2, Users, Trophy, BrainCircuit, LogIn, Home, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,7 +25,7 @@ const navItems = [
   { href: "/handicap-advisor", label: "Handicap Advisor", icon: BrainCircuit },
 ];
 
-const adminNavItem = { href: "/admin", label: "Admin Panel", icon: ShieldCheck };
+const settingsItem = { href: "/settings", label: "Settings", icon: Settings };
 
 export default function AppSidebar() {
   const pathname = usePathname();
@@ -69,12 +69,12 @@ export default function AppSidebar() {
               </Link>
             </SidebarMenuItem>
           ))}
-          {currentUser?.isAdmin && (
+          {currentUser && (
              <SidebarMenuItem>
-              <Link href={adminNavItem.href} passHref>
-                <SidebarMenuButton isActive={isActive(adminNavItem.href)}>
-                  <adminNavItem.icon className="h-5 w-5" />
-                  <span>{adminNavItem.label}</span>
+              <Link href={settingsItem.href} passHref>
+                <SidebarMenuButton isActive={isActive(settingsItem.href)}>
+                  <settingsItem.icon className="h-5 w-5" />
+                  <span>{settingsItem.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
