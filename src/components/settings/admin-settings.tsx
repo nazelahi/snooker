@@ -15,7 +15,7 @@ import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import type { Tournament } from "@/app/tournaments/page";
 import type { LiveMatch } from "@/app/tournaments/page";
-import { Trash2, PlusCircle, CheckCircle } from "lucide-react";
+import { Trash2, PlusCircle, CheckCircle, Megaphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShieldCheck, Settings, ListChecks } from "lucide-react";
@@ -48,6 +48,13 @@ interface RecentResult {
     media?: string[];
 }
 
+interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+}
+
 export default function AdminSettings() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -56,6 +63,9 @@ export default function AdminSettings() {
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({ name: "", description: ""});
   const [rules, setRules] = useState<string[]>([]);
   const [newRule, setNewRule] = useState("");
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [newNoticeTitle, setNewNoticeTitle] = useState("");
+  const [newNoticeContent, setNewNoticeContent] = useState("");
   const { toast } = useToast();
   
   useEffect(() => {
@@ -64,6 +74,7 @@ export default function AdminSettings() {
     setLiveMatches(getFromStorage<LiveMatch[]>("liveMatches", []));
     setUpcomingMatches(getFromStorage<UpcomingMatch[]>("upcomingMatches", []));
     setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
+    setNotices(getFromStorage<Notice[]>("notices", []));
     
     const storedRules = getFromStorage<string[]>("tournamentRules", []);
     setRules(storedRules);
@@ -170,7 +181,7 @@ export default function AdminSettings() {
   };
 
 
-  const handleDelete = <T extends {id: number}>(id: number, type: 'players' | 'tournaments' | 'liveMatches' | 'upcomingMatches', stateSetter: React.Dispatch<React.SetStateAction<T[]>>) => {
+  const handleDelete = <T extends {id: any}>(id: any, type: 'players' | 'tournaments' | 'liveMatches' | 'upcomingMatches' | 'notices', stateSetter: React.Dispatch<React.SetStateAction<T[]>>) => {
       stateSetter(prev => {
         const updated = prev.filter(item => item.id !== id);
         saveToStorage(type, updated);
@@ -241,6 +252,41 @@ export default function AdminSettings() {
     setRules(updatedRules);
   };
 
+  const handleAddNotice = () => {
+    if (!newNoticeTitle.trim() || !newNoticeContent.trim()) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please fill out both title and content for the notice.' });
+        return;
+    }
+
+    const newNotice: Notice = {
+        id: Date.now().toString(),
+        title: newNoticeTitle,
+        content: newNoticeContent,
+        date: new Date().toISOString()
+    };
+    
+    setNotices(prev => [newNotice, ...prev]);
+
+    // Create notifications for all users
+    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+    allUsers.forEach(user => {
+        const userNotifications = getFromStorage<Notification[]>(`notifications_${user.email}`, []);
+        const newNotification: Notification = {
+            id: Date.now().toString() + user.email,
+            title: `New Club Notice: ${newNotice.title}`,
+            description: newNotice.content.substring(0, 100) + (newNotice.content.length > 100 ? '...' : ''),
+            read: false,
+            date: new Date().toISOString()
+        };
+        saveToStorage(`notifications_${user.email}`, [newNotification, ...userNotifications]);
+    });
+    
+    window.dispatchEvent(new Event('storage'));
+
+    setNewNoticeTitle("");
+    setNewNoticeContent("");
+    toast({ title: 'Notice Posted', description: 'All users have been notified.'});
+  };
 
   const handleSaveChanges = () => {
     saveToStorage("players", players);
@@ -249,6 +295,7 @@ export default function AdminSettings() {
     saveToStorage("upcomingMatches", upcomingMatches);
     saveToStorage("siteSettings", siteSettings);
     saveToStorage("tournamentRules", rules);
+    saveToStorage("notices", notices);
     window.dispatchEvent(new Event('storage'));
     toast({
       title: "Saved!",
@@ -267,12 +314,13 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="players" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
           <TabsTrigger value="players">Players</TabsTrigger>
           <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
           <TabsTrigger value="liveMatches">Live Matches</TabsTrigger>
           <TabsTrigger value="upcomingMatches">Upcoming</TabsTrigger>
           <TabsTrigger value="rules">Rules</TabsTrigger>
+          <TabsTrigger value="notices">Notices</TabsTrigger>
           <TabsTrigger value="siteSettings">Site</TabsTrigger>
         </TabsList>
         <TabsContent value="players">
@@ -471,6 +519,45 @@ export default function AdminSettings() {
                         />
                         <Button onClick={handleAddRule}><PlusCircle className="h-4 w-4 mr-2"/> Add Rule</Button>
                     </div>
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="notices">
+           <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle>Manage Notices</CardTitle>
+                  <CardDescription>Post new notices for all users to see on the home page.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2 p-4 border rounded-lg">
+                    <h3 className="font-semibold">Post a New Notice</h3>
+                    <div className="space-y-1">
+                        <Label htmlFor="notice-title">Title</Label>
+                        <Input id="notice-title" value={newNoticeTitle} onChange={e => setNewNoticeTitle(e.target.value)} placeholder="e.g. Holiday Opening Hours" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="notice-content">Content</Label>
+                        <Textarea id="notice-content" value={newNoticeContent} onChange={e => setNewNoticeContent(e.target.value)} placeholder="Full details of the announcement..." />
+                    </div>
+                    <Button onClick={handleAddNotice}><Megaphone className="h-4 w-4 mr-2"/> Post Notice</Button>
+                  </div>
+
+                  <div className="space-y-2 pt-4">
+                     <h3 className="font-semibold">Posted Notices</h3>
+                      {notices.length > 0 ? (
+                        notices.map(notice => (
+                            <div key={notice.id} className="flex items-start justify-between p-2 rounded-lg bg-muted/50">
+                                <div>
+                                    <p className="font-bold">{notice.title}</p>
+                                    <p className="text-sm text-muted-foreground">{notice.content}</p>
+                                </div>
+                                <Button variant="destructive" size="icon" onClick={() => handleDelete(notice.id, 'notices', setNotices)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No notices posted yet.</p>
+                      )}
+                  </div>
                 </CardContent>
             </Card>
         </TabsContent>

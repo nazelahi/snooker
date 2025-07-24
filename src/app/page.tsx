@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight, Camera } from "lucide-react";
+import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight, Camera, Megaphone } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { LiveMatch, Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
@@ -37,7 +37,7 @@ import {
   CarouselApi,
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
-
+import { format } from 'date-fns';
 
 const initialUpcomingMatches = [
   { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00", tournamentId: 1 },
@@ -65,6 +65,13 @@ const initialPlayers: Player[] = [
     { id: 6, name: "Bob Williams", skillLevel: "Beginner", matchesPlayed: 15, winRate: "40%", highestBreak: 45, avatar: "/avatars/bob.png", initials: "BW", wins: 6, losses: 9 },
 ];
 
+interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+}
+
 export default function DashboardPage() {
   const [playerStandings, setPlayerStandings] = useState<Player[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState(initialUpcomingMatches);
@@ -75,6 +82,7 @@ export default function DashboardPage() {
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [recentToShow, setRecentToShow] = useState(5);
   const [matchMedia, setMatchMedia] = useState<string[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
   const [liveMatchApi, setLiveMatchApi] = useState<CarouselApi>();
   const [mediaApi, setMediaApi] = useState<CarouselApi>();
@@ -87,8 +95,10 @@ export default function DashboardPage() {
     const storedResults = getFromStorage('recentResults', initialRecentResults);
     const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
     const storedTournaments = getFromStorage('tournaments', []);
+    const storedNotices = getFromStorage('notices', []);
 
     setPlayers(storedPlayers);
+    setNotices(storedNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     
     const sortedStandings = [...storedPlayers]
         .sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0));
@@ -124,6 +134,9 @@ export default function DashboardPage() {
     }
     if (localStorage.getItem('liveMatches') === null) {
         saveToStorage('liveMatches', initialLiveMatches);
+    }
+    if (localStorage.getItem('notices') === null) {
+        saveToStorage('notices', []);
     }
   }, []);
 
@@ -204,6 +217,28 @@ export default function DashboardPage() {
             </Carousel>
           </CardContent>
         </Card>
+      )}
+
+      {notices.length > 0 && (
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Megaphone className="text-primary"/>
+                    Notice Board
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {notices.slice(0, 2).map((notice) => (
+                        <div key={notice.id} className="p-4 rounded-lg bg-muted/50">
+                            <h3 className="font-semibold text-lg">{notice.title}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">{notice.content}</p>
+                            <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+         </Card>
       )}
       
        <Card className="relative">
