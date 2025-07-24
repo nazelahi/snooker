@@ -16,7 +16,7 @@ import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
-import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X } from "lucide-react";
+import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -40,6 +40,7 @@ export default function TournamentDetailsPage() {
   const [hasApplied, setHasApplied] = useState(false);
   const [enrolledPlayers, setEnrolledPlayers] = useState<EnrolledPlayer[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<EnrolledPlayer[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -53,7 +54,7 @@ export default function TournamentDetailsPage() {
         const tournaments = getFromStorage<Tournament[]>('tournaments', []);
         const foundTournament = tournaments.find(t => t.id === parseInt(id));
         setTournament(foundTournament || null);
-        setEditedTournament(foundTournament || null);
+        setEditedTournament(foundTournament ? {...foundTournament} : null);
 
         if (foundTournament) {
             if(userData && (foundTournament.registeredPlayers?.includes(userData.email) || foundTournament.pendingPlayers?.includes(userData.email))) {
@@ -148,7 +149,7 @@ export default function TournamentDetailsPage() {
         saveToStorage('tournaments', tournaments);
 
         setTournament(updatedTournament);
-        setEditedTournament(updatedTournament);
+        setEditedTournament(updatedTournament ? {...updatedTournament} : null);
 
         const allPlayers = getFromStorage<Player[]>('players', []);
         const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
@@ -195,6 +196,7 @@ export default function TournamentDetailsPage() {
         title: "Success",
         description: "Tournament details have been updated."
       });
+      setIsEditing(false);
     }
   };
 
@@ -220,19 +222,28 @@ export default function TournamentDetailsPage() {
     );
   }
 
-  const isEditing = !!currentUser?.isAdmin;
+  const isAdmin = !!currentUser?.isAdmin;
   const applicationStatus = tournament.registeredPlayers?.includes(currentUser?.email || '') ? 'Approved' : 
                             tournament.pendingPlayers?.includes(currentUser?.email || '') ? 'Pending' : 'Not Applied';
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
+      <div className="flex justify-between items-center">
         <Button variant="outline" onClick={() => router.back()} className="w-fit">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Tournaments
         </Button>
+        {isAdmin && !isEditing && (
+          <Button onClick={() => setIsEditing(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Tournament
+          </Button>
+        )}
+      </div>
+
       <Card className="overflow-hidden">
         <div className="relative">
-            <Image src={editedTournament.image || `https://placehold.co/1200x400.png`} data-ai-hint="tournament banner" width={1200} height={400} alt={editedTournament.name} className="w-full h-64 object-cover"/>
+            <Image src={isEditing ? editedTournament.image : tournament.image || `https://placehold.co/1200x400.png`} data-ai-hint="tournament banner" width={1200} height={400} alt={tournament.name} className="w-full h-64 object-cover"/>
             {isEditing && (
               <div className="absolute bottom-2 right-2">
                 <Input id="image-upload" type="file" className="hidden" onChange={handleImageChange} accept="image/*"/>
@@ -243,19 +254,19 @@ export default function TournamentDetailsPage() {
             )}
         </div>
         <CardHeader>
-          {isEditing ? (
-            <div className="space-y-2">
-              <Label htmlFor="tournament-name">Tournament Name</Label>
+          <div className="flex items-center gap-2">
+             {isEditing ? (
               <Input
                 id="tournament-name"
-                className="text-4xl font-bold -ml-1.5 h-auto p-1.5 border-transparent focus:border-border focus:bg-muted/50 transition-all"
+                className="text-4xl font-bold -ml-1.5 h-auto p-1.5 border-border bg-muted/50 transition-all"
                 value={editedTournament.name}
                 onChange={(e) => setEditedTournament({...editedTournament, name: e.target.value})}
               />
-            </div>
-          ) : (
-            <CardTitle className="text-4xl font-bold">{tournament.name}</CardTitle>
-          )}
+            ) : (
+              <CardTitle className="text-4xl font-bold">{tournament.name}</CardTitle>
+            )}
+          </div>
+         
           <div className="flex items-center gap-4 text-muted-foreground pt-2">
             <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
@@ -276,7 +287,7 @@ export default function TournamentDetailsPage() {
                     value={editedTournament.location || ''}
                     onChange={(e) => setEditedTournament({...editedTournament, location: e.target.value})}
                     placeholder="Location"
-                    className="h-8 -ml-1.5 p-1.5 border-transparent focus:border-border focus:bg-muted/50 transition-all"
+                    className="h-8 -ml-1.5 p-1.5 border-border bg-muted/50 transition-all"
                   />
                 ) : (
                    <span>{tournament.location || 'Not specified'}</span>
@@ -285,13 +296,15 @@ export default function TournamentDetailsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Tournament Rules</h3>
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold flex items-center gap-2">
+              Tournament Rules
+            </h3>
              {isEditing ? (
               <Textarea 
                 value={editedTournament.rules}
                 onChange={(e) => setEditedTournament({...editedTournament, rules: e.target.value})}
-                className="whitespace-pre-line border-transparent focus:border-border focus:bg-muted/50 transition-all"
+                className="whitespace-pre-line border-border bg-muted/50 transition-all"
                 rows={5}
               />
              ) : (
@@ -301,7 +314,7 @@ export default function TournamentDetailsPage() {
         </CardContent>
         <CardFooter className="flex justify-between">
             <div>
-              {tournament.status === 'Upcoming' && !isEditing && (
+              {tournament.status === 'Upcoming' && !isAdmin && (
                    <Button onClick={handleApply} disabled={hasApplied}>
                       {applicationStatus === 'Approved' ? 'Approved' : applicationStatus === 'Pending' ? 'Application Pending' : 'Apply to Participate'}
                    </Button>
@@ -311,15 +324,18 @@ export default function TournamentDetailsPage() {
             </div>
 
             {isEditing && (
-              <Button onClick={handleSaveChanges}>
-                <Save className="mr-2 h-4 w-4"/>
-                Save Changes
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => { setIsEditing(false); setEditedTournament(tournament ? {...tournament} : null); }}>Cancel</Button>
+                <Button onClick={handleSaveChanges}>
+                  <Save className="mr-2 h-4 w-4"/>
+                  Save Changes
+                </Button>
+              </div>
             )}
         </CardFooter>
       </Card>
 
-      {isEditing && pendingPlayers.length > 0 && (
+      {isAdmin && pendingPlayers.length > 0 && (
           <Card>
               <CardHeader>
                   <CardTitle>Pending Applications ({pendingPlayers.length})</CardTitle>
@@ -374,3 +390,5 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
+
+  
