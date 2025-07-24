@@ -280,76 +280,81 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Matches</CardTitle>
-          <CardDescription>Scheduled games for today and tomorrow.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Matches</CardTitle>
+            <CardDescription>Scheduled games for today and tomorrow.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-4">
+              {upcomingMatches.map((match) => {
+                const player1 = getPlayerAvatar(match.player1);
+                const player2 = getPlayerAvatar(match.player2);
+                return (
+                    <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                        <div className="flex-1">
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
+                                <div className="flex items-center justify-end gap-2">
+                                     <Avatar className="h-8 w-8">
+                                        <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                                        <AvatarFallback>{player1.initials}</AvatarFallback>
+                                    </Avatar>
+                                    <PlayerLink name={match.player1} />
+                                </div>
+                                <span className="text-muted-foreground text-sm">vs</span>
+                                 <div className="flex items-center justify-start gap-2">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                                        <AvatarFallback>{player2.initials}</AvatarFallback>
+                                    </Avatar>
+                                    <PlayerLink name={match.player2} />
+                                </div>
+                            </div>
+                        </div>
+                      <div className="text-sm text-muted-foreground text-right w-32">{new Date(match.date).toLocaleDateString()} at {match.time}</div>
+                    </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Results</CardTitle>
+            <CardDescription>Latest match outcomes.</CardDescription>
+          </CardHeader>
+          <CardContent>
           <ul className="space-y-4">
-            {upcomingMatches.map((match) => {
-              const player1 = getPlayerAvatar(match.player1);
-              const player2 = getPlayerAvatar(match.player2);
-              return (
-                  <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                      <div className="flex-1">
-                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
-                              <div className="flex items-center justify-end gap-2">
-                                   <Avatar className="h-8 w-8">
-                                      <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
-                                      <AvatarFallback>{player1.initials}</AvatarFallback>
-                                  </Avatar>
-                                  <PlayerLink name={match.player1} />
-                              </div>
-                              <span className="text-muted-foreground text-sm">vs</span>
-                               <div className="flex items-center justify-start gap-2">
-                                  <Avatar className="h-8 w-8">
-                                      <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
-                                      <AvatarFallback>{player2.initials}</AvatarFallback>
-                                  </Avatar>
-                                  <PlayerLink name={match.player2} />
-                              </div>
+              {recentResults.map((match) => {
+                const winner = getPlayerAvatar(match.winner);
+                const loser = getPlayerAvatar(match.loser);
+                return (
+                    <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center w-full">
+                          <div className="flex items-center justify-end gap-2">
+                               <Avatar className="h-8 w-8">
+                                  <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
+                                  <AvatarFallback>{winner.initials}</AvatarFallback>
+                              </Avatar>
+                              <PlayerLink name={match.winner} />
+                          </div>
+                          <Badge variant="secondary" className="font-bold text-lg">{match.score}</Badge>
+                           <div className="flex items-center justify-start gap-2">
+                              <Avatar className="h-8 w-8">
+                                  <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
+                                  <AvatarFallback>{loser.initials}</AvatarFallback>
+                              </Avatar>
+                              <PlayerLink name={match.loser} />
                           </div>
                       </div>
-                    <div className="text-sm text-muted-foreground text-right w-32">{new Date(match.date).toLocaleDateString()} at {match.time}</div>
-                  </li>
-              );
-            })}
-          </ul>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Results</CardTitle>
-          <CardDescription>Latest match outcomes.</CardDescription>
-        </CardHeader>
-        <CardContent>
-        <ul className="space-y-4">
-            {recentResults.map((match) => {
-              const winner = getPlayerAvatar(match.winner);
-              const loser = getPlayerAvatar(match.loser);
-              return (
-                  <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                          <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
-                          <AvatarFallback>{winner.initials}</AvatarFallback>
-                      </Avatar>
-                      <PlayerLink name={match.winner} />
-                      <span className="text-muted-foreground text-sm">beat</span> 
-                      <Avatar className="h-8 w-8">
-                          <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
-                          <AvatarFallback>{loser.initials}</AvatarFallback>
-                      </Avatar>
-                      <PlayerLink name={match.loser} />
-                  </div>
-                  <Badge variant="secondary">{match.score}</Badge>
-                  </li>
-              );
-            })}
-          </ul>
-        </CardContent>
-      </Card>
+                    </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
@@ -401,5 +406,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
