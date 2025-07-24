@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { Notification } from "@/types/notifications";
 
-interface RecentMatch {
+interface Match {
   id: number;
   winner: string;
   loser: string;
@@ -47,9 +47,9 @@ export default function PlayerProfilePage() {
   const [editedWins, setEditedWins] = useState(0);
   const [editedLosses, setEditedLosses] = useState(0);
   const [editedAverageBreak, setEditedAverageBreak] = useState(0);
-  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
+  const [matchHistory, setMatchHistory] = useState<Match[]>([]);
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<RecentMatch | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [newScore1, setNewScore1] = useState(0);
   const [newScore2, setNewScore2] = useState(0);
   const params = useParams();
@@ -71,11 +71,11 @@ export default function PlayerProfilePage() {
       setEditedLosses(losses);
       setEditedAverageBreak(averageBreak);
       
-      const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
-      const playerMatches = allRecentResults.filter(
+      const allMatches = getFromStorage<Match[]>('recentResults', []);
+      const playerMatches = allMatches.filter(
           (match) => match.winner === foundPlayer.name || match.loser === foundPlayer.name
       );
-      setRecentMatches(playerMatches);
+      setMatchHistory(playerMatches);
     }
   };
 
@@ -147,7 +147,7 @@ export default function PlayerProfilePage() {
     }
   }
 
-  const handleOpenScoreDialog = (match: RecentMatch) => {
+  const handleOpenScoreDialog = (match: Match) => {
     setSelectedMatch(match);
     const scores = match.score.split('-').map(s => parseInt(s.trim()));
     setNewScore1(scores[0]);
@@ -158,17 +158,17 @@ export default function PlayerProfilePage() {
   const handleScoreChangeRequest = () => {
     if (!selectedMatch || !currentUser) return;
 
-    const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
-    const matchIndex = allRecentResults.findIndex(m => m.id === selectedMatch.id);
+    const allMatches = getFromStorage<Match[]>('recentResults', []);
+    const matchIndex = allMatches.findIndex(m => m.id === selectedMatch.id);
 
     if (matchIndex > -1) {
-      allRecentResults[matchIndex].pendingScore = {
+      allMatches[matchIndex].pendingScore = {
         score1: newScore1,
         score2: newScore2,
         proposedBy: currentUser.email,
       };
-      saveToStorage('recentResults', allRecentResults);
-      setRecentMatches(prev => prev.map(m => m.id === selectedMatch.id ? allRecentResults[matchIndex] : m));
+      saveToStorage('recentResults', allMatches);
+      setMatchHistory(prev => prev.map(m => m.id === selectedMatch.id ? allMatches[matchIndex] : m));
       
       const opponentName = selectedMatch.winner === player?.name ? selectedMatch.loser : selectedMatch.winner;
       const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
@@ -195,11 +195,11 @@ export default function PlayerProfilePage() {
   const handleApproval = (matchId: number, approve: boolean) => {
     if (!currentUser || !player) return;
 
-    const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
-    const matchIndex = allRecentResults.findIndex(m => m.id === matchId);
+    const allMatches = getFromStorage<Match[]>('recentResults', []);
+    const matchIndex = allMatches.findIndex(m => m.id === matchId);
     if (matchIndex === -1) return;
 
-    const match = allRecentResults[matchIndex];
+    const match = allMatches[matchIndex];
     if (!match.pendingScore) return;
 
     const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
@@ -209,31 +209,66 @@ export default function PlayerProfilePage() {
     
     if (approve) {
         const { score1, score2 } = match.pendingScore;
-        const winnerName = score1 > score2 ? proposerUser.name : player.name;
-        const loserName = score1 > score2 ? player.name : proposerUser.name;
         
-        allRecentResults[matchIndex] = {
+        const players = getFromStorage<Player[]>('players', []);
+        const proposerPlayerIndex = players.findIndex(p => p.name === proposerUser.name);
+        const approverPlayerIndex = players.findIndex(p => p.name === player.name);
+
+        if (proposerPlayerIndex === -1 || approverPlayerIndex === -1) return;
+
+        // Decrement old stats
+        const oldWinnerWasProposer = match.winner === proposerUser.name;
+        const oldWinnerIndex = oldWinnerWasProposer ? proposerPlayerIndex : approverPlayerIndex;
+        const oldLoserIndex = oldWinnerWasProposer ? approverPlayerIndex : proposerPlayerIndex;
+        
+        players[oldWinnerIndex].wins = (players[oldWinnerIndex].wins ?? 1) - 1;
+        players[oldLoserIndex].losses = (players[oldLoserIndex].losses ?? 1) -1;
+
+        // Determine new winner/loser
+        const newWinnerIsProposer = score1 > score2;
+        const winnerName = newWinnerIsProposer ? proposerUser.name : player.name;
+        const loserName = newWinnerIsProposer ? player.name : proposerUser.name;
+
+        // Increment new stats
+        const newWinnerIndex = newWinnerIsProposer ? proposerPlayerIndex : approverPlayerIndex;
+        const newLoserIndex = newWinnerIsProposer ? approverPlayerIndex : proposerPlayerIndex;
+
+        players[newWinnerIndex].wins = (players[newWinnerIndex].wins ?? 0) + 1;
+        players[newLoserIndex].losses = (players[newLoserIndex].losses ?? 0) + 1;
+        
+        // Recalculate win rates
+        [newWinnerIndex, newLoserIndex].forEach(idx => {
+            const p = players[idx];
+            p.winRate = p.matchesPlayed > 0 ? (((p.wins ?? 0) / p.matchesPlayed) * 100).toFixed(1) + '%' : '0%';
+        });
+        
+        saveToStorage('players', players);
+
+        allMatches[matchIndex] = {
             ...match,
             score: `${score1}-${score2}`,
             winner: winnerName,
             loser: loserName,
             pendingScore: undefined
         };
+
         toast({ title: "Approved", description: "The match score has been updated." });
 
     } else {
-        allRecentResults[matchIndex].pendingScore = undefined;
+        allMatches[matchIndex].pendingScore = undefined;
         toast({ title: "Rejected", description: "The score change request has been rejected." });
     }
 
-    saveToStorage('recentResults', allRecentResults);
-    setRecentMatches(prev => prev.map(m => m.id === matchId ? allRecentResults[matchIndex] : m));
+    saveToStorage('recentResults', allMatches);
     
+    // This is important to re-fetch the data for the page.
+    fetchPlayerData(id);
+
     const proposerNotificationKey = `notifications_${proposerUser.email}`;
     const proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
     const newNotification: Notification = {
         id: Date.now().toString(),
-        title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
+        title: `Score Change ${approve ? 'Approved' : 'Rejected'}`,
         description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
         read: false,
         date: new Date().toISOString()
@@ -409,14 +444,20 @@ export default function PlayerProfilePage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {recentMatches.length > 0 ? (
+          {matchHistory.length > 0 ? (
             <ul className="space-y-4">
-              {recentMatches.map((match) => {
+              {matchHistory.map((match) => {
                 const isWinner = match.winner === player.name;
-                const opponent = isWinner ? match.loser : match.winner;
+                const opponentName = isWinner ? match.loser : match.winner;
+                const opponent = getFromStorage<Player[]>('players', []).find(p => p.name === opponentName);
+
                 const isMyMatch = isOwnProfile;
                 const pendingChange = match.pendingScore;
                 const iAmProposer = pendingChange?.proposedBy === currentUser?.email;
+                
+                const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+                const proposerUser = allUsers.find(u => u.email === pendingChange?.proposedBy);
+
                 const iAmApprover = isMyMatch && pendingChange && !iAmProposer;
 
                 return (
@@ -427,13 +468,13 @@ export default function PlayerProfilePage() {
                                {isWinner ? "WIN" : "LOSS"}
                             </Badge>
                             <div>
-                               <span>vs {opponent}</span>
-                               <p className="text-sm text-muted-foreground">{match.date}</p>
+                               <span>vs <Link href={`/players/${opponent?.id}`} className="hover:underline">{opponentName}</Link></span>
+                               <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
                             </div>
                          </div>
                          <div className="flex items-center gap-4">
                             <span className="font-bold text-lg">{match.score}</span>
-                            {isMyMatch && !pendingChange && (
+                            {(isMyMatch || isAdmin) && !pendingChange && (
                                 <Button size="sm" variant="outline" onClick={() => handleOpenScoreDialog(match)}>
                                     <Edit className="h-4 w-4"/>
                                 </Button>
@@ -445,7 +486,7 @@ export default function PlayerProfilePage() {
                             <CardHeader>
                                 <CardTitle className="text-base">Pending Score Change</CardTitle>
                                 <CardDescription className="text-xs">
-                                    {iAmProposer ? `Waiting for ${opponent} to approve.` : `${pendingChange.proposedBy === currentUser?.email ? 'You' : opponent} proposed a new score.`}
+                                    {iAmProposer ? `Waiting for ${opponentName} to approve.` : `${proposerUser?.name || 'Another player'} proposed a new score.`}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -464,7 +505,7 @@ export default function PlayerProfilePage() {
               })}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-center py-4">No recent matches found.</p>
+            <p className="text-muted-foreground text-center py-4">No match history found.</p>
           )}
         </CardContent>
       </Card>
@@ -500,5 +541,3 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
-
-    

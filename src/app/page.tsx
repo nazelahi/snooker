@@ -31,6 +31,8 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
 } from "@/components/ui/carousel";
 
 const initialPlayerStandings = [
@@ -56,10 +58,12 @@ const initialLiveMatches: LiveMatch[] = [
 ];
 
 const initialPlayers: Player[] = [
-    { id: 1, name: "Ronnie O'Sullivan", skillLevel: "Pro", matchesPlayed: 25, winRate: "88%", highestBreak: 147, avatar: "/avatars/ronnie.png", initials: "RO" },
-    { id: 2, name: "Judd Trump", skillLevel: "Pro", matchesPlayed: 28, winRate: "71%", highestBreak: 147, avatar: "/avatars/judd.png", initials: "JT" },
-    { id: 3, name: "Mark Selby", skillLevel: "Pro", matchesPlayed: 26, winRate: "73%", highestBreak: 145, avatar: "/avatars/mark.png", initials: "MS" },
-    { id: 4, name: "Neil Robertson", skillLevel: "Pro", matchesPlayed: 24, winRate: "75%", highestBreak: 147, avatar: "/avatars/neil.png", initials: "NR" },
+    { id: 1, name: "Ronnie O'Sullivan", skillLevel: "Pro", matchesPlayed: 25, winRate: "88%", highestBreak: 147, avatar: "/avatars/ronnie.png", initials: "RO", wins: 22, losses: 3 },
+    { id: 2, name: "Judd Trump", skillLevel: "Pro", matchesPlayed: 28, winRate: "71%", highestBreak: 147, avatar: "/avatars/judd.png", initials: "JT", wins: 20, losses: 8 },
+    { id: 3, name: "Mark Selby", skillLevel: "Pro", matchesPlayed: 26, winRate: "73%", highestBreak: 145, avatar: "/avatars/mark.png", initials: "MS", wins: 19, losses: 7 },
+    { id: 4, name: "Neil Robertson", skillLevel: "Pro", matchesPlayed: 24, winRate: "75%", highestBreak: 147, avatar: "/avatars/neil.png", initials: "NR", wins: 18, losses: 6 },
+    { id: 5, name: "Alice Johnson", skillLevel: "Intermediate", matchesPlayed: 40, winRate: "60%", highestBreak: 92, avatar: "/avatars/alice.png", initials: "AJ", wins: 24, losses: 16 },
+    { id: 6, name: "Bob Williams", skillLevel: "Beginner", matchesPlayed: 15, winRate: "40%", highestBreak: 45, avatar: "/avatars/bob.png", initials: "BW", wins: 6, losses: 9 },
 ];
 
 export default function DashboardPage() {
@@ -71,21 +75,25 @@ export default function DashboardPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
   useEffect(() => {
+    
+    const storedPlayers = getFromStorage('players', initialPlayers);
     const storedStandings = getFromStorage('playerStandings', initialPlayerStandings);
     const storedMatches = getFromStorage('upcomingMatches', initialUpcomingMatches);
     const storedResults = getFromStorage('recentResults', initialRecentResults);
     const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
-    const storedPlayers = getFromStorage('players', initialPlayers);
     const storedTournaments = getFromStorage('tournaments', []);
 
+    setPlayers(storedPlayers);
     setPlayerStandings(storedStandings);
     setUpcomingMatches(storedMatches);
     setRecentResults(storedResults);
     setLiveMatches(storedLiveMatches);
-    setPlayers(storedPlayers);
     setTournaments(storedTournaments);
 
 
+    if (localStorage.getItem('players') === null) {
+        saveToStorage('players', initialPlayers);
+    }
     if (localStorage.getItem('playerStandings') === null) {
       saveToStorage('playerStandings', initialPlayerStandings);
     }
@@ -97,9 +105,6 @@ export default function DashboardPage() {
     }
     if (localStorage.getItem('liveMatches') === null) {
         saveToStorage('liveMatches', initialLiveMatches);
-    }
-    if (localStorage.getItem('players') === null) {
-        saveToStorage('players', initialPlayers);
     }
   }, []);
 
@@ -181,6 +186,8 @@ export default function DashboardPage() {
                   </CarouselItem>
                 ))}
               </CarouselContent>
+              <CarouselPrevious />
+              <CarouselNext />
             </Carousel>
           ) : (
             <p className="text-muted-foreground text-center py-4">No live matches currently in progress.</p>
@@ -202,7 +209,7 @@ export default function DashboardPage() {
                 >
                     <CarouselContent>
                         {upcomingTournaments.map((tournament) => (
-                            <CarouselItem key={tournament.id} className="w-full">
+                            <CarouselItem key={tournament.id} className="w-full md:basis-1/2 lg:basis-1/3">
                                 <Card className="overflow-hidden">
                                     <CardHeader className="p-0">
                                         <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
@@ -222,6 +229,8 @@ export default function DashboardPage() {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
+                    <CarouselPrevious />
+                    <CarouselNext />
                 </Carousel>
             ) : (
                  <p className="text-muted-foreground text-center py-4">No upcoming tournaments scheduled.</p>
@@ -265,8 +274,8 @@ export default function DashboardPage() {
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">147</div>
-            <p className="text-xs text-muted-foreground">by Judd Trump</p>
+            <div className="text-2xl font-bold">{players.length > 0 ? Math.max(...players.map(p => p.highestBreak)) : 0}</div>
+            <p className="text-xs text-muted-foreground">by {players.length > 0 ? players.reduce((prev, current) => (prev.highestBreak > current.highestBreak) ? prev : current).name : 'N/A'}</p>
           </CardContent>
         </Card>
       </div>
@@ -284,7 +293,7 @@ export default function DashboardPage() {
                   <div className="font-medium">
                     <PlayerLink name={match.player1} /> vs <PlayerLink name={match.player2} />
                   </div>
-                  <div className="text-sm text-muted-foreground">{match.date} at {match.time}</div>
+                  <div className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()} at {match.time}</div>
                 </li>
               ))}
             </ul>
@@ -301,7 +310,7 @@ export default function DashboardPage() {
                 <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                   <div>
                     <PlayerLink name={match.winner} />
-                    <span className="text-muted-foreground"> beat </span>
+                    <span className="text-muted-foreground"> beat </span> 
                     <PlayerLink name={match.loser} />
                   </div>
                   <Badge variant="secondary">{match.score}</Badge>

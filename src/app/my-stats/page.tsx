@@ -102,8 +102,8 @@ export default function MyStatsPage() {
       setEditedLosses(statsToSet.losses);
       setEditedAverageBreak(statsToSet.averageBreak);
 
-      const allRecentResults = getFromStorage<Match[]>('recentResults', []);
-      const matchesForApproval = allRecentResults.filter(match => 
+      const allMatches = getFromStorage<Match[]>('recentResults', []);
+      const matchesForApproval = allMatches.filter(match => 
         (match.winner === userData.name || match.loser === userData.name) && 
         match.pendingScore && match.pendingScore.proposedBy !== userData.email
       );
@@ -191,21 +191,21 @@ export default function MyStatsPage() {
         return;
     }
     
-    const allRecentResults = getFromStorage<any[]>('recentResults', []);
+    const allMatches = getFromStorage<any[]>('recentResults', []);
     const newMatch = {
-        id: allRecentResults.length > 0 ? Math.max(...allRecentResults.map(m => m.id)) + 1 : 1,
+        id: allMatches.length > 0 ? Math.max(...allMatches.map(m => m.id)) + 1 : 1,
         winner: myScore > opponentScore ? currentUser.name : opponent.name,
         loser: myScore > opponentScore ? opponent.name : currentUser.name,
         score: `${myScore}-${opponentScore}`,
         date: new Date().toISOString(),
         pendingScore: {
-            score1: myScore,
-            score2: opponentScore,
+            score1: myScore > opponentScore ? myScore : opponentScore,
+            score2: myScore > opponentScore ? opponentScore : myScore,
             proposedBy: currentUser.email,
         }
     };
     
-    saveToStorage('recentResults', [...allRecentResults, newMatch]);
+    saveToStorage('recentResults', [...allMatches, newMatch]);
 
     const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
     const opponentUser = allUsers.find(u => u.name === opponent.name);
@@ -228,32 +228,39 @@ export default function MyStatsPage() {
 
   const handleApproval = (matchId: number, approve: boolean) => {
     if (!currentUser) return;
-    const allRecentResults = getFromStorage<Match[]>('recentResults', []);
-    const matchIndex = allRecentResults.findIndex(m => m.id === matchId);
+    const allMatches = getFromStorage<Match[]>('recentResults', []);
+    const matchIndex = allMatches.findIndex(m => m.id === matchId);
     if (matchIndex === -1) return;
 
-    const match = allRecentResults[matchIndex];
+    const match = allMatches[matchIndex];
     if (!match.pendingScore) return;
 
     const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
     const proposerUser = allUsers.find(u => u.email === match.pendingScore!.proposedBy);
 
     if (approve) {
-        const { score1, score2 } = match.pendingScore;
+        const { score1, score2, proposedBy } = match.pendingScore;
         
-        let winnerName, loserName;
-        // The proposer is player1, current user (approver) is player2.
-        const proposerIsWinner = score1 > score2;
+        let winnerName: string, loserName: string;
         
-        if (proposerIsWinner) {
-            winnerName = proposerUser!.name;
-            loserName = currentUser.name;
-        } else {
-            winnerName = currentUser.name;
-            loserName = proposerUser!.name;
+        const proposerIsPlayer1 = proposedBy === match.pendingScore.proposedBy;
+
+        const players = getFromStorage<Player[]>('players', []);
+        const currentUserPlayer = players.find(p => p.name === currentUser.name);
+        const proposerPlayer = players.find(p => p.name === proposerUser?.name);
+        
+        if (!currentUserPlayer || !proposerPlayer) return;
+
+        // Determine winner based on who proposed what.
+        if (proposerPlayer.name === match.winner) { // Proposer reported themselves as winner initially
+            winnerName = score1 > score2 ? proposerPlayer.name : currentUserPlayer.name;
+            loserName = score1 > score2 ? currentUserPlayer.name : proposerPlayer.name;
+        } else { // Proposer reported themselves as loser initially
+            winnerName = score1 > score2 ? currentUserPlayer.name : proposerPlayer.name;
+            loserName = score1 > score2 ? proposerPlayer.name : currentUserPlayer.name;
         }
-        
-        allRecentResults[matchIndex] = {
+
+        allMatches[matchIndex] = {
             ...match,
             score: `${score1}-${score2}`,
             winner: winnerName,
@@ -263,7 +270,7 @@ export default function MyStatsPage() {
         toast({ title: "Approved", description: "The match score has been updated." });
 
         // Update player stats
-        const players = getFromStorage<Player[]>('players', []);
+        
         const winnerIndex = players.findIndex(p => p.name === winnerName);
         const loserIndex = players.findIndex(p => p.name === loserName);
 
@@ -280,11 +287,11 @@ export default function MyStatsPage() {
         saveToStorage('players', players);
 
     } else {
-        allRecentResults.splice(matchIndex, 1);
+        allMatches.splice(matchIndex, 1);
         toast({ title: "Rejected", description: "The score has been rejected and the match report removed." });
     }
 
-    saveToStorage('recentResults', allRecentResults);
+    saveToStorage('recentResults', allMatches);
     setPendingMatches(prev => prev.filter(m => m.id !== matchId));
 
     if (proposerUser) {
@@ -337,17 +344,20 @@ export default function MyStatsPage() {
             <CardContent>
                 <ul className="space-y-4">
                     {pendingMatches.map(match => {
-                        const proposer = allPlayers.find(p => p.name === (match.winner === currentUser?.name ? match.loser : match.winner));
                         const proposerUser = getFromStorage<{name:string, email:string}[]>('users', []).find(u => u.email === match.pendingScore?.proposedBy)
                         const opponentName = proposerUser?.name ?? 'Opponent';
 
                         let myProposedScore, opponentProposedScore;
-                        if(match.winner === currentUser?.name) { // I am the winner in the initial report
-                            myProposedScore = match.pendingScore?.score1;
-                            opponentProposedScore = match.pendingScore?.score2;
-                        } else { // I am the loser in the initial report
-                             myProposedScore = match.pendingScore?.score2;
-                             opponentProposedScore = match.pendingScore?.score1;
+                        
+                        // The proposer's score is always score1 in the pending object when created from their side
+                        const proposerIsWinnerInReport = match.winner === opponentName;
+                        
+                        if(proposerIsWinnerInReport) { 
+                           opponentProposedScore = match.pendingScore?.score1;
+                           myProposedScore = match.pendingScore?.score2;
+                        } else {
+                           opponentProposedScore = match.pendingScore?.score2;
+                           myProposedScore = match.pendingScore?.score1;
                         }
 
 
@@ -356,7 +366,7 @@ export default function MyStatsPage() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p>vs <strong>{opponentName}</strong></p>
-                                        <p className="text-sm text-muted-foreground">Proposed Score: <span className="font-bold">{opponentProposedScore}-{myProposedScore}</span></p>
+                                        <p className="text-sm text-muted-foreground">Proposed Score: <span className="font-bold">{myProposedScore}-{opponentProposedScore}</span></p>
                                     </div>
                                     <div className="flex gap-2">
                                         <Button size="sm" variant="outline" onClick={() => handleApproval(match.id, true)}><Check className="h-4 w-4 mr-2"/>Approve</Button>
