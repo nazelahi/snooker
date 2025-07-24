@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from 'next/navigation';
 import {
   Card,
@@ -56,11 +56,12 @@ export default function PlayerProfilePage() {
   const id = params.id as string;
   const { toast } = useToast();
 
-  const fetchPlayerData = (playerId: string) => {
+  const fetchPlayerData = useCallback((playerId: string) => {
     const players = getFromStorage<Player[]>('players', []);
     const foundPlayer = players.find(p => p.id === parseInt(playerId));
     setPlayer(foundPlayer || null);
-     if (foundPlayer) {
+
+    if (foundPlayer) {
       setEditedName(foundPlayer.name);
       setAvatarPreview(foundPlayer.avatar);
       const winRateValue = parseFloat(foundPlayer.winRate) || 0;
@@ -74,10 +75,10 @@ export default function PlayerProfilePage() {
       const allMatches = getFromStorage<Match[]>('recentResults', []);
       const playerMatches = allMatches.filter(
           (match) => match.winner === foundPlayer.name || match.loser === foundPlayer.name
-      );
+      ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setMatchHistory(playerMatches);
     }
-  };
+  }, []);
 
 
   useEffect(() => {
@@ -92,18 +93,11 @@ export default function PlayerProfilePage() {
         if(id) {
           fetchPlayerData(id);
         }
-        const allMatches = getFromStorage<Match[]>('recentResults', []);
-        if (player) {
-             const playerMatches = allMatches.filter(
-                (match) => match.winner === player.name || match.loser === player.name
-            );
-            setMatchHistory(playerMatches);
-        }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [id, player]);
+  }, [id, fetchPlayerData]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -175,7 +169,6 @@ export default function PlayerProfilePage() {
         proposedBy: currentUser.email,
       };
       saveToStorage('recentResults', allMatches);
-      setMatchHistory(prev => prev.map(m => m.id === selectedMatch.id ? allMatches[matchIndex] : m));
       
       const opponentName = selectedMatch.winner === player?.name ? selectedMatch.loser : selectedMatch.winner;
       const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
@@ -191,9 +184,9 @@ export default function PlayerProfilePage() {
             date: new Date().toISOString()
         };
         saveToStorage(`notifications_${opponent.email}`, [newNotification, ...notifications]);
-        window.dispatchEvent(new Event('storage'));
       }
-
+      
+      window.dispatchEvent(new Event('storage'));
       toast({ title: "Request Sent", description: "Your score change request has been sent for approval." });
     }
     setIsScoreDialogOpen(false);
@@ -268,9 +261,6 @@ export default function PlayerProfilePage() {
 
     saveToStorage('recentResults', allMatches);
     
-    // This is important to re-fetch the data for the page.
-    fetchPlayerData(id);
-
     const proposerNotificationKey = `notifications_${proposerUser.email}`;
     const proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
     const newNotification: Notification = {
