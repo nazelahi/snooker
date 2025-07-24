@@ -67,6 +67,14 @@ export default function Header() {
     router.push('/login');
   };
 
+  const handleNotificationClick = (id: string) => {
+    const updatedNotifications = notifications.map(n => 
+        n.id === id ? { ...n, read: true } : n
+    );
+    setNotifications(updatedNotifications);
+    saveToStorage('notifications', updatedNotifications);
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -104,7 +112,11 @@ export default function Header() {
                 </DropdownMenuItem>
             ) : (
                 notifications.slice(0, 5).map(notification => (
-                    <DropdownMenuItem key={notification.id} className={!notification.read ? 'font-semibold' : ''}>
+                    <DropdownMenuItem 
+                      key={notification.id} 
+                      className={!notification.read ? 'font-semibold' : ''}
+                      onClick={() => handleNotificationClick(notification.id)}
+                    >
                         <div className="flex flex-col">
                             <p className={!notification.read ? 'font-bold' : 'font-semibold'}>{notification.title}</p>
                             <p className="text-sm text-muted-foreground">
