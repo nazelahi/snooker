@@ -267,13 +267,13 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="players" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="players">Manage Players</TabsTrigger>
-          <TabsTrigger value="tournaments">Manage Tournaments</TabsTrigger>
-          <TabsTrigger value="liveMatches">Manage Live Matches</TabsTrigger>
-          <TabsTrigger value="upcomingMatches">Upcoming Matches</TabsTrigger>
-          <TabsTrigger value="rules">Manage Rules</TabsTrigger>
-          <TabsTrigger value="siteSettings">Site Settings</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <TabsTrigger value="players">Players</TabsTrigger>
+          <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
+          <TabsTrigger value="liveMatches">Live Matches</TabsTrigger>
+          <TabsTrigger value="upcomingMatches">Upcoming</TabsTrigger>
+          <TabsTrigger value="rules">Rules</TabsTrigger>
+          <TabsTrigger value="siteSettings">Site</TabsTrigger>
         </TabsList>
         <TabsContent value="players">
            <Card className="mt-4">
@@ -282,7 +282,7 @@ export default function AdminSettings() {
                 <CardDescription>Edit player details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                  <div className="hidden md:grid grid-cols-1 md:grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                     <span className="col-span-2">Name</span>
                     <span>Highest Break</span>
                     <span>Wins</span>
@@ -290,12 +290,12 @@ export default function AdminSettings() {
                     <span>Actions</span>
                   </div>
                 {players.map(player => (
-                    <div key={player.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center p-2 rounded-lg bg-muted/50">
-                    <Input className="col-span-2" value={player.name} onChange={e => handlePlayerChange(player.id, 'name', e.target.value)} />
-                    <Input value={player.highestBreak} type="number" onChange={e => handlePlayerChange(player.id, 'highestBreak', parseInt(e.target.value))} />
-                    <Input value={player.wins ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'wins', parseInt(e.target.value))} />
-                    <Input value={player.losses ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'losses', parseInt(e.target.value))} />
-                    <Button variant="destructive" size="icon" onClick={() => handleDelete(player.id, 'players', setPlayers)}><Trash2 className="h-4 w-4" /></Button>
+                    <div key={player.id} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center p-2 rounded-lg bg-muted/50">
+                        <Input className="md:col-span-2" placeholder="Name" value={player.name} onChange={e => handlePlayerChange(player.id, 'name', e.target.value)} />
+                        <Input placeholder="Highest Break" value={player.highestBreak} type="number" onChange={e => handlePlayerChange(player.id, 'highestBreak', parseInt(e.target.value))} />
+                        <Input placeholder="Wins" value={player.wins ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'wins', parseInt(e.target.value))} />
+                        <Input placeholder="Losses" value={player.losses ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'losses', parseInt(e.target.value))} />
+                        <Button variant="destructive" size="icon" onClick={() => handleDelete(player.id, 'players', setPlayers)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 ))}
                 </CardContent>
@@ -308,18 +308,18 @@ export default function AdminSettings() {
                 <CardDescription>Edit tournament details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                  <div className="hidden md:grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                       <span className="col-span-2">Name</span>
                       <span>Players</span>
                       <span>Status</span>
                       <span>Actions</span>
                   </div>
                 {tournaments.map(tournament => (
-                    <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
-                      <div className="col-span-2">
-                        <Input value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
+                    <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-center p-2 rounded-lg bg-muted/50">
+                      <div className="md:col-span-2">
+                        <Input placeholder="Tournament Name" value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
                       </div>
-                      <Input value={tournament.players} type="number" onChange={e => handleTournamentChange(tournament.id, 'players', parseInt(e.target.value))} />
+                      <Input placeholder="Players" value={tournament.players} type="number" onChange={e => handleTournamentChange(tournament.id, 'players', parseInt(e.target.value))} />
                       <div className="flex flex-col gap-2">
                         <Select value={tournament.status} onValueChange={(value: "Upcoming" | "In Progress" | "Finished") => handleTournamentChange(tournament.id, 'status', value)}>
                             <SelectTrigger>
@@ -355,14 +355,14 @@ export default function AdminSettings() {
                 <CardDescription>Edit live match details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                    <div className="hidden md:grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                         <span>Player 1</span>
                         <span>Player 2</span>
                         <span>Score (P1 - P2)</span>
                         <span className="col-span-2">Actions</span>
                     </div>
                     {liveMatches.map(match => (
-                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-center p-2 rounded-lg bg-muted/50">
                             <Select value={match.player1} onValueChange={value => handleLiveMatchChange(match.id, 'player1', value)}>
                                 <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
                                 <SelectContent>
@@ -379,7 +379,7 @@ export default function AdminSettings() {
                                 <Input value={match.score1} type="number" onChange={e => handleLiveMatchChange(match.id, 'score1', parseInt(e.target.value))} />
                                 <Input value={match.score2} type="number" onChange={e => handleLiveMatchChange(match.id, 'score2', parseInt(e.target.value))} />
                             </div>
-                            <div className="flex gap-2 col-span-2">
+                            <div className="flex gap-2 md:col-span-2">
                                 <Button variant="outline" size="sm" onClick={() => handleEndLiveMatch(match.id)} className="w-full">
                                     <CheckCircle className="mr-2 h-4 w-4"/>
                                     End Match
@@ -401,7 +401,7 @@ export default function AdminSettings() {
                     <CardDescription>Manage upcoming matches. Add new matches or edit existing ones.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                    <div className="hidden md:grid grid-cols-1 md:grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                         <span className="col-span-1">Player 1</span>
                         <span className="col-span-1">Player 2</span>
                         <span className="col-span-1">Tournament</span>
@@ -409,24 +409,24 @@ export default function AdminSettings() {
                         <span className="text-right">Actions</span>
                     </div>
                     {upcomingMatches.map(match => (
-                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center p-2 rounded-lg bg-muted/50">
-                            <div className="col-span-1">
+                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center p-2 rounded-lg bg-muted/50">
+                            <div className="md:col-span-1">
                                 <Select value={match.player1} onValueChange={value => handleUpcomingMatchChange(match.id, 'player1', value)}>
-                                    <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder="Select player 1" /></SelectTrigger>
                                     <SelectContent>
                                         {players.map(p => <SelectItem key={`p1-${p.id}`} value={p.name}>{p.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="col-span-1">
+                            <div className="md:col-span-1">
                                  <Select value={match.player2} onValueChange={value => handleUpcomingMatchChange(match.id, 'player2', value)}>
-                                    <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder="Select player 2" /></SelectTrigger>
                                     <SelectContent>
                                         {players.map(p => <SelectItem key={`p2-${p.id}`} value={p.name}>{p.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="col-span-1">
+                            <div className="md:col-span-1">
                                 <Select value={match.tournamentId?.toString()} onValueChange={value => handleUpcomingMatchChange(match.id, 'tournamentId', parseInt(value))}>
                                      <SelectTrigger><SelectValue placeholder="Select tournament" /></SelectTrigger>
                                       <SelectContent>
@@ -434,7 +434,7 @@ export default function AdminSettings() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="flex gap-2 col-span-2">
+                            <div className="flex gap-2 md:col-span-2">
                                 <Input type="date" value={match.date} onChange={e => handleUpcomingMatchChange(match.id, 'date', e.target.value)} />
                                 <Input type="time" value={match.time} onChange={e => handleUpcomingMatchChange(match.id, 'time', e.target.value)} />
                             </div>

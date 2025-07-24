@@ -65,16 +65,8 @@ const initialPlayers: Player[] = [
     { id: 6, name: "Bob Williams", skillLevel: "Beginner", matchesPlayed: 15, winRate: "40%", highestBreak: 45, avatar: "/avatars/bob.png", initials: "BW", wins: 6, losses: 9 },
 ];
 
-interface PlayerStanding {
-  rank: number;
-  name: string;
-  matchesPlayed: number;
-  wins: number;
-  losses: number;
-}
-
 export default function DashboardPage() {
-  const [playerStandings, setPlayerStandings] = useState<PlayerStanding[]>([]);
+  const [playerStandings, setPlayerStandings] = useState<Player[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState(initialUpcomingMatches);
   const [recentResults, setRecentResults] = useState(initialRecentResults);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
@@ -99,16 +91,8 @@ export default function DashboardPage() {
     setPlayers(storedPlayers);
     
     const sortedStandings = [...storedPlayers]
-        .sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0))
-        .map((player, index) => ({
-            rank: index + 1,
-            name: player.name,
-            matchesPlayed: player.matchesPlayed,
-            wins: player.wins ?? 0,
-            losses: player.losses ?? 0,
-        }));
+        .sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0));
     setPlayerStandings(sortedStandings);
-    saveToStorage('playerStandings', sortedStandings);
 
 
     const sortedMatches = storedMatches.sort((a, b) => {
@@ -189,26 +173,26 @@ export default function DashboardPage() {
                             </div>
                         </div>
                         <div className="grid grid-cols-3 items-center text-center">
-                          <div className="flex items-center justify-end gap-4">
-                              <div className="font-bold text-lg"><PlayerLink name={match.player1} /></div>
+                          <div className="flex items-center justify-end gap-2 md:gap-4">
+                              <div className="font-bold text-lg text-right"><PlayerLink name={match.player1} /></div>
                               <Avatar>
                                   <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                   <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
                               </Avatar>
                           </div>
 
-                          <div className="text-4xl font-bold">
+                          <div className="text-2xl md:text-4xl font-bold">
                               <span className="text-primary">{match.score1}</span>
-                              <span className="mx-4">-</span>
+                              <span className="mx-2 md:mx-4">-</span>
                               <span>{match.score2}</span>
                           </div>
 
-                          <div className="flex items-center justify-start gap-4">
+                          <div className="flex items-center justify-start gap-2 md:gap-4">
                               <Avatar>
                                   <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
                                   <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
                               </Avatar>
-                              <div className="font-bold text-lg"><PlayerLink name={match.player2} /></div>
+                              <div className="font-bold text-lg text-left"><PlayerLink name={match.player2} /></div>
                           </div>
                         </div>
                       </div>
@@ -485,40 +469,34 @@ export default function DashboardPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50px]">Rank</TableHead>
+                <TableHead className="w-[50px] text-center">Rank</TableHead>
                 <TableHead>Player</TableHead>
-                <TableHead className="text-center">Matches</TableHead>
+                <TableHead className="text-center hidden md:table-cell">Matches</TableHead>
                 <TableHead className="text-center">Wins</TableHead>
-                <TableHead className="text-center">Losses</TableHead>
+                <TableHead className="text-center hidden md:table-cell">Losses</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {playerStandings.map((player) => {
-                const playerDetails = players.find(p => p.name === player.name);
-                return (
-                    <TableRow key={player.rank}>
-                    <TableCell className="font-medium text-center">{player.rank}</TableCell>
+              {playerStandings.map((player, index) => (
+                <TableRow key={player.id}>
+                    <TableCell className="font-medium text-center">{index + 1}</TableCell>
                     <TableCell>
                         <div className="flex items-center gap-3">
-                        <Avatar>
-                            <AvatarImage src={getPlayerAvatar(player.name).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
-                            <AvatarFallback>{getPlayerAvatar(player.name).initials}</AvatarFallback>
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={player.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
+                            <AvatarFallback>{player.initials}</AvatarFallback>
                         </Avatar>
-                        {playerDetails ? (
-                            <Link href={`/players/${playerDetails.id}`} className="font-medium hover:underline">
-                                {player.name}
-                            </Link>
-                        ) : (
-                            <span className="font-medium">{player.name}</span>
-                        )}
+                         <Link href={`/players/${player.id}`} className="font-medium hover:underline">
+                            {player.name}
+                        </Link>
                         </div>
                     </TableCell>
-                    <TableCell className="text-center">{player.matchesPlayed}</TableCell>
+                    <TableCell className="text-center hidden md:table-cell">{player.matchesPlayed}</TableCell>
                     <TableCell className="text-green-400 text-center">{player.wins}</TableCell>
-                    <TableCell className="text-red-400 text-center">{player.losses}</TableCell>
+                    <TableCell className="text-red-400 text-center hidden md:table-cell">{player.losses}</TableCell>
                     </TableRow>
-                );
-            })}
+                )
+            )}
             </TableBody>
           </Table>
         </CardContent>

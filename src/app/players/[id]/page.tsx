@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -357,7 +358,7 @@ export default function PlayerProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
-       <div className="flex items-center justify-between">
+       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Avatar className="h-20 w-20">
             <AvatarImage src={player.avatar || `https://placehold.co/80x80.png`} data-ai-hint="player portrait" alt={userStats.name} />
@@ -369,7 +370,7 @@ export default function PlayerProfilePage() {
           </div>
         </div>
          {(isAdmin || isOwnProfile) && (
-            <Button onClick={() => setIsEditing(!isEditing)} variant="outline">
+            <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="w-full md:w-auto">
                 {isEditing ? 'Cancel' : <><Edit className="mr-2 h-4 w-4" /> Edit Profile</>}
             </Button>
          )}
@@ -513,7 +514,7 @@ export default function PlayerProfilePage() {
 
                 return (
                   <li key={match.id} className="p-4 rounded-lg bg-muted/50">
-                     <div className="flex items-center justify-between">
+                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                          <div className="flex items-center gap-4">
                             <Badge variant={isWinner ? "default" : "destructive"}>
                             {isWinner ? "WIN" : "LOSS"}
@@ -525,17 +526,17 @@ export default function PlayerProfilePage() {
                               </div>
                             </Link>
                          </div>
-                         <div className="flex items-center gap-4">
+                         <div className="flex items-center gap-2 self-end md:self-center">
                             <span className="font-bold text-lg">{match.score}</span>
                             {(isMyMatch || isAdmin) && !pendingChange && (
-                                <Button size="sm" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenScoreDialog(match); }}>
+                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenScoreDialog(match); }}>
                                     <Edit className="h-4 w-4"/>
                                 </Button>
                             )}
                             {isAdmin && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button size="sm" variant="destructive" title="Delete Match" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                        <Button size="icon" variant="destructive" className="h-8 w-8" title="Delete Match" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </AlertDialogTrigger>

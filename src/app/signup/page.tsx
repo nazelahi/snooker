@@ -71,7 +71,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-15rem)]">
+    <div className="flex items-center justify-center py-12 px-4">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader className="text-center">
           <Icons.logo className="h-12 w-12 mx-auto text-primary" />
