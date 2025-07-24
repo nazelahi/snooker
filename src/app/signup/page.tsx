@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -15,9 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
+import { getFromStorage, saveToStorage } from "@/lib/storage";
+import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,21 +36,31 @@ export default function SignupPage() {
       return;
     }
 
-    const userData = {
+    const users = getFromStorage<any[]>('users', []);
+    
+    if (users.find(user => user.email === email)) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An account with this email already exists.",
+      });
+      return;
+    }
+
+    const newUser = {
       name,
       email,
+      password, // In a real app, hash and salt this!
     };
-
-    localStorage.setItem("userData", JSON.stringify(userData));
+    
+    saveToStorage('users', [...users, newUser]);
 
     toast({
       title: "Success!",
-      description: "Your account has been created and saved locally.",
+      description: "Your account has been created. Please log in.",
     });
     
-    setName("");
-    setEmail("");
-    setPassword("");
+    router.push('/login');
   };
 
   return (

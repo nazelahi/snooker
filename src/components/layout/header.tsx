@@ -22,8 +22,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { getFromStorage } from "@/lib/storage";
+import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Notification } from "@/types/notifications";
+import { useRouter } from 'next/navigation';
 
 const initialNotifications: Notification[] = [
     { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
@@ -33,10 +34,15 @@ const initialNotifications: Notification[] = [
 
 export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [currentUser, setCurrentUser] = useState<{name: string} | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const storedNotifications = getFromStorage('notifications', initialNotifications);
     setNotifications(storedNotifications);
+    
+    const userData = getFromStorage<{name: string} | null>('userData', null);
+    setCurrentUser(userData);
 
     if (localStorage.getItem('notifications') === null) {
       localStorage.setItem('notifications', JSON.stringify(initialNotifications));
@@ -45,11 +51,20 @@ export default function Header() {
     const handleStorageChange = () => {
         const stored = getFromStorage('notifications', initialNotifications);
         setNotifications(stored);
+        const user = getFromStorage<{name: string} | null>('userData', null);
+        setCurrentUser(user);
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('userData');
+    setCurrentUser(null);
+    window.dispatchEvent(new Event('storage'));
+    router.push('/login');
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -109,29 +124,38 @@ export default function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>{currentUser ? currentUser.name : "My Account"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href="#">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my-stats">
-                  <Trophy className="mr-2 h-4 w-4" />
-                  <span>My Stats</span>
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <Link href="/login" passHref>
-              <DropdownMenuItem>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </Link>
+            {currentUser ? (
+              <>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href="/my-stats">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/my-stats">
+                      <Trophy className="mr-2 h-4 w-4" />
+                      <span>My Stats</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <Link href="/login" passHref>
+                <DropdownMenuItem>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log in</span>
+                </DropdownMenuItem>
+              </Link>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -131,7 +132,9 @@ export default function PlayersPage() {
                   <TableCell className="text-center">{player.winRate}</TableCell>
                   <TableCell className="text-center font-semibold text-primary">{player.highestBreak}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => alert(`Viewing profile for ${player.name}`)}>View Profile</Button>
+                    <Link href={`/players/${player.id}`} passHref>
+                      <Button variant="ghost" size="sm">View Profile</Button>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}
