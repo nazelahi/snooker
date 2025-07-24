@@ -247,45 +247,43 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
 
-       <div className="space-y-4">
-            <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="text-primary" />
-                Upcoming Tournaments
-            </CardTitle>
-            {upcomingTournaments.length > 0 ? (
-                <Carousel
-                    opts={{
-                        align: "start",
-                    }}
-                    className="w-full"
-                >
-                    <CarouselContent className="-ml-2">
-                        {upcomingTournaments.map((tournament) => (
-                            <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-full pl-2">
-                                <Card className="overflow-hidden">
-                                    <CardHeader className="p-0">
-                                        <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
-                                    </CardHeader>
-                                    <CardContent className="p-4">
-                                        <h3 className="text-lg font-bold">{tournament.name}</h3>
-                                        <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
-                                    </CardContent>
-                                    <CardFooter className="p-4 bg-muted/50">
-                                        <Button variant="outline" asChild>
-                                           <Link href={`/tournaments/${tournament.id}`}>
-                                             View Details <ArrowRight className="ml-2 h-4 w-4"/>
-                                           </Link>
-                                        </Button>
-                                    </CardFooter>
-                                 </Card>
-                            </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                </Carousel>
-            ) : (
-                 <p className="text-muted-foreground text-center py-4">No upcoming tournaments scheduled.</p>
-            )}
-      </div>
+      {upcomingTournaments.length > 0 && (
+        <div className="space-y-4">
+              <CardTitle className="flex items-center gap-2">
+                  <CalendarIcon className="text-primary" />
+                  Upcoming Tournaments
+              </CardTitle>
+              <Carousel
+                  opts={{
+                      align: "start",
+                  }}
+                  className="w-full"
+              >
+                  <CarouselContent className="-ml-2">
+                      {upcomingTournaments.map((tournament) => (
+                          <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-full pl-2">
+                              <Card className="overflow-hidden">
+                                  <CardHeader className="p-0">
+                                      <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                                  </CardHeader>
+                                  <CardContent className="p-4">
+                                      <h3 className="text-lg font-bold">{tournament.name}</h3>
+                                      <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
+                                  </CardContent>
+                                  <CardFooter className="p-4 bg-muted/50">
+                                      <Button variant="outline" asChild>
+                                         <Link href={`/tournaments/${tournament.id}`}>
+                                           View Details <ArrowRight className="ml-2 h-4 w-4"/>
+                                         </Link>
+                                      </Button>
+                                  </CardFooter>
+                               </Card>
+                          </CarouselItem>
+                      ))}
+                  </CarouselContent>
+              </Carousel>
+        </div>
+      )}
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -472,5 +470,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
