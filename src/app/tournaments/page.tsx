@@ -118,7 +118,7 @@ export default function TournamentsPage() {
             <p className="text-muted-foreground">Create and manage club tournaments.</p>
         </div>
         {currentUser?.isAdmin && (
-            <Button onClick={() => setIsAddTournamentOpen(true)}>
+            <Button onClick={() => setIsAddTournamentOpen(true)} className="hidden md:flex">
               <PlusCircle className="mr-2 h-4 w-4" />
               Create Tournament
             </Button>
@@ -208,6 +208,16 @@ export default function TournamentsPage() {
           </Table>
         </CardContent>
       </Card>
+      {currentUser?.isAdmin && (
+        <Button
+          onClick={() => setIsAddTournamentOpen(true)}
+          className="md:hidden fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+          size="icon"
+        >
+          <PlusCircle className="h-6 w-6" />
+          <span className="sr-only">Create Tournament</span>
+        </Button>
+      )}
       <AddTournamentDialog open={isAddTournamentOpen} onOpenChange={setIsAddTournamentOpen} onAddTournament={handleAddTournament} />
     </div>
   );
