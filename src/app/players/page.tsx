@@ -104,13 +104,13 @@ export default function PlayersPage() {
             <p className="text-muted-foreground">Manage player profiles and view statistics.</p>
         </div>
         <div className="flex items-center gap-2">
-            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')}>
+            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')} className="hidden md:flex">
                 <List className="h-5 w-5" />
             </Button>
-            <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')}>
+            <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')} className="hidden md:flex">
                 <LayoutGrid className="h-5 w-5" />
             </Button>
-            <Button onClick={() => setIsAddPlayerOpen(true)}>
+            <Button onClick={() => setIsAddPlayerOpen(true)} className="hidden md:flex">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Player
             </Button>
@@ -123,10 +123,10 @@ export default function PlayersPage() {
                 <TableHeader>
                 <TableRow>
                     <TableHead>Player</TableHead>
-                    <TableHead>Skill Level</TableHead>
-                    <TableHead className="text-center">Matches</TableHead>
+                    <TableHead className="hidden sm:table-cell">Skill Level</TableHead>
+                    <TableHead className="text-center hidden md:table-cell">Matches</TableHead>
                     <TableHead className="text-center">Win Rate</TableHead>
-                    <TableHead className="text-center">Highest Break</TableHead>
+                    <TableHead className="text-center hidden lg:table-cell">Highest Break</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -143,14 +143,14 @@ export default function PlayersPage() {
                         </Link>
                         </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                         <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'}>
                         {player.skillLevel}
                         </Badge>
                     </TableCell>
-                    <TableCell className="text-center">{player.matchesPlayed}</TableCell>
+                    <TableCell className="text-center hidden md:table-cell">{player.matchesPlayed}</TableCell>
                     <TableCell className="text-center">{player.winRate}</TableCell>
-                    <TableCell className="text-center font-semibold text-primary">{player.highestBreak}</TableCell>
+                    <TableCell className="text-center font-semibold text-primary hidden lg:table-cell">{player.highestBreak}</TableCell>
                     </TableRow>
                 ))}
                 </TableBody>
@@ -160,7 +160,7 @@ export default function PlayersPage() {
       )}
 
        {view === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {players.map((player) => (
             <Card key={player.id} className="overflow-hidden">
                 <CardHeader className="p-0">
@@ -175,7 +175,7 @@ export default function PlayersPage() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <Link href={`/players/${player.id}`} className="block">
-                    <CardTitle className="text-lg hover:underline">{player.name}</CardTitle>
+                    <CardTitle className="text-lg hover:underline truncate">{player.name}</CardTitle>
                   </Link>
                   <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'} className="mt-2">
                     {player.skillLevel}
@@ -186,6 +186,15 @@ export default function PlayersPage() {
           ))}
         </div>
       )}
+
+      <Button
+        onClick={() => setIsAddPlayerOpen(true)}
+        className="md:hidden fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+        size="icon"
+      >
+        <PlusCircle className="h-6 w-6" />
+        <span className="sr-only">Add Player</span>
+      </Button>
 
       <AddPlayerDialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen} onAddPlayer={handleAddPlayer} />
     </div>
