@@ -10,13 +10,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, BarChart, Percent, Activity, Edit, Save } from "lucide-react";
+import { Trophy, BarChart, Percent, Activity, Edit, Save, PlusCircle } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { AddMatchDialog } from "@/components/add-match-dialog";
+import type { Notification } from "@/types/notifications";
 
 const initialStats = {
   name: "John Doe",
@@ -35,12 +37,14 @@ export default function MyStatsPage() {
   const [userStats, setUserStats] = useState(initialStats);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddMatchOpen, setIsAddMatchOpen] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedAvatar, setEditedAvatar] = useState("");
   const [avatarPreview, setAvatarPreview] = useState("");
   const [editedWins, setEditedWins] = useState(0);
   const [editedLosses, setEditedLosses] = useState(0);
   const [editedAverageBreak, setEditedAverageBreak] = useState(0);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
 
   const { toast } = useToast();
 
@@ -49,6 +53,7 @@ export default function MyStatsPage() {
     if (userData) {
       setCurrentUser(userData);
       const players = getFromStorage<Player[]>('players', []);
+      setAllPlayers(players);
       const player = players.find(p => p.name.toLowerCase() === userData.name.toLowerCase());
 
       let statsToSet;
@@ -143,6 +148,50 @@ export default function MyStatsPage() {
     toast({ title: "Success", description: "Your profile has been updated."});
     setIsEditing(false);
   }
+  
+  const handleAddMatch = (opponentId: number, myScore: number, opponentScore: number) => {
+    if (!currentUser) return;
+
+    const opponent = allPlayers.find(p => p.id === opponentId);
+    if (!opponent) {
+        toast({ variant: "destructive", title: "Error", description: "Opponent not found." });
+        return;
+    }
+    
+    const allRecentResults = getFromStorage<any[]>('recentResults', []);
+    const newMatch = {
+        id: allRecentResults.length > 0 ? Math.max(...allRecentResults.map(m => m.id)) + 1 : 1,
+        winner: myScore > opponentScore ? currentUser.name : opponent.name,
+        loser: myScore > opponentScore ? opponent.name : currentUser.name,
+        score: `${myScore}-${opponentScore}`,
+        date: new Date().toISOString(),
+        pendingScore: {
+            score1: myScore,
+            score2: opponentScore,
+            proposedBy: currentUser.email,
+        }
+    };
+    
+    saveToStorage('recentResults', [...allRecentResults, newMatch]);
+
+    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+    const opponentUser = allUsers.find(u => u.name === opponent.name);
+    
+    if (opponentUser) {
+        const notifications = getFromStorage<Notification[]>(`notifications_${opponentUser.email}`, []);
+        const newNotification: Notification = {
+            id: Date.now().toString(),
+            title: "New Match Reported",
+            description: `${currentUser.name} has reported a new match with you. Please review and approve the score on your profile page.`,
+            read: false,
+            date: new Date().toISOString()
+        };
+        saveToStorage(`notifications_${opponentUser.email}`, [newNotification, ...notifications]);
+        window.dispatchEvent(new Event('storage'));
+    }
+
+    toast({ title: "Match Reported", description: "Your new match has been reported and is awaiting approval from your opponent."});
+  };
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
@@ -157,9 +206,14 @@ export default function MyStatsPage() {
             <p className="text-muted-foreground">Your personal snooker statistics.</p>
             </div>
         </div>
-        <Button onClick={() => setIsEditing(!isEditing)} variant="outline">
-            {isEditing ? 'Cancel' : <><Edit className="mr-2 h-4 w-4" /> Edit Profile</>}
-        </Button>
+        <div className="flex gap-2">
+            <Button onClick={() => setIsAddMatchOpen(true)} variant="default">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Match
+            </Button>
+            <Button onClick={() => setIsEditing(!isEditing)} variant="outline">
+                {isEditing ? 'Cancel' : <><Edit className="mr-2 h-4 w-4" /> Edit Profile</>}
+            </Button>
+        </div>
       </div>
 
        {isEditing && (
@@ -267,6 +321,15 @@ export default function MyStatsPage() {
            </div>
         </CardContent>
       </Card>
+      {currentUser && (
+        <AddMatchDialog 
+            open={isAddMatchOpen} 
+            onOpenChange={setIsAddMatchOpen} 
+            onAddMatch={handleAddMatch}
+            players={allPlayers.filter(p => p.name !== currentUser?.name)}
+            currentUser={currentUser}
+        />
+      )}
     </div>
   );
 }

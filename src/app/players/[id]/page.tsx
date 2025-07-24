@@ -190,16 +190,36 @@ export default function PlayerProfilePage() {
     const proposerEmail = match.pendingScore.proposedBy;
     let proposerNotificationKey = `notifications_${proposerEmail}`;
     let proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
+    
+    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+    const proposerUser = allUsers.find(u => u.email === proposerEmail);
+    const approverUser = allUsers.find(u => u.email === currentUser.email);
+    if (!proposerUser || !approverUser) return;
+    
+    // Determine player1 and player2 from original match to correctly assign new scores
+    const player1Name = match.score.split('-')[0] > match.score.split('-')[1] ? match.winner : match.loser;
+    const player2Name = match.score.split('-')[0] > match.score.split('-')[1] ? match.loser : match.winner;
+    
+    const isProposerPlayer1 = proposerUser.name === player1Name;
+    const finalScore1 = isProposerPlayer1 ? match.pendingScore.score1 : match.pendingScore.score2;
+    const finalScore2 = isProposerPlayer1 ? match.pendingScore.score2 : match.pendingScore.score1;
+
 
     if (approve) {
-        const newWinner = match.pendingScore.score1 > match.pendingScore.score2 ? match.winner : match.loser;
-        const newLoser = match.pendingScore.score1 > match.pendingScore.score2 ? match.loser : match.winner;
+        let winnerName, loserName;
+        if (finalScore1 > finalScore2) {
+            winnerName = player1Name;
+            loserName = player2Name;
+        } else {
+            winnerName = player2Name;
+            loserName = player1Name;
+        }
         
         allRecentResults[matchIndex] = {
             ...match,
-            score: `${match.pendingScore.score1}-${match.pendingScore.score2}`,
-            winner: newWinner,
-            loser: newLoser,
+            score: `${finalScore1}-${finalScore2}`,
+            winner: winnerName,
+            loser: loserName,
             pendingScore: undefined
         };
         
@@ -433,7 +453,7 @@ export default function PlayerProfilePage() {
                             <CardHeader>
                                 <CardTitle className="text-base">Pending Score Change</CardTitle>
                                 <CardDescription className="text-xs">
-                                    {iAmProposer ? `Waiting for ${opponent} to approve.` : `${player.name} proposed a new score.`}
+                                    {iAmProposer ? `Waiting for ${opponent} to approve.` : `${pendingChange.proposedBy === currentUser?.email ? 'You' : opponent} proposed a new score.`}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
