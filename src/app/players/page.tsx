@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddPlayerDialog } from "@/components/add-player-dialog";
+import type { Notification } from "@/types/notifications";
 
 export interface Player {
   id: number;
@@ -53,12 +55,27 @@ export default function PlayersPage() {
     }
   }, []);
 
-  const handleAddPlayer = (newPlayer: Omit<Player, 'id' | 'avatar' | 'initials' | 'winRate' | 'matchesPlayed'>) => {
+  const handleAddPlayer = (newPlayer: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed'>) => {
     setPlayers(prevPlayers => {
+      const highestBreak = newPlayer.highestBreak;
+      const prevHighestBreakPlayer = prevPlayers.reduce((prev, curr) => prev.highestBreak > curr.highestBreak ? prev : curr);
+
+      if (highestBreak > prevHighestBreakPlayer.highestBreak) {
+         const notifications = getFromStorage<Notification[]>('notifications', []);
+         const newNotification: Notification = {
+            id: Date.now().toString(),
+            title: "New Club Record!",
+            description: `${newPlayer.name} has set a new high break of ${highestBreak}!`,
+            read: false,
+            date: new Date().toISOString()
+         };
+         saveToStorage('notifications', [newNotification, ...notifications]);
+         window.dispatchEvent(new Event('storage'));
+      }
+
       const newPlayers = [...prevPlayers, {
         ...newPlayer,
         id: prevPlayers.length + 1,
-        avatar: '',
         initials: newPlayer.name.split(' ').map(n => n[0]).join(''),
         matchesPlayed: 0,
         winRate: "0%",
@@ -99,7 +116,7 @@ export default function PlayersPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                         <AvatarImage src={`https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
+                         <AvatarImage src={player.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
                         <AvatarFallback>{player.initials}</AvatarFallback>
                       </Avatar>
                       <span className="font-medium">{player.name}</span>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -20,24 +21,42 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Player } from "@/app/players/page";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface AddPlayerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddPlayer: (player: Omit<Player, 'id' | 'avatar' | 'initials' | 'winRate' | 'matchesPlayed'>) => void;
+  onAddPlayer: (player: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed'>) => void;
 }
 
 export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDialogProps) {
   const [name, setName] = useState("");
   const [skillLevel, setSkillLevel] = useState<"Beginner" | "Intermediate" | "Pro">("Beginner");
   const [highestBreak, setHighestBreak] = useState(0);
+  const [avatar, setAvatar] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState("");
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setAvatar(result);
+        setAvatarPreview(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = () => {
-    onAddPlayer({ name, skillLevel, highestBreak });
+    onAddPlayer({ name, skillLevel, highestBreak, avatar });
     onOpenChange(false);
     setName("");
     setSkillLevel("Beginner");
     setHighestBreak(0);
+    setAvatar("");
+    setAvatarPreview("");
   };
 
   return (
@@ -50,6 +69,24 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="avatar" className="text-right">
+              Avatar
+            </Label>
+            <div className="col-span-3 flex items-center gap-4">
+              <Avatar>
+                <AvatarImage src={avatarPreview || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" />
+                <AvatarFallback>{name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+              </Avatar>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="col-span-3"
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
               Name
