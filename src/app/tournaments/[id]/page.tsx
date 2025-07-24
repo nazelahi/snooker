@@ -15,7 +15,7 @@ import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
-import { Calendar, Users, Shield, ArrowLeft, Save, MapPin } from "lucide-react";
+import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -29,6 +29,7 @@ interface EnrolledPlayer {
   name: string;
   avatar: string;
   initials: string;
+  email: string;
 }
 
 export default function TournamentDetailsPage() {
@@ -37,6 +38,7 @@ export default function TournamentDetailsPage() {
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const [hasApplied, setHasApplied] = useState(false);
   const [enrolledPlayers, setEnrolledPlayers] = useState<EnrolledPlayer[]>([]);
+  const [pendingPlayers, setPendingPlayers] = useState<EnrolledPlayer[]>([]);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -47,29 +49,35 @@ export default function TournamentDetailsPage() {
     setCurrentUser(userData);
 
     if (id) {
-      const tournaments = getFromStorage<Tournament[]>('tournaments', []);
-      const foundTournament = tournaments.find(t => t.id === parseInt(id));
-      setTournament(foundTournament || null);
-      setEditedTournament(foundTournament || null);
+        const tournaments = getFromStorage<Tournament[]>('tournaments', []);
+        const foundTournament = tournaments.find(t => t.id === parseInt(id));
+        setTournament(foundTournament || null);
+        setEditedTournament(foundTournament || null);
 
-      if (foundTournament) {
-        if(userData && foundTournament.registeredPlayers?.includes(userData.email)) {
-            setHasApplied(true);
-        }
+        if (foundTournament) {
+            if(userData && (foundTournament.registeredPlayers?.includes(userData.email) || foundTournament.pendingPlayers?.includes(userData.email))) {
+                setHasApplied(true);
+            }
 
-        const allPlayers = getFromStorage<Player[]>('players', []);
-        const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-        
-        const registeredPlayerDetails = (foundTournament.registeredPlayers || []).map(email => {
-            const user = allUsers.find(u => u.email === email);
-            const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
-            return {
-                name: user?.name || 'Unknown User',
-                avatar: player?.avatar || '',
-                initials: player?.initials || 'UU'
+            const allPlayers = getFromStorage<Player[]>('players', []);
+            const allUsers = getFromStorage<{name: string, email: string, password?: string}[]>('users', []);
+            
+            const getPlayerDetails = (email: string) => {
+                const user = allUsers.find(u => u.email === email);
+                const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
+                return {
+                    name: user?.name || 'Unknown User',
+                    avatar: player?.avatar || '',
+                    initials: player?.initials || 'UU',
+                    email: email,
+                };
             };
-        });
-        setEnrolledPlayers(registeredPlayerDetails);
+            
+            const registeredPlayerDetails = (foundTournament.registeredPlayers || []).map(getPlayerDetails);
+            setEnrolledPlayers(registeredPlayerDetails);
+
+            const pendingPlayerDetails = (foundTournament.pendingPlayers || []).map(getPlayerDetails);
+            setPendingPlayers(pendingPlayerDetails);
       }
     }
   }, [id]);
@@ -90,29 +98,15 @@ export default function TournamentDetailsPage() {
     if (tournamentIndex !== -1) {
         const updatedTournament = {
             ...tournaments[tournamentIndex],
-            registeredPlayers: [...(tournaments[tournamentIndex].registeredPlayers || []), currentUser.email]
+            pendingPlayers: [...(tournaments[tournamentIndex].pendingPlayers || []), currentUser.email]
         };
         tournaments[tournamentIndex] = updatedTournament;
         saveToStorage('tournaments', tournaments);
         setHasApplied(true);
         setTournament(updatedTournament);
-        
-        // Refresh enrolled players list
-        const allPlayers = getFromStorage<Player[]>('players', []);
-        const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-        const registeredPlayerDetails = (updatedTournament.registeredPlayers || []).map(email => {
-            const user = allUsers.find(u => u.email === email);
-            const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
-            return {
-                name: user?.name || 'Unknown User',
-                avatar: player?.avatar || '',
-                initials: player?.initials || 'UU'
-            };
-        });
-        setEnrolledPlayers(registeredPlayerDetails);
     }
     
-    const notifications = getFromStorage<Notification[]>('notifications', []);
+    const adminNotifications = getFromStorage<Notification[]>('adminNotifications', []);
     const newNotification: Notification = {
       id: Date.now().toString(),
       title: 'New Tournament Application',
@@ -120,13 +114,62 @@ export default function TournamentDetailsPage() {
       read: false,
       date: new Date().toISOString(),
     };
-    saveToStorage('notifications', [newNotification, ...notifications]);
+    saveToStorage('adminNotifications', [newNotification, ...adminNotifications]);
     window.dispatchEvent(new Event('storage'));
 
     toast({
         title: "Application Sent!",
-        description: `Your application for "${tournament?.name}" has been received.`,
+        description: `Your application for "${tournament?.name}" has been received and is awaiting admin approval.`,
     });
+  }
+
+  const handleApproval = (playerEmail: string, isApproved: boolean) => {
+    if (!tournament) return;
+    const tournaments = getFromStorage<Tournament[]>('tournaments', []);
+    const tournamentIndex = tournaments.findIndex(t => t.id === tournament.id);
+
+    if (tournamentIndex !== -1) {
+        const currentTournament = tournaments[tournamentIndex];
+        const updatedPending = (currentTournament.pendingPlayers || []).filter(email => email !== playerEmail);
+        let updatedRegistered = currentTournament.registeredPlayers || [];
+
+        if (isApproved) {
+            updatedRegistered = [...updatedRegistered, playerEmail];
+        }
+
+        const updatedTournament = {
+            ...currentTournament,
+            pendingPlayers: updatedPending,
+            registeredPlayers: updatedRegistered
+        };
+
+        tournaments[tournamentIndex] = updatedTournament;
+        saveToStorage('tournaments', tournaments);
+
+        setTournament(updatedTournament);
+        setEditedTournament(updatedTournament);
+
+        const allPlayers = getFromStorage<Player[]>('players', []);
+        const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+        const getPlayerDetails = (email: string) => {
+            const user = allUsers.find(u => u.email === email);
+            const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
+            return {
+                name: user?.name || 'Unknown User',
+                avatar: player?.avatar || '',
+                initials: player?.initials || 'UU',
+                email: email,
+            };
+        };
+        
+        setPendingPlayers(updatedPending.map(getPlayerDetails));
+        setEnrolledPlayers(updatedRegistered.map(getPlayerDetails));
+
+        toast({
+            title: isApproved ? "Player Approved" : "Player Rejected",
+            description: `The application has been processed.`,
+        });
+    }
   }
 
   const handleSaveChanges = () => {
@@ -167,6 +210,8 @@ export default function TournamentDetailsPage() {
   }
 
   const isEditing = !!currentUser?.isAdmin;
+  const applicationStatus = tournament.registeredPlayers?.includes(currentUser?.email || '') ? 'Approved' : 
+                            tournament.pendingPlayers?.includes(currentUser?.email || '') ? 'Pending' : 'Not Applied';
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
@@ -247,7 +292,7 @@ export default function TournamentDetailsPage() {
             <div>
               {tournament.status === 'Upcoming' && !isEditing && (
                    <Button onClick={handleApply} disabled={hasApplied}>
-                      {hasApplied ? 'Applied' : 'Apply to Participate'}
+                      {applicationStatus === 'Approved' ? 'Approved' : applicationStatus === 'Pending' ? 'Application Pending' : 'Apply to Participate'}
                    </Button>
               )}
               {tournament.status === 'In Progress' && <Badge>In Progress</Badge>}
@@ -262,6 +307,38 @@ export default function TournamentDetailsPage() {
             )}
         </CardFooter>
       </Card>
+
+      {isEditing && pendingPlayers.length > 0 && (
+          <Card>
+              <CardHeader>
+                  <CardTitle>Pending Applications ({pendingPlayers.length})</CardTitle>
+                  <CardDescription>Review and approve or reject player applications for this tournament.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <ul className="space-y-2">
+                      {pendingPlayers.map(player => (
+                          <li key={player.email} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                              <div className="flex items-center gap-3">
+                                  <Avatar>
+                                      <AvatarImage src={player.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
+                                      <AvatarFallback>{player.initials}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="font-medium">{player.name}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" onClick={() => handleApproval(player.email, true)}>
+                                      <Check className="h-4 w-4 mr-2"/> Approve
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleApproval(player.email, false)}>
+                                      <X className="h-4 w-4 mr-2"/> Reject
+                                  </Button>
+                              </div>
+                          </li>
+                      ))}
+                  </ul>
+              </CardContent>
+          </Card>
+      )}
 
        {enrolledPlayers.length > 0 && (
          <Card>

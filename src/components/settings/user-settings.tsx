@@ -15,12 +15,13 @@ import {
   CardFooter
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Bell, Trophy, Trash2, CheckCircle } from "lucide-react";
+import { Settings, Bell, Trophy, Trash2, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { format } from 'date-fns';
 
 export default function UserSettings() {
   const [registeredTournaments, setRegisteredTournaments] = useState<Tournament[]>([]);
+  const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
 
@@ -31,9 +32,14 @@ export default function UserSettings() {
     if (userData) {
       const allTournaments = getFromStorage<Tournament[]>('tournaments', []);
       const userRegistered = allTournaments.filter(t => 
-        t.registeredPlayers?.includes(userData.email) && t.status === "Upcoming"
+        t.registeredPlayers?.includes(userData.email)
       );
       setRegisteredTournaments(userRegistered);
+      
+      const userPending = allTournaments.filter(t => 
+        t.pendingPlayers?.includes(userData.email)
+      );
+      setPendingTournaments(userPending);
     }
     
     const allNotifications = getFromStorage<Notification[]>('notifications', []);
@@ -41,16 +47,18 @@ export default function UserSettings() {
   }, []);
 
   const handleMarkAsRead = (id: string) => {
+    const notificationKey = currentUser ? (getFromStorage<{isAdmin?: boolean}>('userData', {}).isAdmin ? 'adminNotifications' : 'notifications') : 'notifications';
     const updatedNotifications = notifications.map(n => n.id === id ? { ...n, read: true } : n);
     setNotifications(updatedNotifications);
-    saveToStorage('notifications', updatedNotifications);
+    saveToStorage(notificationKey, updatedNotifications);
     window.dispatchEvent(new Event('storage'));
   };
 
   const handleClearAllNotifications = () => {
+    const notificationKey = currentUser ? (getFromStorage<{isAdmin?: boolean}>('userData', {}).isAdmin ? 'adminNotifications' : 'notifications') : 'notifications';
     const updatedNotifications = notifications.map(n => ({...n, read: true}));
     setNotifications(updatedNotifications);
-    saveToStorage('notifications', updatedNotifications);
+    saveToStorage(notificationKey, updatedNotifications);
     window.dispatchEvent(new Event('storage'));
   };
 
@@ -68,30 +76,45 @@ export default function UserSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy />
-            My Registered Tournaments
+            My Tournament Applications
           </CardTitle>
-          <CardDescription>A list of upcoming tournaments you have applied for.</CardDescription>
+          <CardDescription>A list of tournaments you have applied for.</CardDescription>
         </CardHeader>
         <CardContent>
-          {registeredTournaments.length > 0 ? (
-             <ul className="space-y-4">
+          {pendingTournaments.length === 0 && registeredTournaments.length === 0 ? (
+             <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">You have not registered for any upcoming tournaments.</p>
+              <Button asChild>
+                <Link href="/tournaments">Browse Tournaments</Link>
+              </Button>
+            </div>
+          ) : (
+            <ul className="space-y-4">
+               {pendingTournaments.map(tournament => (
+                    <li key={tournament.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                        <div>
+                            <h3 className="font-semibold">{tournament.name}</h3>
+                            <p className="text-sm text-muted-foreground">{tournament.format}</p>
+                        </div>
+                        <Badge variant="outline" className="text-amber-500 border-amber-500">
+                          <Clock className="mr-2 h-4 w-4" />
+                          Pending Approval
+                        </Badge>
+                    </li>
+                ))}
                 {registeredTournaments.map(tournament => (
                     <li key={tournament.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                         <div>
                             <h3 className="font-semibold">{tournament.name}</h3>
                             <p className="text-sm text-muted-foreground">{tournament.format}</p>
                         </div>
-                        <Badge variant="secondary">Applied</Badge>
+                        <Badge variant="secondary" className="text-green-500 border-green-500">
+                           <CheckCircle className="mr-2 h-4 w-4" />
+                           Approved
+                        </Badge>
                     </li>
                 ))}
              </ul>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">You have not registered for any upcoming tournaments.</p>
-              <Button asChild>
-                <Link href="/tournaments">Browse Tournaments</Link>
-              </Button>
-            </div>
           )}
         </CardContent>
       </Card>

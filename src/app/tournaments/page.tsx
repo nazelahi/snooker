@@ -32,7 +32,8 @@ export interface Tournament {
   status: "Upcoming" | "In Progress" | "Finished";
   rules: string;
   image?: string;
-  registeredPlayers?: string[]; // Array of user emails
+  pendingPlayers?: string[]; // Array of user emails awaiting approval
+  registeredPlayers?: string[]; // Array of approved user emails
   location?: string;
 }
 
@@ -46,10 +47,10 @@ export interface LiveMatch {
 }
 
 const initialTournaments: Tournament[] = [
-  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress", rules: "Standard knockout rules. Best of 11 frames.", image: "https://placehold.co/600x400.png", registeredPlayers: [], location: "Main Hall" },
-  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress", rules: "Round-robin league format. Each player plays each other once. 2 points for a win, 1 for a draw.", image: "https://placehold.co/600x400.png", registeredPlayers: [], location: "Upstairs Lounge" },
-  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished", rules: "9-ball rules. Race to 7.", image: "https://placehold.co/600x400.png", registeredPlayers: [], location: "Pool Room" },
-  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming", rules: "Pro-Am knockout tournament. Amateurs get a handicap.", image: "https://placehold.co/600x400.png", registeredPlayers: [], location: "Main Hall" },
+  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress", rules: "Standard knockout rules. Best of 11 frames.", image: "https://placehold.co/600x400.png", pendingPlayers: [], registeredPlayers: [], location: "Main Hall" },
+  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress", rules: "Round-robin league format. Each player plays each other once. 2 points for a win, 1 for a draw.", image: "https://placehold.co/600x400.png", pendingPlayers: [], registeredPlayers: [], location: "Upstairs Lounge" },
+  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished", rules: "9-ball rules. Race to 7.", image: "https://placehold.co/600x400.png", pendingPlayers: [], registeredPlayers: [], location: "Pool Room" },
+  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming", rules: "Pro-Am knockout tournament. Amateurs get a handicap.", image: "https://placehold.co/600x400.png", pendingPlayers: [], registeredPlayers: [], location: "Main Hall" },
 ];
 
 const initialLiveMatches: LiveMatch[] = [
@@ -81,11 +82,12 @@ export default function TournamentsPage() {
     }
   }, []);
 
-  const handleAddTournament = (newTournament: Omit<Tournament, 'id' | 'registeredPlayers'>) => {
+  const handleAddTournament = (newTournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers'>) => {
     setTournaments(prevTournaments => {
       const newTournaments = [...prevTournaments, {
         ...newTournament,
         id: prevTournaments.length + 1,
+        pendingPlayers: [],
         registeredPlayers: [],
       }];
       saveToStorage('tournaments', newTournaments);
@@ -116,7 +118,7 @@ export default function TournamentsPage() {
           </CardTitle>
           <CardDescription>Ongoing matches in active tournaments.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {liveMatches.length > 0 ? (
             <ul className="space-y-4">
               {liveMatches.map((match) => (
@@ -177,7 +179,7 @@ export default function TournamentsPage() {
                      <Button asChild variant="ghost" size="sm">
                         <Link href={`/tournaments/${tournament.id}`}>
                            {currentUser?.isAdmin ? <Pencil className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                           {currentUser?.isAdmin ? 'Edit' : 'View Rules & Apply'}
+                           {currentUser?.isAdmin ? 'Edit & Manage' : 'View Rules & Apply'}
                         </Link>
                      </Button>
                   </TableCell>

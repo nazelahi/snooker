@@ -39,21 +39,26 @@ export default function Header() {
   const router = useRouter();
 
   useEffect(() => {
-    const storedNotifications = getFromStorage('notifications', initialNotifications);
-    setNotifications(storedNotifications);
-    
     const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
     setCurrentUser(userData);
 
-    if (localStorage.getItem('notifications') === null) {
-      localStorage.setItem('notifications', JSON.stringify(initialNotifications));
+    const notificationKey = userData?.isAdmin ? 'adminNotifications' : 'notifications';
+    const initialData = userData?.isAdmin ? [] : initialNotifications;
+
+    const storedNotifications = getFromStorage(notificationKey, initialData);
+    setNotifications(storedNotifications);
+    
+    if (localStorage.getItem(notificationKey) === null) {
+      saveToStorage(notificationKey, initialData);
     }
 
     const handleStorageChange = () => {
-        const stored = getFromStorage('notifications', initialNotifications);
-        setNotifications(stored);
         const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
         setCurrentUser(user);
+        const currentKey = user?.isAdmin ? 'adminNotifications' : 'notifications';
+        const currentInitialData = user?.isAdmin ? [] : initialNotifications;
+        const stored = getFromStorage(currentKey, currentInitialData);
+        setNotifications(stored);
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -68,11 +73,12 @@ export default function Header() {
   };
 
   const handleNotificationClick = (id: string) => {
+    const notificationKey = currentUser?.isAdmin ? 'adminNotifications' : 'notifications';
     const updatedNotifications = notifications.map(n => 
         n.id === id ? { ...n, read: true } : n
     );
     setNotifications(updatedNotifications);
-    saveToStorage('notifications', updatedNotifications);
+    saveToStorage(notificationKey, updatedNotifications);
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;

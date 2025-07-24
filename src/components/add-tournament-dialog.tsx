@@ -27,7 +27,7 @@ import Image from "next/image";
 interface AddTournamentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddTournament: (tournament: Omit<Tournament, 'id' | 'registeredPlayers'>) => void;
+  onAddTournament: (tournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers'>) => void;
 }
 
 export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: AddTournamentDialogProps) {
