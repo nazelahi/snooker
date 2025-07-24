@@ -332,95 +332,93 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Matches</CardTitle>
-            <CardDescription>Scheduled games for today and tomorrow.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-4">
-              {upcomingMatches.slice(0, upcomingToShow).map((match) => {
-                const player1 = getPlayerAvatar(match.player1);
-                const player2 = getPlayerAvatar(match.player2);
-                return (
-                    <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-2 justify-start w-2/5">
-                             <Avatar className="h-8 w-8">
-                                <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
-                                <AvatarFallback>{player1.initials}</AvatarFallback>
-                            </Avatar>
-                            <PlayerLink name={match.player1} />
-                        </div>
-                        <div className="flex-1 text-center">
-                            <span className="text-muted-foreground text-sm">vs</span>
-                            <p className="text-xs text-muted-foreground">{new Date(match.date).toLocaleDateString()} at {match.time}</p>
-                        </div>
-                         <div className="flex items-center gap-2 justify-end w-2/5">
-                            <PlayerLink name={match.player2} />
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
-                                <AvatarFallback>{player2.initials}</AvatarFallback>
-                            </Avatar>
-                        </div>
-                    </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-          {upcomingToShow < upcomingMatches.length && (
-            <CardFooter>
-              <Button onClick={() => setUpcomingToShow(upcomingToShow + 5)} variant="secondary" className="w-full">
-                View More
-              </Button>
-            </CardFooter>
-          )}
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Results</CardTitle>
-            <CardDescription>Latest match outcomes.</CardDescription>
-          </CardHeader>
-          <CardContent>
+      <Card>
+        <CardHeader>
+          <CardTitle>Upcoming Matches</CardTitle>
+          <CardDescription>Scheduled games for today and tomorrow.</CardDescription>
+        </CardHeader>
+        <CardContent>
           <ul className="space-y-4">
-              {recentResults.slice(0, recentToShow).map((match) => {
-                const winner = getPlayerAvatar(match.winner);
-                const loser = getPlayerAvatar(match.loser);
-                return (
-                     <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-2 justify-start w-2/5">
+            {upcomingMatches.slice(0, upcomingToShow).map((match) => {
+              const player1 = getPlayerAvatar(match.player1);
+              const player2 = getPlayerAvatar(match.player2);
+              return (
+                  <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 justify-start w-2/5">
                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
-                              <AvatarFallback>{winner.initials}</AvatarFallback>
+                              <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                              <AvatarFallback>{player1.initials}</AvatarFallback>
                           </Avatar>
-                          <PlayerLink name={match.winner} />
-                        </div>
-                        <div className="flex-1 text-center">
-                            <Link href={`/match/${match.id}`}>
-                                <Badge variant="secondary" className="font-bold text-lg">{match.score}</Badge>
-                            </Link>
-                        </div>
-                       <div className="flex items-center gap-2 justify-end w-2/5">
-                            <PlayerLink name={match.loser} />
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
-                                <AvatarFallback>{loser.initials}</AvatarFallback>
-                            </Avatar>
+                          <PlayerLink name={match.player1} />
                       </div>
-                    </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-           {recentToShow < recentResults.length && (
-            <CardFooter>
-                <Button onClick={() => setRecentToShow(recentToShow + 5)} variant="secondary" className="w-full">
-                    View More
-                </Button>
-            </CardFooter>
-          )}
-        </Card>
-      </div>
+                      <div className="flex-1 text-center">
+                          <span className="text-muted-foreground text-sm">vs</span>
+                          <p className="text-xs text-muted-foreground">{new Date(match.date).toLocaleDateString()} at {match.time}</p>
+                      </div>
+                       <div className="flex items-center gap-2 justify-end w-2/5">
+                          <PlayerLink name={match.player2} />
+                          <Avatar className="h-8 w-8">
+                              <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                              <AvatarFallback>{player2.initials}</AvatarFallback>
+                          </Avatar>
+                      </div>
+                  </li>
+              );
+            })}
+          </ul>
+        </CardContent>
+        {upcomingToShow < upcomingMatches.length && (
+          <CardFooter>
+            <Button onClick={() => setUpcomingToShow(upcomingToShow + 5)} variant="secondary" className="w-full">
+              View More
+            </Button>
+          </CardFooter>
+        )}
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Results</CardTitle>
+          <CardDescription>Latest match outcomes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+        <ul className="space-y-4">
+            {recentResults.slice(0, recentToShow).map((match) => {
+              const winner = getPlayerAvatar(match.winner);
+              const loser = getPlayerAvatar(match.loser);
+              return (
+                   <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 justify-start w-2/5">
+                         <Avatar className="h-8 w-8">
+                            <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
+                            <AvatarFallback>{winner.initials}</AvatarFallback>
+                        </Avatar>
+                        <PlayerLink name={match.winner} />
+                      </div>
+                      <div className="flex-1 text-center">
+                          <Link href={`/match/${match.id}`}>
+                              <Badge variant="secondary" className="font-bold text-lg">{match.score}</Badge>
+                          </Link>
+                      </div>
+                     <div className="flex items-center gap-2 justify-end w-2/5">
+                          <PlayerLink name={match.loser} />
+                          <Avatar className="h-8 w-8">
+                              <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
+                              <AvatarFallback>{loser.initials}</AvatarFallback>
+                          </Avatar>
+                    </div>
+                  </li>
+              );
+            })}
+          </ul>
+        </CardContent>
+         {recentToShow < recentResults.length && (
+          <CardFooter>
+              <Button onClick={() => setRecentToShow(recentToShow + 5)} variant="secondary" className="w-full">
+                  View More
+              </Button>
+          </CardFooter>
+        )}
+      </Card>
 
       <Card>
         <CardHeader>
