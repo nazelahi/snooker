@@ -73,6 +73,7 @@ export default function MatchDetailsPage() {
         reader.onloadend = () => {
           const result = reader.result as string;
           
+          let matchUpdated = false;
           setMatch(prevMatch => {
             if (!prevMatch) return null;
             const updatedMatch = {
@@ -86,11 +87,15 @@ export default function MatchDetailsPage() {
               allMatches[matchIndex] = updatedMatch;
               saveToStorage('recentResults', allMatches);
               setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-              toast({ title: "Media Uploaded", description: "Your photo/video has been added to the match."});
+              matchUpdated = true;
             }
 
             return updatedMatch;
           });
+
+          if(matchUpdated) {
+            toast({ title: "Media Uploaded", description: "Your photo/video has been added to the match."});
+          }
         };
         reader.readAsDataURL(file);
       });
