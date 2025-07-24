@@ -1,3 +1,162 @@
-export default function Home() {
-  return <></>;
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BarChart, Users, Trophy, ClipboardList } from "lucide-react";
+
+const playerStandings = [
+  { rank: 1, name: "Ronnie O'Sullivan", matchesPlayed: 25, wins: 22, losses: 3, avatar: "/avatars/ronnie.png", initials: "RO" },
+  { rank: 2, name: "Judd Trump", matchesPlayed: 28, wins: 20, losses: 8, avatar: "/avatars/judd.png", initials: "JT" },
+  { rank: 3, name: "Mark Selby", matchesPlayed: 26, wins: 19, losses: 7, avatar: "/avatars/mark.png", initials: "MS" },
+  { rank: 4, name: "Neil Robertson", matchesPlayed: 24, wins: 18, losses: 6, avatar: "/avatars/neil.png", initials: "NR" },
+];
+
+const upcomingMatches = [
+  { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00" },
+  { id: 2, player1: "Mark Selby", player2: "Neil Robertson", date: "2024-08-15", time: "21:00" },
+];
+
+const recentResults = [
+  { id: 1, winner: "Ronnie O'Sullivan", loser: "John Higgins", score: "6-2", date: "2024-08-10" },
+  { id: 2, winner: "Judd Trump", loser: "Kyren Wilson", score: "6-4", date: "2024-08-09" },
+];
+
+export default function DashboardPage() {
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Players</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">128</div>
+            <p className="text-xs text-muted-foreground">+5 from last month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Tournaments</CardTitle>
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">4</div>
+            <p className="text-xs text-muted-foreground">2 Knockout, 2 League</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Matches Played Today</CardTitle>
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">12</div>
+            <p className="text-xs text-muted-foreground">+10% from yesterday</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Highest Break</CardTitle>
+            <BarChart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">147</div>
+            <p className="text-xs text-muted-foreground">by Judd Trump</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-8 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Matches</CardTitle>
+            <CardDescription>Scheduled games for today and tomorrow.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-4">
+              {upcomingMatches.map((match) => (
+                <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                  <div className="font-medium">{match.player1} vs {match.player2}</div>
+                  <div className="text-sm text-muted-foreground">{match.date} at {match.time}</div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Results</CardTitle>
+            <CardDescription>Latest match outcomes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+          <ul className="space-y-4">
+              {recentResults.map((match) => (
+                <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                  <div>
+                    <span className="font-medium">{match.winner}</span>
+                    <span className="text-muted-foreground"> beat </span>
+                    <span className="font-medium">{match.loser}</span>
+                  </div>
+                  <Badge variant="secondary">{match.score}</Badge>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Player Standings</CardTitle>
+          <CardDescription>Top players in the club league.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]">Rank</TableHead>
+                <TableHead>Player</TableHead>
+                <TableHead className="text-center">Matches</TableHead>
+                <TableHead className="text-center">Wins</TableHead>
+                <TableHead className="text-center">Losses</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {playerStandings.map((player) => (
+                <TableRow key={player.rank}>
+                  <TableCell className="font-medium text-center">{player.rank}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                         <AvatarImage src={`https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
+                        <AvatarFallback>{player.initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{player.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">{player.matchesPlayed}</TableCell>
+                  <TableCell className="text-green-400 text-center">{player.wins}</TableCell>
+                  <TableCell className="text-red-400 text-center">{player.losses}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
