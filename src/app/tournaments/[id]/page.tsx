@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
+import type { Player } from "@/app/players/page";
 import { Calendar, Users, Shield, ArrowLeft, Save, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -22,12 +23,20 @@ import type { Notification } from "@/types/notifications";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+interface EnrolledPlayer {
+  name: string;
+  avatar: string;
+  initials: string;
+}
 
 export default function TournamentDetailsPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [editedTournament, setEditedTournament] = useState<Tournament | null>(null);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const [hasApplied, setHasApplied] = useState(false);
+  const [enrolledPlayers, setEnrolledPlayers] = useState<EnrolledPlayer[]>([]);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -43,8 +52,24 @@ export default function TournamentDetailsPage() {
       setTournament(foundTournament || null);
       setEditedTournament(foundTournament || null);
 
-      if (foundTournament && userData && foundTournament.registeredPlayers?.includes(userData.email)) {
-        setHasApplied(true);
+      if (foundTournament) {
+        if(userData && foundTournament.registeredPlayers?.includes(userData.email)) {
+            setHasApplied(true);
+        }
+
+        const allPlayers = getFromStorage<Player[]>('players', []);
+        const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+        
+        const registeredPlayerDetails = (foundTournament.registeredPlayers || []).map(email => {
+            const user = allUsers.find(u => u.email === email);
+            const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
+            return {
+                name: user?.name || 'Unknown User',
+                avatar: player?.avatar || '',
+                initials: player?.initials || 'UU'
+            };
+        });
+        setEnrolledPlayers(registeredPlayerDetails);
       }
     }
   }, [id]);
@@ -71,6 +96,20 @@ export default function TournamentDetailsPage() {
         saveToStorage('tournaments', tournaments);
         setHasApplied(true);
         setTournament(updatedTournament);
+        
+        // Refresh enrolled players list
+        const allPlayers = getFromStorage<Player[]>('players', []);
+        const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+        const registeredPlayerDetails = (updatedTournament.registeredPlayers || []).map(email => {
+            const user = allUsers.find(u => u.email === email);
+            const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
+            return {
+                name: user?.name || 'Unknown User',
+                avatar: player?.avatar || '',
+                initials: player?.initials || 'UU'
+            };
+        });
+        setEnrolledPlayers(registeredPlayerDetails);
     }
     
     const notifications = getFromStorage<Notification[]>('notifications', []);
@@ -223,6 +262,29 @@ export default function TournamentDetailsPage() {
             )}
         </CardFooter>
       </Card>
+
+       {enrolledPlayers.length > 0 && (
+         <Card>
+            <CardHeader>
+                <CardTitle>Enrolled Players ({enrolledPlayers.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {enrolledPlayers.map((player, index) => (
+                        <div key={index} className="flex flex-col items-center gap-2">
+                            <Avatar className="h-16 w-16">
+                                <AvatarImage src={player.avatar || `https://placehold.co/64x64.png`} data-ai-hint="player portrait" alt={player.name} />
+                                <AvatarFallback>{player.initials}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-medium text-center">{player.name}</span>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+         </Card>
+       )}
     </div>
   );
 }
+
+    
