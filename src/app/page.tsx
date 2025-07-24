@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -16,25 +19,51 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BarChart, Users, Trophy, ClipboardList } from "lucide-react";
+import { getFromStorage, saveToStorage } from "@/lib/storage";
 
-const playerStandings = [
+const initialPlayerStandings = [
   { rank: 1, name: "Ronnie O'Sullivan", matchesPlayed: 25, wins: 22, losses: 3, avatar: "/avatars/ronnie.png", initials: "RO" },
   { rank: 2, name: "Judd Trump", matchesPlayed: 28, wins: 20, losses: 8, avatar: "/avatars/judd.png", initials: "JT" },
   { rank: 3, name: "Mark Selby", matchesPlayed: 26, wins: 19, losses: 7, avatar: "/avatars/mark.png", initials: "MS" },
   { rank: 4, name: "Neil Robertson", matchesPlayed: 24, wins: 18, losses: 6, avatar: "/avatars/neil.png", initials: "NR" },
 ];
 
-const upcomingMatches = [
+const initialUpcomingMatches = [
   { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00" },
   { id: 2, player1: "Mark Selby", player2: "Neil Robertson", date: "2024-08-15", time: "21:00" },
 ];
 
-const recentResults = [
+const initialRecentResults = [
   { id: 1, winner: "Ronnie O'Sullivan", loser: "John Higgins", score: "6-2", date: "2024-08-10" },
   { id: 2, winner: "Judd Trump", loser: "Kyren Wilson", score: "6-4", date: "2024-08-09" },
 ];
 
 export default function DashboardPage() {
+  const [playerStandings, setPlayerStandings] = useState(initialPlayerStandings);
+  const [upcomingMatches, setUpcomingMatches] = useState(initialUpcomingMatches);
+  const [recentResults, setRecentResults] = useState(initialRecentResults);
+
+  useEffect(() => {
+    const storedStandings = getFromStorage('playerStandings', initialPlayerStandings);
+    const storedMatches = getFromStorage('upcomingMatches', initialUpcomingMatches);
+    const storedResults = getFromStorage('recentResults', initialRecentResults);
+
+    setPlayerStandings(storedStandings);
+    setUpcomingMatches(storedMatches);
+    setRecentResults(storedResults);
+
+    if (localStorage.getItem('playerStandings') === null) {
+      saveToStorage('playerStandings', initialPlayerStandings);
+    }
+    if (localStorage.getItem('upcomingMatches') === null) {
+      saveToStorage('upcomingMatches', initialUpcomingMatches);
+    }
+     if (localStorage.getItem('recentResults') === null) {
+      saveToStorage('recentResults', initialRecentResults);
+    }
+  }, []);
+
+
   return (
     <div className="flex flex-col gap-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

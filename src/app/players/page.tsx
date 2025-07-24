@@ -1,9 +1,9 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -17,8 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { getFromStorage, saveToStorage } from "@/lib/storage";
 
-const players = [
+const initialPlayers = [
   { id: 1, name: "Ronnie O'Sullivan", skillLevel: "Pro", matchesPlayed: 25, winRate: "88%", highestBreak: 147, avatar: "/avatars/ronnie.png", initials: "RO" },
   { id: 2, name: "Judd Trump", skillLevel: "Pro", matchesPlayed: 28, winRate: "71%", highestBreak: 147, avatar: "/avatars/judd.png", initials: "JT" },
   { id: 3, name: "Mark Selby", skillLevel: "Pro", matchesPlayed: 26, winRate: "73%", highestBreak: 145, avatar: "/avatars/mark.png", initials: "MS" },
@@ -28,6 +29,17 @@ const players = [
 ];
 
 export default function PlayersPage() {
+  const [players, setPlayers] = useState(initialPlayers);
+
+  useEffect(() => {
+    const storedPlayers = getFromStorage('players', initialPlayers);
+    setPlayers(storedPlayers);
+
+    if (localStorage.getItem('players') === null) {
+      saveToStorage('players', initialPlayers);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">

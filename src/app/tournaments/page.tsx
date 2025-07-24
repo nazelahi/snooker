@@ -1,9 +1,9 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -16,8 +16,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { getFromStorage, saveToStorage } from "@/lib/storage";
 
-const tournaments = [
+const initialTournaments = [
   { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress" },
   { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress" },
   { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished" },
@@ -25,6 +26,17 @@ const tournaments = [
 ];
 
 export default function TournamentsPage() {
+  const [tournaments, setTournaments] = useState(initialTournaments);
+
+  useEffect(() => {
+    const storedTournaments = getFromStorage('tournaments', initialTournaments);
+    setTournaments(storedTournaments);
+
+    if (localStorage.getItem('tournaments') === null) {
+      saveToStorage('tournaments', initialTournaments);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col gap-8">
        <div className="flex items-center justify-between">
