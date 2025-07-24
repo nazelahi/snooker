@@ -35,6 +35,7 @@ interface UpcomingMatch {
     player2: string;
     date: string;
     time: string;
+    tournamentId?: number;
 }
 
 export default function AdminSettings() {
@@ -108,6 +109,7 @@ export default function AdminSettings() {
             player2: players[1]?.name || "Player 2",
             date: new Date().toISOString().split('T')[0],
             time: "19:00",
+            tournamentId: tournaments[0]?.id || undefined,
         };
         return [...prev, newMatch];
     });
@@ -305,14 +307,15 @@ export default function AdminSettings() {
                     <CardDescription>Manage upcoming matches. Add new matches or edit existing ones.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                         <span className="col-span-1">Player 1</span>
                         <span className="col-span-1">Player 2</span>
+                        <span className="col-span-1">Tournament</span>
                         <span className="col-span-2">Date & Time</span>
                         <span className="text-right">Actions</span>
                     </div>
                     {upcomingMatches.map(match => (
-                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center p-2 rounded-lg bg-muted/50">
                             <div className="col-span-1">
                                 <Select value={match.player1} onValueChange={value => handleUpcomingMatchChange(match.id, 'player1', value)}>
                                     <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
@@ -326,6 +329,14 @@ export default function AdminSettings() {
                                     <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
                                     <SelectContent>
                                         {players.map(p => <SelectItem key={`p2-${p.id}`} value={p.name}>{p.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="col-span-1">
+                                <Select value={match.tournamentId?.toString()} onValueChange={value => handleUpcomingMatchChange(match.id, 'tournamentId', parseInt(value))}>
+                                     <SelectTrigger><SelectValue placeholder="Select tournament" /></SelectTrigger>
+                                      <SelectContent>
+                                        {tournaments.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>

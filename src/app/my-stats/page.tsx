@@ -34,7 +34,8 @@ interface Match {
     score1: number;
     score2: number;
     proposedBy: string;
-  }
+  };
+  tournamentId?: number;
 }
 
 const initialStats = {

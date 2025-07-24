@@ -46,7 +46,8 @@ interface Match {
     score1: number;
     score2: number;
     proposedBy: string; // email of user who proposed
-  }
+  };
+  tournamentId?: number;
 }
 
 export default function PlayerProfilePage() {

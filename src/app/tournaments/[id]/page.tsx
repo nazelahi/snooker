@@ -16,7 +16,7 @@ import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
-import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle } from "lucide-react";
+import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -34,6 +34,25 @@ interface EnrolledPlayer {
   email: string;
 }
 
+interface Match {
+    id: number;
+    winner: string;
+    loser: string;
+    score: string;
+    date: string;
+    tournamentId?: number;
+}
+
+interface UpcomingMatch {
+    id: number;
+    player1: string;
+    player2: string;
+    date: string;
+    time: string;
+    tournamentId?: number;
+}
+
+
 export default function TournamentDetailsPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [editedTournament, setEditedTournament] = useState<Tournament | null>(null);
@@ -43,6 +62,11 @@ export default function TournamentDetailsPage() {
   const [pendingPlayers, setPendingPlayers] = useState<EnrolledPlayer[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [predefinedRules, setPredefinedRules] = useState<string[]>([]);
+  const [tournamentMatches, setTournamentMatches] = useState<Match[]>([]);
+  const [tournamentUpcoming, setTournamentUpcoming] = useState<UpcomingMatch[]>([]);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+
+
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -54,6 +78,9 @@ export default function TournamentDetailsPage() {
 
     const storedRules = getFromStorage<string[]>('tournamentRules', []);
     setPredefinedRules(storedRules);
+    
+    const players = getFromStorage<Player[]>('players', []);
+    setAllPlayers(players);
 
     if (id) {
         const tournaments = getFromStorage<Tournament[]>('tournaments', []);
@@ -66,12 +93,11 @@ export default function TournamentDetailsPage() {
                 setHasApplied(true);
             }
 
-            const allPlayers = getFromStorage<Player[]>('players', []);
             const allUsers = getFromStorage<{name: string, email: string, password?: string}[]>('users', []);
             
             const getPlayerDetails = (email: string) => {
                 const user = allUsers.find(u => u.email === email);
-                const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
+                const player = players.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
                 return {
                     id: player?.id || 0,
                     name: user?.name || 'Unknown User',
@@ -86,9 +112,28 @@ export default function TournamentDetailsPage() {
 
             const pendingPlayerDetails = (foundTournament.pendingPlayers || []).map(getPlayerDetails);
             setPendingPlayers(pendingPlayerDetails);
+
+            const allRecentMatches = getFromStorage<Match[]>('recentResults', []);
+            setTournamentMatches(allRecentMatches.filter(m => m.tournamentId === foundTournament.id));
+
+            const allUpcomingMatches = getFromStorage<UpcomingMatch[]>('upcomingMatches', []);
+            setTournamentUpcoming(allUpcomingMatches.filter(m => m.tournamentId === foundTournament.id));
       }
     }
   }, [id]);
+
+  const getPlayerAvatar = (name: string) => {
+    const player = allPlayers.find(p => p.name === name);
+    return player ? {avatar: player.avatar, initials: player.initials, id: player.id} : {avatar: '', initials: name.split(' ').map(n=>n[0]).join(''), id: null};
+  }
+
+  const PlayerLink = ({name}: {name: string}) => {
+    const player = getPlayerAvatar(name);
+    if (!player.id) {
+        return <span className="font-medium">{name}</span>;
+    }
+    return <Link href={`/players/${player.id}`} className="font-medium hover:underline">{name}</Link>
+  }
 
   const handleApply = () => {
     if (!currentUser || !tournament) {
@@ -371,6 +416,84 @@ export default function TournamentDetailsPage() {
             </div>
         </CardFooter>
       </Card>
+      
+      {tournamentUpcoming.length > 0 && (
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Swords /> Upcoming Matches</CardTitle>
+            </CardHeader>
+            <CardContent>
+               <ul className="space-y-4">
+              {tournamentUpcoming.map((match) => {
+                const player1 = getPlayerAvatar(match.player1);
+                const player2 = getPlayerAvatar(match.player2);
+                return (
+                    <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-2 justify-start w-2/5">
+                             <Avatar className="h-8 w-8">
+                                <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                                <AvatarFallback>{player1.initials}</AvatarFallback>
+                            </Avatar>
+                            <PlayerLink name={match.player1} />
+                        </div>
+                        <div className="flex-1 text-center">
+                            <span className="text-muted-foreground text-sm">vs</span>
+                            <p className="text-xs text-muted-foreground">{new Date(match.date).toLocaleDateString()} at {match.time}</p>
+                        </div>
+                         <div className="flex items-center gap-2 justify-end w-2/5">
+                            <PlayerLink name={match.player2} />
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                                <AvatarFallback>{player2.initials}</AvatarFallback>
+                            </Avatar>
+                        </div>
+                    </li>
+                );
+              })}
+            </ul>
+            </CardContent>
+         </Card>
+      )}
+
+      {tournamentMatches.length > 0 && (
+          <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ClipboardList /> Recent Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+                 <ul className="space-y-4">
+              {tournamentMatches.map((match) => {
+                const winner = getPlayerAvatar(match.winner);
+                const loser = getPlayerAvatar(match.loser);
+                return (
+                     <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-2 justify-start w-2/5">
+                           <Avatar className="h-8 w-8">
+                              <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
+                              <AvatarFallback>{winner.initials}</AvatarFallback>
+                          </Avatar>
+                          <PlayerLink name={match.winner} />
+                        </div>
+                        <div className="flex-1 text-center">
+                            <Link href={`/match/${match.id}`}>
+                                <Badge variant="secondary" className="font-bold text-lg">{match.score}</Badge>
+                            </Link>
+                        </div>
+                       <div className="flex items-center gap-2 justify-end w-2/5">
+                            <PlayerLink name={match.loser} />
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
+                                <AvatarFallback>{loser.initials}</AvatarFallback>
+                            </Avatar>
+                      </div>
+                    </li>
+                );
+              })}
+            </ul>
+            </CardContent>
+          </Card>
+      )}
+
 
       {isAdmin && pendingPlayers.length > 0 && (
           <Card>
@@ -429,3 +552,5 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
+
+    

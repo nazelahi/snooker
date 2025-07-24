@@ -47,13 +47,15 @@ const initialPlayerStandings = [
 ];
 
 const initialUpcomingMatches = [
-  { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00" },
-  { id: 2, player1: "Mark Selby", player2: "Neil Robertson", date: "2024-08-15", time: "21:00" },
+  { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00", tournamentId: 1 },
+  { id: 2, player1: "Mark Selby", player2: "Neil Robertson", date: "2024-08-15", time: "21:00", tournamentId: 1 },
+  { id: 3, player1: "Alice Johnson", player2: "Bob Williams", date: "2024-08-16", time: "20:00", tournamentId: 2 },
 ];
 
 const initialRecentResults = [
-  { id: 1, winner: "Ronnie O'Sullivan", loser: "John Higgins", score: "6-2", date: "2024-08-10" },
-  { id: 2, winner: "Judd Trump", loser: "Kyren Wilson", score: "6-4", date: "2024-08-09" },
+  { id: 1, winner: "Ronnie O'Sullivan", loser: "John Higgins", score: "6-2", date: "2024-08-10", tournamentId: 1 },
+  { id: 2, winner: "Judd Trump", loser: "Kyren Wilson", score: "6-4", date: "2024-08-09", tournamentId: 1 },
+  { id: 3, winner: "Mark Selby", loser: "Neil Robertson", score: "5-1", date: "2024-08-11", tournamentId: 2 },
 ];
 
 const initialLiveMatches: LiveMatch[] = [
@@ -150,7 +152,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
        <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 relative">
           {liveMatches.length > 0 ? (
             <Carousel
               setApi={setLiveMatchApi}
@@ -212,7 +214,7 @@ export default function DashboardPage() {
       </Card>
       
        <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 relative">
                 {matchMedia.length > 0 ? (
                      <Carousel
                         setApi={setMediaApi}
@@ -470,3 +472,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
