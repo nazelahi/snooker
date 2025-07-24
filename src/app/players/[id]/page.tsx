@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -22,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogFooter, ResponsiveDialog } from "@/components/ui/dialog";
 import type { Notification } from "@/types/notifications";
 import {
   AlertDialog,
@@ -610,34 +609,27 @@ export default function PlayerProfilePage() {
           <Button variant="outline" className="w-full md:w-auto">Back to Players List</Button>
       </Link>
 
-      <Dialog open={isScoreDialogOpen} onOpenChange={setIsScoreDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Request Score Change</DialogTitle>
-                <DialogDescription>
-                   Propose a new score for your match against {selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}. The other player will need to approve this change.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2">
-                    <Label htmlFor="score1">{currentUser?.name.toLowerCase() === selectedMatch?.winner.toLowerCase() || currentUser?.name.toLowerCase() === selectedMatch?.loser.toLowerCase() ? (player?.name === selectedMatch.winner ? selectedMatch.winner : selectedMatch.loser) : player?.name}</Label>
-                    <Input id="score1" type="number" value={newScore1} onChange={e => setNewScore1(parseInt(e.target.value, 10) || 0)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="score2">{selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}</Label>
-                    <Input id="score2" type="number" value={newScore2} onChange={e => setNewScore2(parseInt(e.target.value, 10) || 0)} />
-                </div>
+      <ResponsiveDialog 
+        open={isScoreDialogOpen} 
+        onOpenChange={setIsScoreDialogOpen}
+        title="Request Score Change"
+        description={`Propose a new score for your match against ${selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}. The other player will need to approve this change.`}
+      >
+        <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+                <Label htmlFor="score1">{currentUser?.name.toLowerCase() === selectedMatch?.winner.toLowerCase() || currentUser?.name.toLowerCase() === selectedMatch?.loser.toLowerCase() ? (player?.name === selectedMatch.winner ? selectedMatch.winner : selectedMatch.loser) : player?.name}</Label>
+                <Input id="score1" type="number" value={newScore1} onChange={e => setNewScore1(parseInt(e.target.value, 10) || 0)} />
             </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsScoreDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleScoreChangeRequest}>Send Request</Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-2">
+                <Label htmlFor="score2">{selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}</Label>
+                <Input id="score2" type="number" value={newScore2} onChange={e => setNewScore2(parseInt(e.target.value, 10) || 0)} />
+            </div>
+        </div>
+        <DialogFooter>
+            <Button variant="outline" onClick={() => setIsScoreDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleScoreChangeRequest}>Send Request</Button>
+        </DialogFooter>
+      </ResponsiveDialog>
     </div>
   );
 }
-
-    
-
-    

@@ -3,11 +3,6 @@
 
 import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Player } from "@/app/players/page";
+import { ResponsiveDialog } from "@/components/ui/dialog";
 
 interface AddMatchDialogProps {
   open: boolean;
@@ -46,14 +42,13 @@ export function AddMatchDialog({ open, onOpenChange, onAddMatch, players, curren
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Report a New Match</DialogTitle>
-          <DialogDescription>
-            Select your opponent and enter the final score. Your opponent will be notified to approve the result.
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog 
+        open={open} 
+        onOpenChange={onOpenChange}
+        title="Report a New Match"
+        description="Select your opponent and enter the final score. Your opponent will be notified to approve the result."
+        className="sm:max-w-md"
+    >
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="opponent" className="text-right">
@@ -101,8 +96,6 @@ export function AddMatchDialog({ open, onOpenChange, onAddMatch, players, curren
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="submit" onClick={handleSubmit}>Report Match</Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }
-

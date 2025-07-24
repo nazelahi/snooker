@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -107,6 +108,65 @@ const DialogDescription = React.forwardRef<
   />
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+
+import { useIsMobile } from "@/hooks/use-mobile"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter
+} from "@/components/ui/sheet"
+
+
+interface ResponsiveDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
+  title?: string;
+  description?: string;
+  className?: string;
+}
+
+export function ResponsiveDialog({ open, onOpenChange, children, title, description, className }: ResponsiveDialogProps) {
+  const isMobile = useIsMobile();
+  const [header, ...restChildren] = React.Children.toArray(children);
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className={cn("p-0 flex flex-col", className)}>
+           {(title || description) && (
+            <SheetHeader className="p-6 pb-0">
+              {title && <SheetTitle>{title}</SheetTitle>}
+              {description && <SheetDescription>{description}</SheetDescription>}
+            </SheetHeader>
+           )}
+          <div className="flex-1 overflow-y-auto p-6">
+            {children}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={className}>
+         {(title || description) && (
+          <DialogHeader>
+            {title && <DialogTitle>{title}</DialogTitle>}
+            {description && <DialogDescription>{description}</DialogDescription>}
+          </DialogHeader>
+         )}
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export {
   Dialog,

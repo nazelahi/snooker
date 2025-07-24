@@ -1,10 +1,20 @@
+
 "use client"
 
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription
+} from "@/components/ui/sheet"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -30,19 +40,41 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className
-      )}
-      {...props}
-    />
-  </AlertDialogPortal>
-))
+>(({ className, ...props }, ref) => {
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    return (
+      <Sheet open={props.open} onOpenChange={props.onOpenChange}>
+        <SheetContent side="bottom" className="p-0">
+          <div className="p-6 pb-0">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{props.title}</AlertDialogTitle>
+              <AlertDialogDescription>{props.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+          </div>
+          <AlertDialogFooter className="p-6 pt-4">
+             {props.children}
+          </AlertDialogFooter>
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return (
+    <AlertDialogPortal>
+      <AlertDialogOverlay />
+      <AlertDialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+          className
+        )}
+        {...props}
+      />
+    </AlertDialogPortal>
+  )
+})
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
 
 const AlertDialogHeader = ({

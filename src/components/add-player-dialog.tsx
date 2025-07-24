@@ -3,11 +3,6 @@
 
 import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import type { Player } from "@/app/players/page";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { ResponsiveDialog } from "@/components/ui/dialog";
 
 interface AddPlayerDialogProps {
   open: boolean;
@@ -61,81 +57,79 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add New Player</DialogTitle>
-          <DialogDescription>
-            Enter the details of the new player below.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="avatar" className="text-right">
-              Avatar
-            </Label>
-            <div className="col-span-3 flex items-center gap-4">
-              <Avatar>
-                <AvatarImage src={avatarPreview || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" />
-                <AvatarFallback>{name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-              </Avatar>
-              <Input
-                id="avatar"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
+    <ResponsiveDialog 
+        open={open} 
+        onOpenChange={onOpenChange}
+        title="Add New Player"
+        description="Enter the details of the new player below."
+        className="sm:max-w-[425px]"
+    >
+      <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="avatar" className="text-right">
+            Avatar
+          </Label>
+          <div className="col-span-3 flex items-center gap-4">
+            <Avatar>
+              <AvatarImage src={avatarPreview || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" />
+              <AvatarFallback>{name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+            </Avatar>
             <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="col-span-3"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="skillLevel" className="text-right">
-              Skill Level
-            </Label>
-            <Select
-              onValueChange={(value: "Beginner" | "Intermediate" | "Pro") => setSkillLevel(value)}
-              defaultValue={skillLevel}
-            >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select skill level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Beginner">Beginner</SelectItem>
-                <SelectItem value="Intermediate">Intermediate</SelectItem>
-                <SelectItem value="Pro">Pro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="highestBreak" className="text-right">
-              Highest Break
-            </Label>
-            <Input
-              id="highestBreak"
-              type="number"
-              value={highestBreak}
-              onChange={(e) => setHighestBreak(parseInt(e.target.value, 10))}
+              id="avatar"
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
               className="col-span-3"
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" onClick={handleSubmit} disabled={!name}>Add Player</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="name" className="text-right">
+            Name
+          </Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="col-span-3"
+            required
+          />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="skillLevel" className="text-right">
+            Skill Level
+          </Label>
+          <Select
+            onValueChange={(value: "Beginner" | "Intermediate" | "Pro") => setSkillLevel(value)}
+            defaultValue={skillLevel}
+          >
+            <SelectTrigger className="col-span-3">
+              <SelectValue placeholder="Select skill level" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Beginner">Beginner</SelectItem>
+              <SelectItem value="Intermediate">Intermediate</SelectItem>
+              <SelectItem value="Pro">Pro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="highestBreak" className="text-right">
+            Highest Break
+          </Label>
+          <Input
+            id="highestBreak"
+            type="number"
+            value={highestBreak}
+            onChange={(e) => setHighestBreak(parseInt(e.target.value, 10))}
+            className="col-span-3"
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <Button type="submit" onClick={handleSubmit} disabled={!name}>Add Player</Button>
+      </DialogFooter>
+    </ResponsiveDialog>
   );
 }
