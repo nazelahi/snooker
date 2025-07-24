@@ -67,6 +67,7 @@ export default function PlayerProfilePage() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [newScore1, setNewScore1] = useState(0);
   const [newScore2, setNewScore2] = useState(0);
+  const [matchesToShow, setMatchesToShow] = useState(5);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -498,7 +499,7 @@ export default function PlayerProfilePage() {
         <CardContent>
           {matchHistory.length > 0 ? (
             <ul className="space-y-4">
-              {matchHistory.map((match) => {
+              {matchHistory.slice(0, matchesToShow).map((match) => {
                 const isWinner = match.winner === player.name;
                 const opponentName = isWinner ? match.loser : match.winner;
                 const opponent = getFromStorage<Player[]>('players', []).find(p => p.name === opponentName);
@@ -585,6 +586,13 @@ export default function PlayerProfilePage() {
             <p className="text-muted-foreground text-center py-4">No match history found.</p>
           )}
         </CardContent>
+        {matchHistory.length > matchesToShow && (
+          <CardFooter>
+            <Button onClick={() => setMatchesToShow(matchesToShow + 5)} variant="secondary" className="w-full">
+              View More
+            </Button>
+          </CardFooter>
+        )}
       </Card>
       
        {(isAdmin || isOwnProfile) && (
