@@ -63,7 +63,7 @@ export default function MyStatsPage() {
 
   const { toast } = useToast();
 
-  useEffect(() => {
+  const fetchCurrentUserData = () => {
     const userData = getFromStorage<{name: string, email: string} | null>('userData', null);
     if (userData) {
       setCurrentUser(userData);
@@ -109,6 +109,17 @@ export default function MyStatsPage() {
       );
       setPendingMatches(matchesForApproval);
     }
+  };
+
+  useEffect(() => {
+    fetchCurrentUserData();
+    
+    const handleStorageChange = () => {
+        fetchCurrentUserData();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -229,8 +240,18 @@ export default function MyStatsPage() {
 
     if (approve) {
         const { score1, score2 } = match.pendingScore;
-        const winnerName = score1 > score2 ? currentUser.name : proposerUser!.name;
-        const loserName = score1 > score2 ? proposerUser!.name : currentUser.name;
+        
+        let winnerName, loserName;
+        // The proposer is player1, current user (approver) is player2.
+        const proposerIsWinner = score1 > score2;
+        
+        if (proposerIsWinner) {
+            winnerName = proposerUser!.name;
+            loserName = currentUser.name;
+        } else {
+            winnerName = currentUser.name;
+            loserName = proposerUser!.name;
+        }
         
         allRecentResults[matchIndex] = {
             ...match,
@@ -241,9 +262,26 @@ export default function MyStatsPage() {
         };
         toast({ title: "Approved", description: "The match score has been updated." });
 
+        // Update player stats
+        const players = getFromStorage<Player[]>('players', []);
+        const winnerIndex = players.findIndex(p => p.name === winnerName);
+        const loserIndex = players.findIndex(p => p.name === loserName);
+
+        if (winnerIndex > -1) {
+            players[winnerIndex].wins = (players[winnerIndex].wins ?? 0) + 1;
+            players[winnerIndex].matchesPlayed += 1;
+            players[winnerIndex].winRate = ((players[winnerIndex].wins! / players[winnerIndex].matchesPlayed) * 100).toFixed(1) + '%';
+        }
+        if (loserIndex > -1) {
+            players[loserIndex].losses = (players[loserIndex].losses ?? 0) + 1;
+            players[loserIndex].matchesPlayed += 1;
+            players[loserIndex].winRate = ((players[loserIndex].wins! / players[loserIndex].matchesPlayed) * 100).toFixed(1) + '%';
+        }
+        saveToStorage('players', players);
+
     } else {
-        allRecentResults[matchIndex].pendingScore = undefined;
-        toast({ title: "Rejected", description: "The score change request has been rejected." });
+        allRecentResults.splice(matchIndex, 1);
+        toast({ title: "Rejected", description: "The score has been rejected and the match report removed." });
     }
 
     saveToStorage('recentResults', allRecentResults);
@@ -261,6 +299,9 @@ export default function MyStatsPage() {
         };
         saveToStorage(proposerNotificationKey, [newNotification, ...proposerNotifications]);
     }
+    
+    // Refresh all data
+    fetchCurrentUserData();
     window.dispatchEvent(new Event('storage'));
   }
 
@@ -296,13 +337,26 @@ export default function MyStatsPage() {
             <CardContent>
                 <ul className="space-y-4">
                     {pendingMatches.map(match => {
-                        const opponentName = match.winner === currentUser?.name ? match.loser : match.winner;
+                        const proposer = allPlayers.find(p => p.name === (match.winner === currentUser?.name ? match.loser : match.winner));
+                        const proposerUser = getFromStorage<{name:string, email:string}[]>('users', []).find(u => u.email === match.pendingScore?.proposedBy)
+                        const opponentName = proposerUser?.name ?? 'Opponent';
+
+                        let myProposedScore, opponentProposedScore;
+                        if(match.winner === currentUser?.name) { // I am the winner in the initial report
+                            myProposedScore = match.pendingScore?.score1;
+                            opponentProposedScore = match.pendingScore?.score2;
+                        } else { // I am the loser in the initial report
+                             myProposedScore = match.pendingScore?.score2;
+                             opponentProposedScore = match.pendingScore?.score1;
+                        }
+
+
                         return (
                             <li key={match.id} className="p-4 rounded-lg bg-muted/50">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p>vs <strong>{opponentName}</strong></p>
-                                        <p className="text-sm text-muted-foreground">Proposed Score: <span className="font-bold">{match.pendingScore?.score1}-{match.pendingScore?.score2}</span></p>
+                                        <p className="text-sm text-muted-foreground">Proposed Score: <span className="font-bold">{opponentProposedScore}-{myProposedScore}</span></p>
                                     </div>
                                     <div className="flex gap-2">
                                         <Button size="sm" variant="outline" onClick={() => handleApproval(match.id, true)}><Check className="h-4 w-4 mr-2"/>Approve</Button>
@@ -434,3 +488,5 @@ export default function MyStatsPage() {
     </div>
   );
 }
+
+    
