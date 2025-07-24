@@ -6,6 +6,8 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -18,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, List, LayoutGrid } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
@@ -49,6 +51,8 @@ const initialPlayers: Player[] = [
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
+  const [view, setView] = useState<'list' | 'grid'>('list');
+
 
   useEffect(() => {
     const storedPlayers = getFromStorage('players', initialPlayers);
@@ -99,51 +103,90 @@ export default function PlayersPage() {
             <h1 className="text-3xl font-bold">Players</h1>
             <p className="text-muted-foreground">Manage player profiles and view statistics.</p>
         </div>
-        <Button onClick={() => setIsAddPlayerOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Player
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')}>
+                <List className="h-5 w-5" />
+            </Button>
+            <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')}>
+                <LayoutGrid className="h-5 w-5" />
+            </Button>
+            <Button onClick={() => setIsAddPlayerOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Player
+            </Button>
+        </div>
       </div>
-      <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Player</TableHead>
-                <TableHead>Skill Level</TableHead>
-                <TableHead className="text-center">Matches</TableHead>
-                <TableHead className="text-center">Win Rate</TableHead>
-                <TableHead className="text-center">Highest Break</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {players.map((player) => (
-                <TableRow key={player.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                         <AvatarImage src={player.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
-                        <AvatarFallback>{player.initials}</AvatarFallback>
-                      </Avatar>
-                      <Link href={`/players/${player.id}`} className="font-medium hover:underline">
-                        {player.name}
-                      </Link>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'}>
-                      {player.skillLevel}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">{player.matchesPlayed}</TableCell>
-                  <TableCell className="text-center">{player.winRate}</TableCell>
-                  <TableCell className="text-center font-semibold text-primary">{player.highestBreak}</TableCell>
+      {view === 'list' && (
+        <Card>
+            <CardContent className="pt-6">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>Player</TableHead>
+                    <TableHead>Skill Level</TableHead>
+                    <TableHead className="text-center">Matches</TableHead>
+                    <TableHead className="text-center">Win Rate</TableHead>
+                    <TableHead className="text-center">Highest Break</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                {players.map((player) => (
+                    <TableRow key={player.id}>
+                    <TableCell>
+                        <div className="flex items-center gap-3">
+                        <Avatar>
+                            <AvatarImage src={player.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
+                            <AvatarFallback>{player.initials}</AvatarFallback>
+                        </Avatar>
+                        <Link href={`/players/${player.id}`} className="font-medium hover:underline">
+                            {player.name}
+                        </Link>
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'}>
+                        {player.skillLevel}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">{player.matchesPlayed}</TableCell>
+                    <TableCell className="text-center">{player.winRate}</TableCell>
+                    <TableCell className="text-center font-semibold text-primary">{player.highestBreak}</TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+            </CardContent>
+        </Card>
+      )}
+
+       {view === 'grid' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {players.map((player) => (
+            <Card key={player.id} className="overflow-hidden">
+                <CardHeader className="p-0">
+                  <Link href={`/players/${player.id}`}>
+                    <div className="relative aspect-square bg-muted">
+                        <Avatar className="h-full w-full rounded-none">
+                            <AvatarImage src={player.avatar || `https://placehold.co/400x400.png`} data-ai-hint="player portrait" alt={player.name} className="object-cover" />
+                            <AvatarFallback className="text-4xl rounded-none">{player.initials}</AvatarFallback>
+                        </Avatar>
+                    </div>
+                  </Link>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <Link href={`/players/${player.id}`} className="block">
+                    <CardTitle className="text-lg hover:underline">{player.name}</CardTitle>
+                  </Link>
+                  <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'} className="mt-2">
+                    {player.skillLevel}
+                  </Badge>
+                  <div className="text-sm text-muted-foreground mt-2">{player.winRate} Win Rate</div>
+                </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       <AddPlayerDialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen} onAddPlayer={handleAddPlayer} />
     </div>
   );
