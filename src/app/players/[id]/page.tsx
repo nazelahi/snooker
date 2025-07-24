@@ -56,32 +56,46 @@ export default function PlayerProfilePage() {
   const id = params.id as string;
   const { toast } = useToast();
 
+  const fetchPlayerData = (playerId: string) => {
+    const players = getFromStorage<Player[]>('players', []);
+    const foundPlayer = players.find(p => p.id === parseInt(playerId));
+    setPlayer(foundPlayer || null);
+     if (foundPlayer) {
+      setEditedName(foundPlayer.name);
+      setAvatarPreview(foundPlayer.avatar);
+      const winRateValue = parseFloat(foundPlayer.winRate) || 0;
+      const wins = foundPlayer.wins ?? Math.round(foundPlayer.matchesPlayed * (winRateValue / 100));
+      const losses = foundPlayer.losses ?? foundPlayer.matchesPlayed - wins;
+      const averageBreak = foundPlayer.averageBreak ?? Math.floor(foundPlayer.highestBreak / 2);
+      setEditedWins(wins);
+      setEditedLosses(losses);
+      setEditedAverageBreak(averageBreak);
+      
+      const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
+      const playerMatches = allRecentResults.filter(
+          (match) => match.winner === foundPlayer.name || match.loser === foundPlayer.name
+      );
+      setRecentMatches(playerMatches);
+    }
+  };
+
+
   useEffect(() => {
     const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
     setCurrentUser(userData);
 
     if (id) {
-      const players = getFromStorage<Player[]>('players', []);
-      const foundPlayer = players.find(p => p.id === parseInt(id));
-      setPlayer(foundPlayer || null);
-       if (foundPlayer) {
-        setEditedName(foundPlayer.name);
-        setAvatarPreview(foundPlayer.avatar);
-        const winRateValue = parseFloat(foundPlayer.winRate) || 0;
-        const wins = foundPlayer.wins ?? Math.round(foundPlayer.matchesPlayed * (winRateValue / 100));
-        const losses = foundPlayer.losses ?? foundPlayer.matchesPlayed - wins;
-        const averageBreak = foundPlayer.averageBreak ?? Math.floor(foundPlayer.highestBreak / 2);
-        setEditedWins(wins);
-        setEditedLosses(losses);
-        setEditedAverageBreak(averageBreak);
-        
-        const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
-        const playerMatches = allRecentResults.filter(
-            (match) => match.winner === foundPlayer.name || match.loser === foundPlayer.name
-        );
-        setRecentMatches(playerMatches);
-      }
+      fetchPlayerData(id);
     }
+    
+    const handleStorageChange = () => {
+        if(id) {
+          fetchPlayerData(id);
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [id]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,7 +193,8 @@ export default function PlayerProfilePage() {
   }
 
   const handleApproval = (matchId: number, approve: boolean) => {
-    if (!currentUser) return;
+    if (!currentUser || !player) return;
+
     const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
     const matchIndex = allRecentResults.findIndex(m => m.id === matchId);
     if (matchIndex === -1) return;
@@ -187,67 +202,44 @@ export default function PlayerProfilePage() {
     const match = allRecentResults[matchIndex];
     if (!match.pendingScore) return;
 
-    const proposerEmail = match.pendingScore.proposedBy;
-    let proposerNotificationKey = `notifications_${proposerEmail}`;
-    let proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
-    
     const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-    const proposerUser = allUsers.find(u => u.email === proposerEmail);
-    const approverUser = allUsers.find(u => u.email === currentUser.email);
-    if (!proposerUser || !approverUser) return;
-    
-    // Determine player1 and player2 from original match to correctly assign new scores
-    const player1Name = match.score.split('-')[0] > match.score.split('-')[1] ? match.winner : match.loser;
-    const player2Name = match.score.split('-')[0] > match.score.split('-')[1] ? match.loser : match.winner;
-    
-    const isProposerPlayer1 = proposerUser.name === player1Name;
-    const finalScore1 = isProposerPlayer1 ? match.pendingScore.score1 : match.pendingScore.score2;
-    const finalScore2 = isProposerPlayer1 ? match.pendingScore.score2 : match.pendingScore.score1;
+    const proposerUser = allUsers.find(u => u.email === match.pendingScore!.proposedBy);
 
-
+    if (!proposerUser) return;
+    
     if (approve) {
-        let winnerName, loserName;
-        if (finalScore1 > finalScore2) {
-            winnerName = player1Name;
-            loserName = player2Name;
-        } else {
-            winnerName = player2Name;
-            loserName = player1Name;
-        }
+        const { score1, score2 } = match.pendingScore;
+        const winnerName = score1 > score2 ? proposerUser.name : player.name;
+        const loserName = score1 > score2 ? player.name : proposerUser.name;
         
         allRecentResults[matchIndex] = {
             ...match,
-            score: `${finalScore1}-${finalScore2}`,
+            score: `${score1}-${score2}`,
             winner: winnerName,
             loser: loserName,
             pendingScore: undefined
         };
-        
-        const proposerNotification: Notification = {
-            id: Date.now().toString(),
-            title: "Score Change Approved",
-            description: `Your score change request for the match against ${currentUser.name} has been approved.`,
-            read: false,
-            date: new Date().toISOString()
-        };
-        saveToStorage(proposerNotificationKey, [proposerNotification, ...proposerNotifications]);
         toast({ title: "Approved", description: "The match score has been updated." });
+
     } else {
         allRecentResults[matchIndex].pendingScore = undefined;
-
-        const proposerNotification: Notification = {
-            id: Date.now().toString(),
-            title: "Score Change Rejected",
-            description: `Your score change request for the match against ${currentUser.name} has been rejected.`,
-            read: false,
-            date: new Date().toISOString()
-        };
-        saveToStorage(proposerNotificationKey, [proposerNotification, ...proposerNotifications]);
         toast({ title: "Rejected", description: "The score change request has been rejected." });
     }
 
     saveToStorage('recentResults', allRecentResults);
     setRecentMatches(prev => prev.map(m => m.id === matchId ? allRecentResults[matchIndex] : m));
+    
+    const proposerNotificationKey = `notifications_${proposerUser.email}`;
+    const proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
+    const newNotification: Notification = {
+        id: Date.now().toString(),
+        title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
+        description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
+        read: false,
+        date: new Date().toISOString()
+    };
+    saveToStorage(proposerNotificationKey, [newNotification, ...proposerNotifications]);
+    
     window.dispatchEvent(new Event('storage'));
   }
 
@@ -508,3 +500,5 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
+    
