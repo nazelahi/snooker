@@ -18,8 +18,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
+import { AddPlayerDialog } from "@/components/add-player-dialog";
 
-const initialPlayers = [
+export interface Player {
+  id: number;
+  name: string;
+  skillLevel: "Beginner" | "Intermediate" | "Pro";
+  matchesPlayed: number;
+  winRate: string;
+  highestBreak: number;
+  avatar: string;
+  initials: string;
+}
+
+const initialPlayers: Player[] = [
   { id: 1, name: "Ronnie O'Sullivan", skillLevel: "Pro", matchesPlayed: 25, winRate: "88%", highestBreak: 147, avatar: "/avatars/ronnie.png", initials: "RO" },
   { id: 2, name: "Judd Trump", skillLevel: "Pro", matchesPlayed: 28, winRate: "71%", highestBreak: 147, avatar: "/avatars/judd.png", initials: "JT" },
   { id: 3, name: "Mark Selby", skillLevel: "Pro", matchesPlayed: 26, winRate: "73%", highestBreak: 145, avatar: "/avatars/mark.png", initials: "MS" },
@@ -29,7 +41,8 @@ const initialPlayers = [
 ];
 
 export default function PlayersPage() {
-  const [players, setPlayers] = useState(initialPlayers);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
 
   useEffect(() => {
     const storedPlayers = getFromStorage('players', initialPlayers);
@@ -40,6 +53,21 @@ export default function PlayersPage() {
     }
   }, []);
 
+  const handleAddPlayer = (newPlayer: Omit<Player, 'id' | 'avatar' | 'initials' | 'winRate' | 'matchesPlayed'>) => {
+    setPlayers(prevPlayers => {
+      const newPlayers = [...prevPlayers, {
+        ...newPlayer,
+        id: prevPlayers.length + 1,
+        avatar: '',
+        initials: newPlayer.name.split(' ').map(n => n[0]).join(''),
+        matchesPlayed: 0,
+        winRate: "0%",
+      }];
+      saveToStorage('players', newPlayers);
+      return newPlayers;
+    });
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -47,7 +75,7 @@ export default function PlayersPage() {
             <h1 className="text-3xl font-bold">Players</h1>
             <p className="text-muted-foreground">Manage player profiles and view statistics.</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsAddPlayerOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Player
         </Button>
@@ -86,7 +114,7 @@ export default function PlayersPage() {
                   <TableCell className="text-center">{player.winRate}</TableCell>
                   <TableCell className="text-center font-semibold text-primary">{player.highestBreak}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">View Profile</Button>
+                    <Button variant="ghost" size="sm" onClick={() => alert(`Viewing profile for ${player.name}`)}>View Profile</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -94,6 +122,7 @@ export default function PlayersPage() {
           </Table>
         </CardContent>
       </Card>
+      <AddPlayerDialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen} onAddPlayer={handleAddPlayer} />
     </div>
   );
 }
