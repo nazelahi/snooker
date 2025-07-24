@@ -34,6 +34,20 @@ export default function LoginPage() {
       });
       return;
     }
+    
+    const adminEmail = "admin@gmail.com";
+    const adminPassword = "123456";
+
+    if (email === adminEmail && password === adminPassword) {
+        toast({
+            title: "Success!",
+            description: "Admin logged in successfully.",
+        });
+        saveToStorage('userData', { name: 'Admin', email: adminEmail, isAdmin: true });
+        window.dispatchEvent(new Event('storage'));
+        router.push('/admin');
+        return;
+    }
 
     const storedUsers = getFromStorage<{name: string, email: string, password: string}[]>('users', []);
     const user = storedUsers.find(u => u.email === email && u.password === password);
@@ -43,7 +57,7 @@ export default function LoginPage() {
         title: "Success!",
         description: "You have been logged in.",
       });
-      saveToStorage('userData', { name: user.name, email: user.email });
+      saveToStorage('userData', { name: user.name, email: user.email, isAdmin: false });
       window.dispatchEvent(new Event('storage'));
       router.push('/my-stats');
     } else {

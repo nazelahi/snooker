@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -24,12 +25,20 @@ export default function AdminPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const { toast } = useToast();
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    setPlayers(getFromStorage<Player[]>("players", []));
-    setTournaments(getFromStorage<Tournament[]>("tournaments", []));
-    setLiveMatches(getFromStorage<LiveMatch[]>("liveMatches", []));
-  }, []);
+    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
+    if (userData?.isAdmin) {
+      setIsAuthorized(true);
+      setPlayers(getFromStorage<Player[]>("players", []));
+      setTournaments(getFromStorage<Tournament[]>("tournaments", []));
+      setLiveMatches(getFromStorage<LiveMatch[]>("liveMatches", []));
+    } else {
+      router.push('/login');
+    }
+  }, [router]);
 
   const handlePlayerChange = (id: number, field: keyof Player, value: any) => {
     const updatedPlayers = players.map(p => p.id === id ? { ...p, [field]: value } : p);
@@ -64,6 +73,14 @@ export default function AdminPage() {
       description: "All changes have been saved to local storage.",
     });
   };
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Verifying authorization...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8">

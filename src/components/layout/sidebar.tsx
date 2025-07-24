@@ -15,17 +15,35 @@ import {
 } from "@/components/ui/sidebar";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
+import { getFromStorage } from "@/lib/storage";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/players", label: "Players", icon: Users },
   { href: "/tournaments", label: "Tournaments", icon: Trophy },
   { href: "/handicap-advisor", label: "Handicap Advisor", icon: BrainCircuit },
-  { href: "/admin", label: "Admin Panel", icon: ShieldCheck },
 ];
+
+const adminNavItem = { href: "/admin", label: "Admin Panel", icon: ShieldCheck };
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+
+  useEffect(() => {
+    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
+    setCurrentUser(userData);
+
+    const handleStorageChange = () => {
+        const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
+        setCurrentUser(user);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
 
   const isActive = (href: string) => {
     return pathname === href;
@@ -51,6 +69,16 @@ export default function AppSidebar() {
               </Link>
             </SidebarMenuItem>
           ))}
+          {currentUser?.isAdmin && (
+             <SidebarMenuItem>
+              <Link href={adminNavItem.href} passHref>
+                <SidebarMenuButton isActive={isActive(adminNavItem.href)}>
+                  <adminNavItem.icon className="h-5 w-5" />
+                  <span>{adminNavItem.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
