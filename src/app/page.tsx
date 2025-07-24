@@ -146,7 +146,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
        <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-0">
           {liveMatches.length > 0 ? (
             <Carousel
               opts={{
