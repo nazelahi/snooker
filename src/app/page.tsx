@@ -213,14 +213,7 @@ export default function DashboardPage() {
       </Card>
       
        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Camera className="text-primary" />
-                    Match Media
-                </CardTitle>
-                <CardDescription>Recent photos and videos from matches.</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
                 {matchMedia.length > 0 ? (
                      <Carousel
                         opts={{
