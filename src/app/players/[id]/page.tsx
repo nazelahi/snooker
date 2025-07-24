@@ -92,11 +92,18 @@ export default function PlayerProfilePage() {
         if(id) {
           fetchPlayerData(id);
         }
+        const allMatches = getFromStorage<Match[]>('recentResults', []);
+        if (player) {
+             const playerMatches = allMatches.filter(
+                (match) => match.winner === player.name || match.loser === player.name
+            );
+            setMatchHistory(playerMatches);
+        }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [id]);
+  }, [id, player]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -541,3 +548,5 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
+    
