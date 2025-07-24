@@ -13,29 +13,74 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getFromStorage } from "@/lib/storage";
+import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import { Calendar, Users, Shield, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
+import type { Notification } from "@/types/notifications";
 
 export default function TournamentDetailsPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+  const [hasApplied, setHasApplied] = useState(false);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
+    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
+    setCurrentUser(userData);
+
     if (id) {
       const tournaments = getFromStorage<Tournament[]>('tournaments', []);
       const foundTournament = tournaments.find(t => t.id === parseInt(id));
       setTournament(foundTournament || null);
+
+      if (foundTournament && userData && foundTournament.registeredPlayers?.includes(userData.email)) {
+        setHasApplied(true);
+      }
     }
   }, [id]);
 
   const handleApply = () => {
+    if (!currentUser || !tournament) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to apply for a tournament.",
+        });
+        router.push('/login');
+        return;
+    }
+
+    // Update tournament with new registered player
+    const tournaments = getFromStorage<Tournament[]>('tournaments', []);
+    const tournamentIndex = tournaments.findIndex(t => t.id === tournament.id);
+    if (tournamentIndex !== -1) {
+        const updatedTournament = {
+            ...tournaments[tournamentIndex],
+            registeredPlayers: [...(tournaments[tournamentIndex].registeredPlayers || []), currentUser.email]
+        };
+        tournaments[tournamentIndex] = updatedTournament;
+        saveToStorage('tournaments', tournaments);
+        setHasApplied(true);
+    }
+    
+    // Create notification for admin
+    const notifications = getFromStorage<Notification[]>('notifications', []);
+    const newNotification: Notification = {
+      id: Date.now().toString(),
+      title: 'New Tournament Application',
+      description: `User ${currentUser.name} (${currentUser.email}) has applied for the "${tournament.name}" tournament.`,
+      read: false,
+      date: new Date().toISOString(),
+    };
+    saveToStorage('notifications', [newNotification, ...notifications]);
+    window.dispatchEvent(new Event('storage'));
+
     toast({
         title: "Application Sent!",
         description: `Your application for "${tournament?.name}" has been received.`,
@@ -85,8 +130,10 @@ export default function TournamentDetailsPage() {
           </div>
         </CardContent>
         <CardFooter>
-            {tournament.status === 'Upcoming' && (
-                 <Button onClick={handleApply}>Apply to Participate</Button>
+            {tournament.status === 'Upcoming' && !currentUser?.isAdmin && (
+                 <Button onClick={handleApply} disabled={hasApplied}>
+                    {hasApplied ? 'Applied' : 'Apply to Participate'}
+                 </Button>
             )}
             {tournament.status === 'In Progress' && (
                 <Badge>In Progress</Badge>

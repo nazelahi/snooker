@@ -32,6 +32,7 @@ export interface Tournament {
   status: "Upcoming" | "In Progress" | "Finished";
   rules: string;
   image?: string;
+  registeredPlayers?: string[]; // Array of user emails
 }
 
 export interface LiveMatch {
@@ -44,10 +45,10 @@ export interface LiveMatch {
 }
 
 const initialTournaments: Tournament[] = [
-  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress", rules: "Standard knockout rules. Best of 11 frames.", image: "https://placehold.co/600x400.png" },
-  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress", rules: "Round-robin league format. Each player plays each other once. 2 points for a win, 1 for a draw.", image: "https://placehold.co/600x400.png" },
-  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished", rules: "9-ball rules. Race to 7.", image: "https://placehold.co/600x400.png" },
-  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming", rules: "Pro-Am knockout tournament. Amateurs get a handicap.", image: "https://placehold.co/600x400.png" },
+  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress", rules: "Standard knockout rules. Best of 11 frames.", image: "https://placehold.co/600x400.png", registeredPlayers: [] },
+  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress", rules: "Round-robin league format. Each player plays each other once. 2 points for a win, 1 for a draw.", image: "https://placehold.co/600x400.png", registeredPlayers: [] },
+  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished", rules: "9-ball rules. Race to 7.", image: "https://placehold.co/600x400.png", registeredPlayers: [] },
+  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming", rules: "Pro-Am knockout tournament. Amateurs get a handicap.", image: "https://placehold.co/600x400.png", registeredPlayers: [] },
 ];
 
 const initialLiveMatches: LiveMatch[] = [
@@ -79,11 +80,12 @@ export default function TournamentsPage() {
     }
   }, []);
 
-  const handleAddTournament = (newTournament: Omit<Tournament, 'id'>) => {
+  const handleAddTournament = (newTournament: Omit<Tournament, 'id' | 'registeredPlayers'>) => {
     setTournaments(prevTournaments => {
       const newTournaments = [...prevTournaments, {
         ...newTournament,
         id: prevTournaments.length + 1,
+        registeredPlayers: [],
       }];
       saveToStorage('tournaments', newTournaments);
       return newTournaments;
@@ -141,7 +143,7 @@ export default function TournamentsPage() {
             <CardTitle>All Tournaments</CardTitle>
              <CardDescription>A list of all tournaments, including upcoming and finished ones.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Table>
             <TableHeader>
               <TableRow>
