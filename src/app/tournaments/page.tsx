@@ -195,10 +195,10 @@ export default function TournamentsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                     <Button asChild variant="ghost" size="sm">
+                     <Button asChild variant="ghost" size="icon">
                         <Link href={`/tournaments/${tournament.id}`}>
-                           {currentUser?.isAdmin ? <Pencil className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                           {currentUser?.isAdmin ? 'Edit & Manage' : 'View Rules & Apply'}
+                           {currentUser?.isAdmin ? <Pencil className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                           <span className="sr-only">{currentUser?.isAdmin ? 'Edit & Manage' : 'View Rules & Apply'}</span>
                         </Link>
                      </Button>
                   </TableCell>
