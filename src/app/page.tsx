@@ -59,8 +59,8 @@ const initialRecentResults = [
 ];
 
 const initialLiveMatches: LiveMatch[] = [
-    { id: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
-    { id: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
+    { id: 1, tournamentId: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
+    { id: 2, tournamentId: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
 ];
 
 const initialPlayers: Player[] = [
@@ -151,8 +151,8 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-       <Card>
-        <CardContent className="p-0 relative">
+       <Card className="relative">
+        <CardContent className="p-0">
           {liveMatches.length > 0 ? (
             <Carousel
               setApi={setLiveMatchApi}
@@ -213,8 +213,8 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
       
-       <Card>
-            <CardContent className="p-0 relative">
+       <Card className="relative">
+            <CardContent className="p-0">
                 {matchMedia.length > 0 ? (
                      <Carousel
                         setApi={setMediaApi}
@@ -472,5 +472,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

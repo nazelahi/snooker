@@ -40,6 +40,7 @@ export interface Tournament {
 
 export interface LiveMatch {
   id: number;
+  tournamentId: number;
   tournamentName: string;
   player1: string;
   player2: string;
@@ -55,8 +56,8 @@ const initialTournaments: Tournament[] = [
 ];
 
 const initialLiveMatches: LiveMatch[] = [
-    { id: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
-    { id: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
+    { id: 1, tournamentId: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
+    { id: 2, tournamentId: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
 ];
 
 export default function TournamentsPage() {

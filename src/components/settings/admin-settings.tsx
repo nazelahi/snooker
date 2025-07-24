@@ -15,7 +15,7 @@ import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import type { Tournament } from "@/app/tournaments/page";
 import type { LiveMatch } from "@/app/tournaments/page";
-import { Trash2, PlusCircle } from "lucide-react";
+import { Trash2, PlusCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShieldCheck, Settings, ListChecks } from "lucide-react";
@@ -36,6 +36,16 @@ interface UpcomingMatch {
     date: string;
     time: string;
     tournamentId?: number;
+}
+
+interface RecentResult {
+    id: number;
+    winner: string;
+    loser: string;
+    score: string;
+    date: string;
+    tournamentId?: number;
+    media?: string[];
 }
 
 export default function AdminSettings() {
@@ -150,6 +160,50 @@ export default function AdminSettings() {
         return updated;
       });
       toast({ title: "Success", description: `Item removed from ${type}.`});
+  };
+
+  const handleEndLiveMatch = (matchId: number) => {
+    const match = liveMatches.find(m => m.id === matchId);
+    if (!match) return;
+
+    // 1. Create new recent result
+    const recentResults = getFromStorage<RecentResult[]>("recentResults", []);
+    const newResult: RecentResult = {
+        id: recentResults.length > 0 ? Math.max(...recentResults.map(r => r.id)) + 1 : 1,
+        winner: match.score1 > match.score2 ? match.player1 : match.player2,
+        loser: match.score1 > match.score2 ? match.player2 : match.player1,
+        score: `${match.score1}-${match.score2}`,
+        date: new Date().toISOString(),
+        tournamentId: match.tournamentId
+    };
+    const updatedRecentResults = [...recentResults, newResult];
+    saveToStorage("recentResults", updatedRecentResults);
+
+    // 2. Update player stats
+    const winnerIndex = players.findIndex(p => p.name === newResult.winner);
+    const loserIndex = players.findIndex(p => p.name === newResult.loser);
+    const updatedPlayers = [...players];
+
+    if (winnerIndex > -1) {
+        const winner = updatedPlayers[winnerIndex];
+        winner.wins = (winner.wins || 0) + 1;
+        winner.matchesPlayed = (winner.matchesPlayed || 0) + 1;
+        winner.winRate = ((winner.wins / winner.matchesPlayed) * 100).toFixed(1) + '%';
+    }
+    if (loserIndex > -1) {
+        const loser = updatedPlayers[loserIndex];
+        loser.losses = (loser.losses || 0) + 1;
+        loser.matchesPlayed = (loser.matchesPlayed || 0) + 1;
+        loser.winRate = ((loser.wins || 0) / loser.matchesPlayed * 100).toFixed(1) + '%';
+    }
+    setPlayers(updatedPlayers);
+    saveToStorage("players", updatedPlayers);
+
+    // 3. Remove from live matches
+    handleDelete(matchId, 'liveMatches', setLiveMatches);
+
+    toast({ title: "Match Ended", description: `${newResult.winner} won against ${newResult.loser}. Results saved.`});
+    window.dispatchEvent(new Event('storage'));
   };
 
   const handleRuleChange = (index: number, value: string) => {
@@ -270,14 +324,14 @@ export default function AdminSettings() {
                 <CardDescription>Edit live match details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                         <span>Player 1</span>
                         <span>Player 2</span>
                         <span>Score (P1 - P2)</span>
-                        <span>Actions</span>
+                        <span className="col-span-2">Actions</span>
                     </div>
                     {liveMatches.map(match => (
-                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                        <div key={match.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
                             <Select value={match.player1} onValueChange={value => handleLiveMatchChange(match.id, 'player1', value)}>
                                 <SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger>
                                 <SelectContent>
@@ -294,7 +348,13 @@ export default function AdminSettings() {
                                 <Input value={match.score1} type="number" onChange={e => handleLiveMatchChange(match.id, 'score1', parseInt(e.target.value))} />
                                 <Input value={match.score2} type="number" onChange={e => handleLiveMatchChange(match.id, 'score2', parseInt(e.target.value))} />
                             </div>
-                            <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
+                            <div className="flex gap-2 col-span-2">
+                                <Button variant="outline" size="sm" onClick={() => handleEndLiveMatch(match.id)} className="w-full">
+                                    <CheckCircle className="mr-2 h-4 w-4"/>
+                                    End Match
+                                </Button>
+                                <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
                         </div>
                     ))}
                 </CardContent>
@@ -414,5 +474,3 @@ export default function AdminSettings() {
     </div>
   );
 }
-
-    
