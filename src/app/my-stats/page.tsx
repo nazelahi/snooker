@@ -333,16 +333,16 @@ export default function MyStatsPage() {
             <AvatarImage src={userStats.avatar || `https://placehold.co/80x80.png`} data-ai-hint="player portrait" alt={userStats.name} />
             <AvatarFallback>{userStats.initials}</AvatarFallback>
             </Avatar>
-            <div className="hidden md:block">
-            <h1 className="text-4xl font-bold">{userStats.name}</h1>
-            <p className="text-muted-foreground">Your personal snooker statistics.</p>
+            <div>
+              <h1 className="text-2xl md:text-4xl font-bold">{userStats.name}</h1>
+              <p className="text-muted-foreground hidden md:block">Your personal snooker statistics.</p>
             </div>
         </div>
         <div className="flex gap-2">
-            <Button onClick={() => setIsAddMatchOpen(true)} variant="default">
+            <Button onClick={() => setIsAddMatchOpen(true)} variant="default" className="hidden md:flex">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Match
             </Button>
-            <Button onClick={() => setIsEditing(!isEditing)} variant="outline">
+            <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="hidden md:flex">
                 {isEditing ? 'Cancel' : <><Edit className="mr-2 h-4 w-4" /> Edit Profile</>}
             </Button>
         </div>
@@ -542,6 +542,28 @@ export default function MyStatsPage() {
            </div>
         </CardContent>
       </Card>
+
+      <div className="md:hidden flex gap-2 fixed bottom-20 right-4">
+         <Button
+            onClick={() => setIsAddMatchOpen(true)}
+            className="h-14 w-14 rounded-full shadow-lg"
+            size="icon"
+          >
+            <PlusCircle className="h-6 w-6" />
+            <span className="sr-only">Add Match</span>
+          </Button>
+         <Button
+            onClick={() => setIsEditing(!isEditing)}
+            className="h-14 w-14 rounded-full shadow-lg"
+            size="icon"
+            variant="outline"
+          >
+            {isEditing ? <Save className="h-6 w-6" /> : <Edit className="h-6 w-6" />}
+            <span className="sr-only">{isEditing ? 'Save Changes' : 'Edit Profile'}</span>
+          </Button>
+      </div>
+
+
       {currentUser && (
         <AddMatchDialog 
             open={isAddMatchOpen} 
@@ -554,4 +576,6 @@ export default function MyStatsPage() {
     </div>
   );
 }
+    
+
     

@@ -358,7 +358,7 @@ export default function PlayerProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
-       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16 md:h-20 md:w-20">
             <AvatarImage src={player.avatar || `https://placehold.co/80x80.png`} data-ai-hint="player portrait" alt={userStats.name} />
@@ -370,7 +370,7 @@ export default function PlayerProfilePage() {
           </div>
         </div>
          {(isAdmin || isOwnProfile) && (
-            <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="w-full md:w-auto">
+            <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="w-full md:w-auto hidden md:flex">
                 {isEditing ? 'Cancel' : <><Edit className="mr-2 h-4 w-4" /> Edit Profile</>}
             </Button>
          )}
@@ -586,6 +586,17 @@ export default function PlayerProfilePage() {
           )}
         </CardContent>
       </Card>
+      
+       {(isAdmin || isOwnProfile) && (
+          <Button
+            onClick={() => setIsEditing(!isEditing)}
+            className="md:hidden fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+            size="icon"
+          >
+            {isEditing ? <Save className="h-6 w-6" /> : <Edit className="h-6 w-6" />}
+            <span className="sr-only">{isEditing ? 'Save Changes' : 'Edit Profile'}</span>
+          </Button>
+       )}
 
       <Link href="/players" passHref>
           <Button variant="outline" className="w-full md:w-auto">Back to Players List</Button>
@@ -618,5 +629,7 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
+    
 
     
