@@ -209,9 +209,9 @@ export default function DashboardPage() {
                     }}
                     className="w-full"
                 >
-                    <CarouselContent>
+                    <CarouselContent className="-ml-2">
                         {upcomingTournaments.map((tournament) => (
-                            <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-1/3">
+                            <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-full pl-2">
                                 <Card className="overflow-hidden">
                                     <CardHeader className="p-0">
                                         <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
@@ -296,7 +296,7 @@ export default function DashboardPage() {
                         <div className="flex-1">
                             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
                                 <div className="flex items-center justify-end gap-2">
-                                    <Avatar className="h-8 w-8">
+                                     <Avatar className="h-8 w-8">
                                         <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                         <AvatarFallback>{player1.initials}</AvatarFallback>
                                     </Avatar>
@@ -326,16 +326,28 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
           <ul className="space-y-4">
-              {recentResults.map((match) => (
-                <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div>
-                    <PlayerLink name={match.winner} />
-                    <span className="text-muted-foreground"> beat </span> 
-                    <PlayerLink name={match.loser} />
-                  </div>
-                  <Badge variant="secondary">{match.score}</Badge>
-                </li>
-              ))}
+              {recentResults.map((match) => {
+                const winner = getPlayerAvatar(match.winner);
+                const loser = getPlayerAvatar(match.loser);
+                return (
+                    <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
+                            <AvatarFallback>{winner.initials}</AvatarFallback>
+                        </Avatar>
+                        <PlayerLink name={match.winner} />
+                        <span className="text-muted-foreground text-sm">beat</span> 
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
+                            <AvatarFallback>{loser.initials}</AvatarFallback>
+                        </Avatar>
+                        <PlayerLink name={match.loser} />
+                    </div>
+                    <Badge variant="secondary">{match.score}</Badge>
+                    </li>
+                );
+              })}
             </ul>
           </CardContent>
         </Card>
