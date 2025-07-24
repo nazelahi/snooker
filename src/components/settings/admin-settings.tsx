@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -177,7 +178,7 @@ export default function AdminSettings() {
         };
         return [...prev, newMatch];
     });
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   };
 
 
@@ -231,7 +232,7 @@ export default function AdminSettings() {
     handleDelete(matchId, 'liveMatches', setLiveMatches);
 
     toast({ title: "Match Ended", description: `${newResult.winner} won against ${newResult.loser}. Results saved.`});
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   };
 
   const handleRuleChange = (index: number, value: string) => {
@@ -281,7 +282,7 @@ export default function AdminSettings() {
         saveToStorage(`notifications_${user.email}`, [newNotification, ...userNotifications]);
     });
     
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
 
     setNewNoticeTitle("");
     setNewNoticeContent("");
@@ -296,7 +297,7 @@ export default function AdminSettings() {
     saveToStorage("siteSettings", siteSettings);
     saveToStorage("tournamentRules", rules);
     saveToStorage("notices", notices);
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
     toast({
       title: "Saved!",
       description: "All changes have been saved to local storage.",

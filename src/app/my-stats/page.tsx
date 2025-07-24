@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -187,7 +188,7 @@ export default function MyStatsPage() {
             winRate: winRate
         }));
         
-        window.dispatchEvent(new Event('storage'));
+        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
     }
 
     toast({ title: "Success", description: "Your profile has been updated."});
@@ -233,7 +234,7 @@ export default function MyStatsPage() {
             date: new Date().toISOString()
         };
         saveToStorage(`notifications_${opponentUser.email}`, [newNotification, ...notifications]);
-        window.dispatchEvent(new Event('storage'));
+        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
     }
 
     toast({ title: "Match Reported", description: "Your new match has been reported and is awaiting approval from your opponent."});
@@ -322,7 +323,7 @@ export default function MyStatsPage() {
     
     // Refresh all data
     fetchCurrentUserData();
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   }
 
   return (

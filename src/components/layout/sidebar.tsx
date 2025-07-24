@@ -61,7 +61,7 @@ const UserMenu = () => {
     const handleLogout = () => {
         localStorage.removeItem('userData');
         setCurrentUser(null);
-        window.dispatchEvent(new Event('storage'));
+        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
         router.push('/login');
     };
 

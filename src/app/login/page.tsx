@@ -51,7 +51,7 @@ export default function LoginPage() {
             description: "Admin logged in successfully.",
         });
         saveToStorage('userData', { name: 'Admin', email: adminEmail, isAdmin: true });
-        window.dispatchEvent(new Event('storage'));
+        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
         router.push('/admin');
         return;
     }
@@ -65,7 +65,7 @@ export default function LoginPage() {
         description: "You have been logged in.",
       });
       saveToStorage('userData', { name: user.name, email: user.email, isAdmin: false });
-      window.dispatchEvent(new Event('storage'));
+      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
       router.push('/my-stats');
     } else {
       toast({

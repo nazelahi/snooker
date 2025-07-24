@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -73,7 +74,7 @@ export default function UserSettings() {
     const updatedNotifications = notifications.map(n => n.id === id ? { ...n, read: true } : n);
     setNotifications(updatedNotifications);
     saveToStorage(notificationKey, updatedNotifications);
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   };
 
   const handleClearAllNotifications = () => {
@@ -82,7 +83,7 @@ export default function UserSettings() {
     const updatedNotifications = notifications.map(n => ({...n, read: true}));
     setNotifications(updatedNotifications);
     saveToStorage(notificationKey, updatedNotifications);
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   };
 
   return (

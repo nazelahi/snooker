@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -149,13 +150,7 @@ export default function DashboardPage() {
     }
 
     const handleStorageChange = (event: StorageEvent) => {
-        if (event.key === 'notices') {
-            const newNotices = getFromStorage('notices', []);
-            setNotices(newNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-        } else {
-            // For other changes, we can refetch all data
-            fetchDashboardData();
-        }
+        fetchDashboardData();
     };
 
     window.addEventListener('storage', handleStorageChange);

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -81,7 +82,7 @@ export default function PlayersPage() {
             date: new Date().toISOString()
          };
          saveToStorage('notifications', [newNotification, ...notifications]);
-         window.dispatchEvent(new Event('storage'));
+         setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
       }
 
       const newPlayers = [...prevPlayers, {

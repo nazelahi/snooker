@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -21,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogFooter, ResponsiveDialog } from "@/components/ui/dialog";
+import { DialogFooter, ResponsiveDialog } from "@/components/ui/dialog";
 import type { Notification } from "@/types/notifications";
 import {
   AlertDialog,
@@ -159,7 +160,7 @@ export default function PlayerProfilePage() {
         }
         
         setPlayer(updatedPlayer);
-        window.dispatchEvent(new Event('storage'));
+        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
         toast({ title: "Success", description: "Player profile has been updated."});
         setIsEditing(false);
     }
@@ -203,7 +204,7 @@ export default function PlayerProfilePage() {
         saveToStorage(`notifications_${opponent.email}`, [newNotification, ...notifications]);
       }
       
-      window.dispatchEvent(new Event('storage'));
+      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
       toast({ title: "Request Sent", description: "Your score change request has been sent for approval." });
     }
     setIsScoreDialogOpen(false);
@@ -289,7 +290,7 @@ export default function PlayerProfilePage() {
     };
     saveToStorage(proposerNotificationKey, [newNotification, ...proposerNotifications]);
     
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   }
 
   const handleAdminDeleteMatch = (matchId: number) => {
@@ -321,7 +322,7 @@ export default function PlayerProfilePage() {
     saveToStorage('recentResults', allMatches);
 
     toast({ title: 'Match Deleted', description: 'The match has been removed and stats updated.'});
-    window.dispatchEvent(new Event('storage'));
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   }
 
 

@@ -85,7 +85,7 @@ export default function MatchDetailsPage() {
             if (matchIndex > -1) {
               allMatches[matchIndex] = updatedMatch;
               saveToStorage('recentResults', allMatches);
-              window.dispatchEvent(new Event('storage'));
+              setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
               toast({ title: "Media Uploaded", description: "Your photo/video has been added to the match."});
             }
 
