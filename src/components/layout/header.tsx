@@ -28,6 +28,7 @@ import type { Notification } from "@/types/notifications";
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import type { Player } from "@/app/players/page";
+import { Icons } from "../icons";
 
 const initialUserNotifications: Notification[] = [
     { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
@@ -38,6 +39,7 @@ const initialUserNotifications: Notification[] = [
 export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean, avatar?: string, initials?: string} | null>(null);
+  const [clubName, setClubName] = useState("CueScore");
   const router = useRouter();
 
   const getNotificationKey = (user: {email: string, isAdmin?: boolean} | null) => {
@@ -62,6 +64,8 @@ export default function Header() {
 
   useEffect(() => {
     fetchUserData();
+    const siteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
+    setClubName(siteSettings.name);
 
     const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
     const notificationKey = getNotificationKey(userData);
@@ -81,6 +85,9 @@ export default function Header() {
         const currentInitialData = user?.isAdmin ? [] : initialUserNotifications;
         const stored = getFromStorage(currentKey, currentInitialData);
         setNotifications(stored);
+
+        const newSiteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
+        setClubName(newSiteSettings.name);
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -106,12 +113,23 @@ export default function Header() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-      <div className="md:hidden">
-        <SidebarTrigger />
+    <header className="sticky top-0 z-10 flex h-16 items-center border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+      <div className="flex items-center gap-2">
+        <div className="md:hidden">
+            <SidebarTrigger />
+        </div>
+        <Link href="/" className="hidden items-center gap-2 md:flex">
+          <Icons.logo className="h-7 w-7 text-primary" />
+        </Link>
+      </div>
+      
+      <div className="flex-1 text-center">
+        <Link href="/" className="text-xl font-semibold">
+          {clubName}
+        </Link>
       </div>
 
-      <div className="flex w-full items-center justify-end gap-4">
+      <div className="flex items-center justify-end gap-2 md:gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
