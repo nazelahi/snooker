@@ -152,6 +152,23 @@ export default function AdminSettings() {
     }, 0);
   };
 
+  const handleAddLiveMatch = () => {
+    setLiveMatches(prev => {
+        const newId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
+        const newMatch: LiveMatch = {
+            id: newId,
+            player1: players[0]?.name || "Player 1",
+            player2: players[1]?.name || "Player 2",
+            score1: 0,
+            score2: 0,
+            tournamentId: tournaments[0]?.id || 1,
+            tournamentName: tournaments[0]?.name || "Tournament",
+        };
+        return [...prev, newMatch];
+    });
+    window.dispatchEvent(new Event('storage'));
+  };
+
 
   const handleDelete = <T extends {id: number}>(id: number, type: 'players' | 'tournaments' | 'liveMatches' | 'upcomingMatches', stateSetter: React.Dispatch<React.SetStateAction<T[]>>) => {
       stateSetter(prev => {
@@ -357,6 +374,9 @@ export default function AdminSettings() {
                             </div>
                         </div>
                     ))}
+                    <Button onClick={handleAddLiveMatch} variant="outline" className="mt-4">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Live Match
+                    </Button>
                 </CardContent>
             </Card>
         </TabsContent>
