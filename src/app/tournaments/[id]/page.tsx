@@ -16,15 +16,15 @@ import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
-import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, Pencil } from "lucide-react";
+import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import type { Notification } from "@/types/notifications";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface EnrolledPlayer {
   name: string;
@@ -32,6 +32,20 @@ interface EnrolledPlayer {
   initials: string;
   email: string;
 }
+
+const PREDEFINED_RULES = [
+  "Standard knockout rules",
+  "Best of 11 frames",
+  "Round-robin league format",
+  "Each player plays each other once",
+  "2 points for a win, 1 for a draw",
+  "9-ball rules. Race to 7",
+  "Pro-Am knockout tournament",
+  "Amateurs get a handicap",
+  "Final match is best of 19 frames",
+  "All matches must be completed by the specified date",
+];
+
 
 export default function TournamentDetailsPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -211,6 +225,19 @@ export default function TournamentDetailsPage() {
     }
   };
 
+  const handleRuleChange = (rule: string, checked: boolean) => {
+    if (!editedTournament) return;
+    const currentRules = editedTournament.rules || [];
+    let updatedRules;
+    if (checked) {
+      updatedRules = [...currentRules, rule];
+    } else {
+      updatedRules = currentRules.filter(r => r !== rule);
+    }
+    setEditedTournament({ ...editedTournament, rules: updatedRules });
+  };
+
+
   if (!tournament || !editedTournament) {
     return (
         <div className="text-center">
@@ -228,16 +255,28 @@ export default function TournamentDetailsPage() {
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start">
         <Button variant="outline" onClick={() => router.back()} className="w-fit">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Tournaments
         </Button>
-        {isAdmin && !isEditing && (
-          <Button onClick={() => setIsEditing(true)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Tournament
-          </Button>
+        {isAdmin && (
+           <div className="flex gap-2">
+            {isEditing ? (
+              <>
+                <Button variant="outline" onClick={() => { setIsEditing(false); setEditedTournament(tournament ? {...tournament} : null); }}>Cancel</Button>
+                <Button onClick={handleSaveChanges}>
+                  <Save className="mr-2 h-4 w-4"/>
+                  Save Changes
+                </Button>
+              </>
+            ) : (
+               <Button onClick={() => setIsEditing(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Tournament
+              </Button>
+            )}
+           </div>
         )}
       </div>
 
@@ -254,18 +293,18 @@ export default function TournamentDetailsPage() {
             )}
         </div>
         <CardHeader>
-          <div className="flex items-center gap-2">
-             {isEditing ? (
+          {isEditing ? (
+            <div className="flex items-center gap-2">
               <Input
                 id="tournament-name"
                 className="text-4xl font-bold -ml-1.5 h-auto p-1.5 border-border bg-muted/50 transition-all"
                 value={editedTournament.name}
                 onChange={(e) => setEditedTournament({...editedTournament, name: e.target.value})}
               />
-            ) : (
-              <CardTitle className="text-4xl font-bold">{tournament.name}</CardTitle>
-            )}
-          </div>
+            </div>
+          ) : (
+             <CardTitle className="text-4xl font-bold">{tournament.name}</CardTitle>
+          )}
          
           <div className="flex items-center gap-4 text-muted-foreground pt-2">
             <div className="flex items-center gap-2">
@@ -296,19 +335,28 @@ export default function TournamentDetailsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-4">
             <h3 className="text-xl font-semibold flex items-center gap-2">
+              <ListChecks className="text-primary"/>
               Tournament Rules
             </h3>
              {isEditing ? (
-              <Textarea 
-                value={editedTournament.rules}
-                onChange={(e) => setEditedTournament({...editedTournament, rules: e.target.value})}
-                className="whitespace-pre-line border-border bg-muted/50 transition-all"
-                rows={5}
-              />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border bg-muted/20">
+                    {PREDEFINED_RULES.map(rule => (
+                        <div key={rule} className="flex items-center space-x-2">
+                            <Checkbox
+                                id={`rule-${rule}`}
+                                checked={(editedTournament.rules || []).includes(rule)}
+                                onCheckedChange={(checked) => handleRuleChange(rule, !!checked)}
+                            />
+                            <Label htmlFor={`rule-${rule}`} className="font-normal">{rule}</Label>
+                        </div>
+                    ))}
+                </div>
              ) : (
-              <p className="text-muted-foreground whitespace-pre-line">{tournament.rules}</p>
+                <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-4">
+                  {(tournament.rules || []).map(rule => <li key={rule}>{rule}</li>)}
+                </ul>
              )}
           </div>
         </CardContent>
@@ -322,16 +370,6 @@ export default function TournamentDetailsPage() {
               {tournament.status === 'In Progress' && <Badge>In Progress</Badge>}
               {tournament.status === 'Finished' && <Badge variant="secondary">Finished</Badge>}
             </div>
-
-            {isEditing && (
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => { setIsEditing(false); setEditedTournament(tournament ? {...tournament} : null); }}>Cancel</Button>
-                <Button onClick={handleSaveChanges}>
-                  <Save className="mr-2 h-4 w-4"/>
-                  Save Changes
-                </Button>
-              </div>
-            )}
         </CardFooter>
       </Card>
 
@@ -390,5 +428,3 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
-
-  

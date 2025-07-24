@@ -127,15 +127,14 @@ export default function AdminSettings() {
                 <CardDescription>Edit tournament details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                       <span>Name</span>
                       <span>Players</span>
                       <span>Status</span>
-                      <span>Rules</span>
                       <span>Actions</span>
                   </div>
                 {tournaments.map(tournament => (
-                    <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                    <div key={tournament.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
                       <Input value={tournament.name} onChange={e => handleTournamentChange(tournament.id, 'name', e.target.value)} />
                       <Input value={tournament.players} type="number" onChange={e => handleTournamentChange(tournament.id, 'players', parseInt(e.target.value))} />
                       <Select value={tournament.status} onValueChange={(value: "Upcoming" | "In Progress" | "Finished") => handleTournamentChange(tournament.id, 'status', value)}>
@@ -148,7 +147,6 @@ export default function AdminSettings() {
                           <SelectItem value="Finished">Finished</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Input value={tournament.rules} onChange={e => handleTournamentChange(tournament.id, 'rules', e.target.value)} />
                       <Button variant="destructive" size="icon" onClick={() => handleDelete(tournament.id, 'tournaments', setTournaments)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 ))}

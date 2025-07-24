@@ -21,8 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Tournament } from "@/app/tournaments/page";
-import { Textarea } from "./ui/textarea";
 import Image from "next/image";
+import { Checkbox } from "./ui/checkbox";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface AddTournamentDialogProps {
   open: boolean;
@@ -30,12 +31,25 @@ interface AddTournamentDialogProps {
   onAddTournament: (tournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers'>) => void;
 }
 
+const PREDEFINED_RULES = [
+  "Standard knockout rules",
+  "Best of 11 frames",
+  "Round-robin league format",
+  "Each player plays each other once",
+  "2 points for a win, 1 for a draw",
+  "9-ball rules. Race to 7",
+  "Pro-Am knockout tournament",
+  "Amateurs get a handicap",
+  "Final match is best of 19 frames",
+  "All matches must be completed by the specified date",
+];
+
 export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: AddTournamentDialogProps) {
   const [name, setName] = useState("");
   const [format, setFormat] = useState<"Knockout" | "League" | "Round Robin">("Knockout");
   const [players, setPlayers] = useState(8);
   const [status, setStatus] = useState<"Upcoming" | "In Progress" | "Finished">("Upcoming");
-  const [rules, setRules] = useState("");
+  const [rules, setRules] = useState<string[]>([]);
   const [image, setImage] = useState("");
   const [location, setLocation] = useState("");
   const [imagePreview, setImagePreview] = useState("");
@@ -53,6 +67,16 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
     }
   };
 
+  const handleRuleChange = (rule: string, checked: boolean) => {
+    setRules(prevRules => {
+        if (checked) {
+            return [...prevRules, rule];
+        } else {
+            return prevRules.filter(r => r !== rule);
+        }
+    });
+  };
+
   const handleSubmit = () => {
     onAddTournament({ name, format, players, status, rules, image, location });
     onOpenChange(false);
@@ -60,7 +84,7 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
     setFormat("Knockout");
     setPlayers(8);
     setStatus("Upcoming");
-    setRules("");
+    setRules([]);
     setImage("");
     setLocation("");
     setImagePreview("");
@@ -68,13 +92,14 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Tournament</DialogTitle>
           <DialogDescription>
             Enter the details of the new tournament below.
           </DialogDescription>
         </DialogHeader>
+        <ScrollArea className="max-h-[70vh] pr-4">
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
@@ -151,13 +176,17 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
             <Label htmlFor="rules" className="text-right pt-2">
               Rules
             </Label>
-            <Textarea
-              id="rules"
-              value={rules}
-              onChange={(e) => setRules(e.target.value)}
-              className="col-span-3"
-              placeholder="Enter tournament rules here..."
-            />
+            <div className="col-span-3 space-y-2 border rounded-md p-4">
+                {PREDEFINED_RULES.map(rule => (
+                    <div key={rule} className="flex items-center space-x-2">
+                        <Checkbox 
+                            id={`rule-new-${rule}`}
+                            onCheckedChange={(checked) => handleRuleChange(rule, !!checked)}
+                        />
+                        <Label htmlFor={`rule-new-${rule}`} className="font-normal">{rule}</Label>
+                    </div>
+                ))}
+            </div>
           </div>
            <div className="grid grid-cols-4 items-start gap-4">
              <Label htmlFor="image" className="text-right pt-2">
@@ -174,6 +203,7 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
              </div>
            </div>
         </div>
+        </ScrollArea>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="submit" onClick={handleSubmit}>Create Tournament</Button>
