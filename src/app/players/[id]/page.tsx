@@ -364,9 +364,9 @@ export default function PlayerProfilePage() {
             <AvatarImage src={player.avatar || `https://placehold.co/80x80.png`} data-ai-hint="player portrait" alt={userStats.name} />
             <AvatarFallback>{userStats.initials}</AvatarFallback>
           </Avatar>
-          <div className="hidden md:block">
-            <h1 className="text-4xl font-bold">{userStats.name}</h1>
-            <p className="text-muted-foreground">Player Profile & Statistics</p>
+          <div>
+            <h1 className="text-2xl md:text-4xl font-bold">{userStats.name}</h1>
+            <p className="text-muted-foreground hidden md:block">Player Profile & Statistics</p>
           </div>
         </div>
          {(isAdmin || isOwnProfile) && (
