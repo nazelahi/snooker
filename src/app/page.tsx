@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
+import { cn } from "@/lib/utils";
 
 const initialUpcomingMatches = [
   { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00", tournamentId: 1 },
@@ -169,12 +170,12 @@ export default function DashboardPage() {
   const upcomingTournaments = tournaments.filter(t => t.status === "Upcoming");
   const finishedTournaments = tournaments.filter(t => t.status === "Finished" && t.winner);
 
-  const PlayerLink = ({name}: {name: string}) => {
+  const PlayerLink = ({name, className}: {name: string, className?: string}) => {
     const player = getPlayerAvatar(name);
     if (!player.id) {
-        return <span className="font-medium">{name}</span>;
+        return <span className={cn("font-medium", className)}>{name}</span>;
     }
-    return <Link href={`/players/${player.id}`} className="font-medium hover:underline">{name}</Link>
+    return <Link href={`/players/${player.id}`} className={cn("font-medium hover:underline", className)}>{name}</Link>
   }
 
 
@@ -455,14 +456,14 @@ export default function DashboardPage() {
                                 <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                 <AvatarFallback>{player1.initials}</AvatarFallback>
                             </Avatar>
-                            <PlayerLink name={match.player1} />
+                            <PlayerLink name={match.player1} className="text-sm" />
                         </div>
                         <div className="flex-1 text-center">
                             <span className="text-muted-foreground text-sm">vs</span>
-                            <p className="text-xs text-muted-foreground">{new Date(match.date).toLocaleDateString()} at {match.time}</p>
+                            <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()} at {match.time}</p>
                         </div>
                         <div className="flex items-center gap-2 justify-end w-2/5">
-                            <PlayerLink name={match.player2} />
+                            <PlayerLink name={match.player2} className="text-sm" />
                             <Avatar className="h-8 w-8">
                                 <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
                                 <AvatarFallback>{player2.initials}</AvatarFallback>
@@ -499,7 +500,7 @@ export default function DashboardPage() {
                               <AvatarImage src={winner.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.winner} />
                               <AvatarFallback>{winner.initials}</AvatarFallback>
                           </Avatar>
-                          <PlayerLink name={match.winner} />
+                          <PlayerLink name={match.winner} className="text-sm" />
                         </div>
                         <div className="flex-1 text-center">
                             <Link href={`/match/${match.id}`}>
@@ -507,7 +508,7 @@ export default function DashboardPage() {
                             </Link>
                         </div>
                       <div className="flex items-center gap-2 justify-end w-2/5">
-                            <PlayerLink name={match.loser} />
+                            <PlayerLink name={match.loser} className="text-sm" />
                             <Avatar className="h-8 w-8">
                                 <AvatarImage src={loser.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.loser} />
                                 <AvatarFallback>{loser.initials}</AvatarFallback>
@@ -573,3 +574,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
