@@ -83,8 +83,8 @@ export default function DashboardPage() {
   const [recentToShow, setRecentToShow] = useState(5);
   const [matchMedia, setMatchMedia] = useState<string[]>([]);
   const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
-  const [liveMatchApi, setLiveMatchApi] = useState<CarouselApi>()
-  const [mediaApi, setMediaApi] = useState<CarouselApi>()
+  const [liveMatchApi, setLiveMatchApi] = useState<CarouselApi>();
+  const [mediaApi, setMediaApi] = useState<CarouselApi>();
 
 
   useEffect(() => {
@@ -206,7 +206,7 @@ export default function DashboardPage() {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              {liveMatches.length > 1 && <CarouselDots api={liveMatchApi} />}
+              {liveMatches.length > 1 && liveMatchApi && <CarouselDots api={liveMatchApi} />}
             </Carousel>
           </CardContent>
         </Card>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
-                        {matchMedia.length > 1 && <CarouselDots api={mediaApi} />}
+                        {matchMedia.length > 1 && mediaApi && <CarouselDots api={mediaApi} />}
                     </Carousel>
                 ) : (
                     <p className="text-muted-foreground text-center py-4">No match media has been uploaded yet.</p>
