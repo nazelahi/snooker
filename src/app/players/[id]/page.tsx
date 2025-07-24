@@ -8,10 +8,11 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription
+  CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords } from "lucide-react";
+import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords, Check, X } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import type { Notification } from "@/types/notifications";
 
 interface RecentMatch {
   id: number;
@@ -27,6 +30,11 @@ interface RecentMatch {
   loser: string;
   score: string;
   date: string;
+  pendingScore?: {
+    score1: number;
+    score2: number;
+    proposedBy: string; // email of user who proposed
+  }
 }
 
 export default function PlayerProfilePage() {
@@ -40,6 +48,10 @@ export default function PlayerProfilePage() {
   const [editedLosses, setEditedLosses] = useState(0);
   const [editedAverageBreak, setEditedAverageBreak] = useState(0);
   const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
+  const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<RecentMatch | null>(null);
+  const [newScore1, setNewScore1] = useState(0);
+  const [newScore2, setNewScore2] = useState(0);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -119,6 +131,104 @@ export default function PlayerProfilePage() {
         toast({ title: "Success", description: "Player profile has been updated."});
         setIsEditing(false);
     }
+  }
+
+  const handleOpenScoreDialog = (match: RecentMatch) => {
+    setSelectedMatch(match);
+    const scores = match.score.split('-').map(s => parseInt(s.trim()));
+    setNewScore1(scores[0]);
+    setNewScore2(scores[1]);
+    setIsScoreDialogOpen(true);
+  }
+
+  const handleScoreChangeRequest = () => {
+    if (!selectedMatch || !currentUser) return;
+
+    const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
+    const matchIndex = allRecentResults.findIndex(m => m.id === selectedMatch.id);
+
+    if (matchIndex > -1) {
+      allRecentResults[matchIndex].pendingScore = {
+        score1: newScore1,
+        score2: newScore2,
+        proposedBy: currentUser.email,
+      };
+      saveToStorage('recentResults', allRecentResults);
+      setRecentMatches(prev => prev.map(m => m.id === selectedMatch.id ? allRecentResults[matchIndex] : m));
+      
+      const opponentName = selectedMatch.winner === player?.name ? selectedMatch.loser : selectedMatch.winner;
+      const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+      const opponent = allUsers.find(u => u.name === opponentName);
+      
+      if (opponent) {
+        const notifications = getFromStorage<Notification[]>(`notifications_${opponent.email}`, []);
+        const newNotification: Notification = {
+            id: Date.now().toString(),
+            title: "Score Change Request",
+            description: `${currentUser.name} has proposed a new score for your match. Please review on your profile.`,
+            read: false,
+            date: new Date().toISOString()
+        };
+        saveToStorage(`notifications_${opponent.email}`, [newNotification, ...notifications]);
+        window.dispatchEvent(new Event('storage'));
+      }
+
+      toast({ title: "Request Sent", description: "Your score change request has been sent for approval." });
+    }
+    setIsScoreDialogOpen(false);
+  }
+
+  const handleApproval = (matchId: number, approve: boolean) => {
+    if (!currentUser) return;
+    const allRecentResults = getFromStorage<RecentMatch[]>('recentResults', []);
+    const matchIndex = allRecentResults.findIndex(m => m.id === matchId);
+    if (matchIndex === -1) return;
+
+    const match = allRecentResults[matchIndex];
+    if (!match.pendingScore) return;
+
+    const proposerEmail = match.pendingScore.proposedBy;
+    let proposerNotificationKey = `notifications_${proposerEmail}`;
+    let proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
+
+    if (approve) {
+        const newWinner = match.pendingScore.score1 > match.pendingScore.score2 ? match.winner : match.loser;
+        const newLoser = match.pendingScore.score1 > match.pendingScore.score2 ? match.loser : match.winner;
+        
+        allRecentResults[matchIndex] = {
+            ...match,
+            score: `${match.pendingScore.score1}-${match.pendingScore.score2}`,
+            winner: newWinner,
+            loser: newLoser,
+            pendingScore: undefined
+        };
+        
+        const proposerNotification: Notification = {
+            id: Date.now().toString(),
+            title: "Score Change Approved",
+            description: `Your score change request for the match against ${currentUser.name} has been approved.`,
+            read: false,
+            date: new Date().toISOString()
+        };
+        saveToStorage(proposerNotificationKey, [proposerNotification, ...proposerNotifications]);
+        toast({ title: "Approved", description: "The match score has been updated." });
+    } else {
+        allRecentResults[matchIndex].pendingScore = undefined;
+
+        const proposerNotification: Notification = {
+            id: Date.now().toString(),
+            title: "Score Change Rejected",
+            description: `Your score change request for the match against ${currentUser.name} has been rejected.`,
+            read: false,
+            date: new Date().toISOString()
+        };
+        saveToStorage(proposerNotificationKey, [proposerNotification, ...proposerNotifications]);
+        toast({ title: "Rejected", description: "The score change request has been rejected." });
+    }
+
+    saveToStorage('recentResults', allRecentResults);
+    setRecentMatches(prev => prev.map(m => m.id === matchId ? allRecentResults[matchIndex] : m));
+    window.dispatchEvent(new Event('storage'));
   }
 
 
@@ -292,18 +402,51 @@ export default function PlayerProfilePage() {
               {recentMatches.map((match) => {
                 const isWinner = match.winner === player.name;
                 const opponent = isWinner ? match.loser : match.winner;
+                const isMyMatch = isOwnProfile;
+                const pendingChange = match.pendingScore;
+                const iAmProposer = pendingChange?.proposedBy === currentUser?.email;
+                const iAmApprover = isMyMatch && pendingChange && !iAmProposer;
+
                 return (
-                  <li key={match.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                     <div className="flex items-center gap-4">
-                        <Badge variant={isWinner ? "default" : "destructive"}>
-                           {isWinner ? "WIN" : "LOSS"}
-                        </Badge>
-                        <div>
-                           <span>vs {opponent}</span>
-                           <p className="text-sm text-muted-foreground">{match.date}</p>
-                        </div>
+                  <li key={match.id} className="p-4 rounded-lg bg-muted/50">
+                     <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-4">
+                            <Badge variant={isWinner ? "default" : "destructive"}>
+                               {isWinner ? "WIN" : "LOSS"}
+                            </Badge>
+                            <div>
+                               <span>vs {opponent}</span>
+                               <p className="text-sm text-muted-foreground">{match.date}</p>
+                            </div>
+                         </div>
+                         <div className="flex items-center gap-4">
+                            <span className="font-bold text-lg">{match.score}</span>
+                            {isMyMatch && !pendingChange && (
+                                <Button size="sm" variant="outline" onClick={() => handleOpenScoreDialog(match)}>
+                                    <Edit className="h-4 w-4"/>
+                                </Button>
+                            )}
+                         </div>
                      </div>
-                     <span className="font-bold text-lg">{match.score}</span>
+                     {pendingChange && (
+                        <Card className="mt-4 bg-background/50">
+                            <CardHeader>
+                                <CardTitle className="text-base">Pending Score Change</CardTitle>
+                                <CardDescription className="text-xs">
+                                    {iAmProposer ? `Waiting for ${opponent} to approve.` : `${player.name} proposed a new score.`}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                               <p>Proposed Score: <span className="font-bold">{pendingChange.score1} - {pendingChange.score2}</span></p>
+                            </CardContent>
+                           {iAmApprover && (
+                             <CardFooter className="flex justify-end gap-2">
+                                <Button size="sm" variant="outline" onClick={() => handleApproval(match.id, true)}><Check className="h-4 w-4 mr-2"/>Approve</Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleApproval(match.id, false)}><X className="h-4 w-4 mr-2"/>Reject</Button>
+                             </CardFooter>
+                           )}
+                        </Card>
+                     )}
                   </li>
                 );
               })}
@@ -317,6 +460,31 @@ export default function PlayerProfilePage() {
       <Link href="/players" passHref>
           <Button variant="outline" className="w-full md:w-auto">Back to Players List</Button>
       </Link>
+
+      <Dialog open={isScoreDialogOpen} onOpenChange={setIsScoreDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Request Score Change</DialogTitle>
+                <DialogDescription>
+                   Propose a new score for your match against {selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}. The other player will need to approve this change.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="score1">{player?.name} (You)</Label>
+                    <Input id="score1" type="number" value={newScore1} onChange={e => setNewScore1(parseInt(e.target.value, 10) || 0)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="score2">{selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}</Label>
+                    <Input id="score2" type="number" value={newScore2} onChange={e => setNewScore2(parseInt(e.target.value, 10) || 0)} />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsScoreDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleScoreChangeRequest}>Send Request</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
