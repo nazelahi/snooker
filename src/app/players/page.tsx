@@ -8,6 +8,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Table,
@@ -54,7 +55,7 @@ export default function PlayersPage() {
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [playersToShow, setPlayersToShow] = useState(10);
 
   useEffect(() => {
     const storedPlayers = getFromStorage('players', initialPlayers);
@@ -101,6 +102,17 @@ export default function PlayersPage() {
   const filteredPlayers = players.filter(player =>
     player.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const paginatedPlayers = filteredPlayers.slice(0, playersToShow);
+
+  const ViewMoreButton = () => {
+    if (playersToShow >= filteredPlayers.length) return null;
+    return (
+        <Button onClick={() => setPlayersToShow(playersToShow + 10)} variant="secondary" className="w-full">
+            View More
+        </Button>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -146,7 +158,7 @@ export default function PlayersPage() {
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {filteredPlayers.map((player) => (
+                {paginatedPlayers.map((player) => (
                     <TableRow key={player.id}>
                     <TableCell>
                         <div className="flex items-center gap-3">
@@ -172,35 +184,45 @@ export default function PlayersPage() {
                 </TableBody>
             </Table>
             </CardContent>
+             {filteredPlayers.length > playersToShow && (
+                <CardFooter>
+                  <ViewMoreButton />
+                </CardFooter>
+            )}
         </Card>
       )}
 
        {view === 'grid' && (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {filteredPlayers.map((player) => (
-            <Card key={player.id} className="overflow-hidden">
-                <CardHeader className="p-0">
-                  <Link href={`/players/${player.id}`}>
-                    <div className="relative aspect-square bg-muted">
-                        <Avatar className="h-full w-full rounded-none">
-                            <AvatarImage src={player.avatar || `https://placehold.co/400x400.png`} data-ai-hint="player portrait" alt={player.name} className="object-cover" />
-                            <AvatarFallback className="text-4xl rounded-none">{player.initials}</AvatarFallback>
-                        </Avatar>
-                    </div>
-                  </Link>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <Link href={`/players/${player.id}`} className="block">
-                    <CardTitle className="text-lg hover:underline truncate">{player.name}</CardTitle>
-                  </Link>
-                  <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'} className="mt-2">
-                    {player.skillLevel}
-                  </Badge>
-                  <div className="text-sm text-muted-foreground mt-2">{player.winRate} Win Rate</div>
-                </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {paginatedPlayers.map((player) => (
+                <Card key={player.id} className="overflow-hidden">
+                    <CardHeader className="p-0">
+                    <Link href={`/players/${player.id}`}>
+                        <div className="relative aspect-square bg-muted">
+                            <Avatar className="h-full w-full rounded-none">
+                                <AvatarImage src={player.avatar || `https://placehold.co/400x400.png`} data-ai-hint="player portrait" alt={player.name} className="object-cover" />
+                                <AvatarFallback className="text-4xl rounded-none">{player.initials}</AvatarFallback>
+                            </Avatar>
+                        </div>
+                    </Link>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                    <Link href={`/players/${player.id}`} className="block">
+                        <CardTitle className="text-lg hover:underline truncate">{player.name}</CardTitle>
+                    </Link>
+                    <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'} className="mt-2">
+                        {player.skillLevel}
+                    </Badge>
+                    <div className="text-sm text-muted-foreground mt-2">{player.winRate} Win Rate</div>
+                    </CardContent>
+                </Card>
+            ))}
+            </div>
+             {filteredPlayers.length > playersToShow && (
+                <ViewMoreButton />
+            )}
+        </>
       )}
        {filteredPlayers.length === 0 && (
             <div className="text-center py-16">
