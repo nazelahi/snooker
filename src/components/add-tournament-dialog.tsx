@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Tournament } from "@/app/tournaments/page";
+import { Textarea } from "./ui/textarea";
 
 interface AddTournamentDialogProps {
   open: boolean;
@@ -32,14 +33,16 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
   const [format, setFormat] = useState<"Knockout" | "League" | "Round Robin">("Knockout");
   const [players, setPlayers] = useState(8);
   const [status, setStatus] = useState<"Upcoming" | "In Progress" | "Finished">("Upcoming");
+  const [rules, setRules] = useState("");
 
   const handleSubmit = () => {
-    onAddTournament({ name, format, players, status });
+    onAddTournament({ name, format, players, status, rules });
     onOpenChange(false);
     setName("");
     setFormat("Knockout");
     setPlayers(8);
     setStatus("Upcoming");
+    setRules("");
   };
 
   return (
@@ -110,6 +113,18 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
                 <SelectItem value="Finished">Finished</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+           <div className="grid grid-cols-4 items-start gap-4">
+            <Label htmlFor="rules" className="text-right pt-2">
+              Rules
+            </Label>
+            <Textarea
+              id="rules"
+              value={rules}
+              onChange={(e) => setRules(e.target.value)}
+              className="col-span-3"
+              placeholder="Enter tournament rules here..."
+            />
           </div>
         </div>
         <DialogFooter>

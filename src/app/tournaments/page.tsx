@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Radio } from "lucide-react";
+import { PlusCircle, Radio, Pencil, Eye } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddTournamentDialog } from "@/components/add-tournament-dialog";
 
@@ -29,6 +30,7 @@ export interface Tournament {
   format: "Knockout" | "League" | "Round Robin";
   players: number;
   status: "Upcoming" | "In Progress" | "Finished";
+  rules: string;
 }
 
 export interface LiveMatch {
@@ -41,10 +43,10 @@ export interface LiveMatch {
 }
 
 const initialTournaments: Tournament[] = [
-  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress" },
-  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress" },
-  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished" },
-  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming" },
+  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress", rules: "Standard knockout rules. Best of 11 frames." },
+  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress", rules: "Round-robin league format. Each player plays each other once. 2 points for a win, 1 for a draw." },
+  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished", rules: "9-ball rules. Race to 7." },
+  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming", rules: "Pro-Am knockout tournament. Amateurs get a handicap." },
 ];
 
 const initialLiveMatches: LiveMatch[] = [
@@ -56,8 +58,12 @@ export default function TournamentsPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [isAddTournamentOpen, setIsAddTournamentOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
 
   useEffect(() => {
+    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
+    setCurrentUser(userData);
+
     const storedTournaments = getFromStorage('tournaments', initialTournaments);
     setTournaments(storedTournaments);
 
@@ -90,10 +96,12 @@ export default function TournamentsPage() {
             <h1 className="text-3xl font-bold">Tournaments</h1>
             <p className="text-muted-foreground">Create and manage club tournaments.</p>
         </div>
-        <Button onClick={() => setIsAddTournamentOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Create Tournament
-        </Button>
+        {currentUser?.isAdmin && (
+            <Button onClick={() => setIsAddTournamentOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Tournament
+            </Button>
+        )}
       </div>
 
        <Card>
@@ -162,7 +170,19 @@ export default function TournamentsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => alert(`Viewing details for ${tournament.name}`)}>View Details</Button>
+                    {currentUser?.isAdmin ? (
+                         <Button asChild variant="ghost" size="sm">
+                            <Link href="/admin">
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </Link>
+                         </Button>
+                    ) : (
+                        <Button asChild variant="ghost" size="sm">
+                            <Link href={`/tournaments/${tournament.id}`}>
+                               <Eye className="mr-2 h-4 w-4" /> View Rules & Apply
+                            </Link>
+                        </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
