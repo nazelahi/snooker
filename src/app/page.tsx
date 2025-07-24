@@ -211,7 +211,7 @@ export default function DashboardPage() {
                 >
                     <CarouselContent>
                         {upcomingTournaments.map((tournament) => (
-                            <CarouselItem key={tournament.id} className="w-full">
+                            <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-1/3">
                                 <Card className="overflow-hidden">
                                     <CardHeader className="p-0">
                                         <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
@@ -288,14 +288,34 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
-              {upcomingMatches.map((match) => (
-                <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div className="font-medium">
-                    <PlayerLink name={match.player1} /> vs <PlayerLink name={match.player2} />
-                  </div>
-                  <div className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()} at {match.time}</div>
-                </li>
-              ))}
+              {upcomingMatches.map((match) => {
+                const player1 = getPlayerAvatar(match.player1);
+                const player2 = getPlayerAvatar(match.player2);
+                return (
+                    <li key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                        <div className="flex-1">
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
+                                <div className="flex items-center justify-end gap-2">
+                                    <PlayerLink name={match.player1} />
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={player1.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                                        <AvatarFallback>{player1.initials}</AvatarFallback>
+                                    </Avatar>
+                                </div>
+                                <span className="text-muted-foreground text-sm">vs</span>
+                                 <div className="flex items-center justify-start gap-2">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={player2.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                                        <AvatarFallback>{player2.initials}</AvatarFallback>
+                                    </Avatar>
+                                    <PlayerLink name={match.player2} />
+                                </div>
+                            </div>
+                        </div>
+                      <div className="text-sm text-muted-foreground text-right w-32">{new Date(match.date).toLocaleDateString()} at {match.time}</div>
+                    </li>
+                );
+              })}
             </ul>
           </CardContent>
         </Card>
