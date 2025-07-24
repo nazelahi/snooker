@@ -359,7 +359,7 @@ export default function TournamentDetailsPage() {
                 </div>
              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(Array.isArray(tournament.rules) ? tournament.rules : [tournament.rules].flat()).map((rule, index) => rule && (
+                  {(tournament.rules || []).map((rule, index) => rule && (
                     <div key={`${rule}-${index}`} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                       <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0"/>
                       <span className="text-muted-foreground">{rule}</span>
