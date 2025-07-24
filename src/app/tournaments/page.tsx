@@ -165,10 +165,10 @@ export default function TournamentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tournament Name</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Format</TableHead>
                 <TableHead className="text-center">Players</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="hidden md:table-cell">Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -182,7 +182,7 @@ export default function TournamentsPage() {
                   </TableCell>
                   <TableCell>{tournament.format}</TableCell>
                   <TableCell className="text-center">{tournament.players}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Badge
                       variant={
                         tournament.status === 'In Progress' ? 'default'
