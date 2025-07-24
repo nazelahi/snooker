@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Trophy, LogIn, Home, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { Users, Trophy, LogIn, Home, Settings, LogOut, User as UserIcon, Swords } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +25,7 @@ import type { Player } from "@/app/players/page";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
+  { href: "/matches", label: "Matches", icon: Swords },
   { href: "/players", label: "Players", icon: Users },
   { href: "/tournaments", label: "Tournaments", icon: Trophy },
 ];

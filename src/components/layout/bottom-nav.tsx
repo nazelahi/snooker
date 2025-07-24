@@ -3,13 +3,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Trophy, User as UserIcon } from "lucide-react";
+import { Home, Users, Trophy, User as UserIcon, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFromStorage } from "@/lib/storage";
 import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/matches", label: "Matches", icon: Swords },
   { href: "/players", label: "Players", icon: Users },
   { href: "/tournaments", label: "Tournaments", icon: Trophy },
   { href: "/my-stats", label: "My Stats", icon: UserIcon, auth: true },
@@ -34,7 +35,10 @@ export default function BottomNav() {
   }, []);
   
   const isActive = (href: string) => {
-    return pathname === href;
+    if (href === "/") {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
   };
 
   const filteredNavItems = navItems.filter(item => !item.auth || isLoggedIn);
