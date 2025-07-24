@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, Users, Trophy, BrainCircuit, LogIn, Home, Settings } from "lucide-react";
+import { Users, Trophy, LogIn, Home, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
