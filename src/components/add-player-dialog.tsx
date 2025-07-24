@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 interface AddPlayerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddPlayer: (player: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed'>) => void;
+  onAddPlayer: (player: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed' | 'wins' | 'losses' | 'averageBreak'>) => void;
 }
 
 export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDialogProps) {
@@ -50,6 +50,7 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
   };
 
   const handleSubmit = () => {
+    if (!name) return;
     onAddPlayer({ name, skillLevel, highestBreak, avatar });
     onOpenChange(false);
     setName("");
@@ -96,6 +97,7 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="col-span-3"
+              required
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -131,7 +133,7 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" onClick={handleSubmit}>Add Player</Button>
+          <Button type="submit" onClick={handleSubmit} disabled={!name}>Add Player</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

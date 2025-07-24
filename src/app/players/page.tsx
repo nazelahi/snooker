@@ -20,10 +20,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, List, LayoutGrid } from "lucide-react";
+import { PlusCircle, List, LayoutGrid, Search } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
+import { Input } from "@/components/ui/input";
 
 export interface Player {
   id: number;
@@ -52,6 +53,7 @@ export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [view, setView] = useState<'list' | 'grid'>('list');
+  const [searchQuery, setSearchQuery] = useState("");
 
 
   useEffect(() => {
@@ -83,7 +85,7 @@ export default function PlayersPage() {
 
       const newPlayers = [...prevPlayers, {
         ...newPlayer,
-        id: prevPlayers.length + 1,
+        id: prevPlayers.length > 0 ? Math.max(...prevPlayers.map(p => p.id)) + 1 : 1,
         initials: newPlayer.name.split(' ').map(n => n[0]).join(''),
         matchesPlayed: 0,
         winRate: "0%",
@@ -96,21 +98,35 @@ export default function PlayersPage() {
     });
   };
 
+  const filteredPlayers = players.filter(player =>
+    player.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="hidden md:block">
             <h1 className="text-3xl font-bold">Players</h1>
             <p className="text-muted-foreground">Manage player profiles and view statistics.</p>
         </div>
-        <div className="flex items-center gap-2">
-            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')} className="hidden md:flex">
+        <div className="flex items-center gap-2 w-full md:w-auto">
+             <div className="relative w-full md:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Search players..."
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')} className="hidden md:flex shrink-0">
                 <List className="h-5 w-5" />
             </Button>
-            <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')} className="hidden md:flex">
+            <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')} className="hidden md:flex shrink-0">
                 <LayoutGrid className="h-5 w-5" />
             </Button>
-            <Button onClick={() => setIsAddPlayerOpen(true)} className="hidden md:flex">
+            <Button onClick={() => setIsAddPlayerOpen(true)} className="hidden md:flex shrink-0">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Player
             </Button>
@@ -130,7 +146,7 @@ export default function PlayersPage() {
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {players.map((player) => (
+                {filteredPlayers.map((player) => (
                     <TableRow key={player.id}>
                     <TableCell>
                         <div className="flex items-center gap-3">
@@ -161,7 +177,7 @@ export default function PlayersPage() {
 
        {view === 'grid' && (
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {players.map((player) => (
+          {filteredPlayers.map((player) => (
             <Card key={player.id} className="overflow-hidden">
                 <CardHeader className="p-0">
                   <Link href={`/players/${player.id}`}>
@@ -186,6 +202,12 @@ export default function PlayersPage() {
           ))}
         </div>
       )}
+       {filteredPlayers.length === 0 && (
+            <div className="text-center py-16">
+                <h3 className="text-xl font-semibold">No Players Found</h3>
+                <p className="text-muted-foreground mt-2">Your search for "{searchQuery}" did not match any players.</p>
+            </div>
+        )}
 
       <Button
         onClick={() => setIsAddPlayerOpen(true)}
