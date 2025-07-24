@@ -52,7 +52,7 @@ const initialPlayers: Player[] = [
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
-  const [view, setView] = useState<'list' | 'grid'>('list');
+  const [view, setView] = useState<'list' | 'grid'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
 
 
@@ -109,8 +109,8 @@ export default function PlayersPage() {
             <h1 className="text-3xl font-bold">Players</h1>
             <p className="text-muted-foreground">Manage player profiles and view statistics.</p>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-             <div className="relative w-full md:w-64">
+        <div className="flex items-center gap-2 w-full">
+             <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                     type="search"
@@ -120,10 +120,10 @@ export default function PlayersPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
-            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')} className="hidden md:flex shrink-0">
+            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')} className="shrink-0">
                 <List className="h-5 w-5" />
             </Button>
-            <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')} className="hidden md:flex shrink-0">
+            <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')} className="shrink-0">
                 <LayoutGrid className="h-5 w-5" />
             </Button>
             <Button onClick={() => setIsAddPlayerOpen(true)} className="hidden md:flex shrink-0">
