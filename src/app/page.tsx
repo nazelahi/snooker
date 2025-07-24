@@ -27,6 +27,13 @@ import type { LiveMatch, Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const initialPlayerStandings = [
   { rank: 1, name: "Ronnie O'Sullivan", matchesPlayed: 25, wins: 22, losses: 3, avatar: "/avatars/ronnie.png", initials: "RO" },
@@ -117,45 +124,58 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           {liveMatches.length > 0 ? (
-            <ul className="space-y-6">
-              {liveMatches.map((match) => (
-                <li key={match.id} className="p-4 rounded-lg bg-muted/50">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
-                    <div className="flex items-center gap-2">
-                        <span className="relative flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                        </span>
-                        <span className="text-sm font-medium text-green-400">Live</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 items-center text-center">
-                    <div className="flex items-center justify-end gap-4">
-                        <span className="font-bold text-lg">{match.player1}</span>
-                        <Avatar>
-                            <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
-                            <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
-                        </Avatar>
-                    </div>
+            <Carousel
+              opts={{
+                align: "start",
+              }}
+              className="w-full"
+            >
+              <CarouselContent>
+                {liveMatches.map((match) => (
+                  <CarouselItem key={match.id} className="md:basis-1/2 lg:basis-1/1">
+                    <div className="p-1">
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
+                          <div className="flex items-center gap-2">
+                              <span className="relative flex h-3 w-3">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                              </span>
+                              <span className="text-sm font-medium text-green-400">Live</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 items-center text-center">
+                          <div className="flex items-center justify-end gap-4">
+                              <span className="font-bold text-lg">{match.player1}</span>
+                              <Avatar>
+                                  <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                                  <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
+                              </Avatar>
+                          </div>
 
-                    <div className="text-4xl font-bold">
-                        <span className="text-primary">{match.score1}</span>
-                        <span className="mx-4">-</span>
-                        <span>{match.score2}</span>
-                    </div>
+                          <div className="text-4xl font-bold">
+                              <span className="text-primary">{match.score1}</span>
+                              <span className="mx-4">-</span>
+                              <span>{match.score2}</span>
+                          </div>
 
-                    <div className="flex items-center justify-start gap-4">
-                        <Avatar>
-                            <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
-                            <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
-                        </Avatar>
-                        <span className="font-bold text-lg">{match.player2}</span>
+                          <div className="flex items-center justify-start gap-4">
+                              <Avatar>
+                                  <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                                  <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-bold text-lg">{match.player2}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious />
+              <CarouselNext />
+            </Carousel>
           ) : (
             <p className="text-muted-foreground text-center py-4">No live matches currently in progress.</p>
           )}
