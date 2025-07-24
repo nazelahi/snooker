@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   Card,
@@ -39,13 +39,6 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 
 
-const initialPlayerStandings = [
-  { rank: 1, name: "Ronnie O'Sullivan", matchesPlayed: 25, wins: 22, losses: 3, avatar: "/avatars/ronnie.png", initials: "RO" },
-  { rank: 2, name: "Judd Trump", matchesPlayed: 28, wins: 20, losses: 8, avatar: "/avatars/judd.png", initials: "JT" },
-  { rank: 3, name: "Mark Selby", matchesPlayed: 26, wins: 19, losses: 7, avatar: "/avatars/mark.png", initials: "MS" },
-  { rank: 4, name: "Neil Robertson", matchesPlayed: 24, wins: 18, losses: 6, avatar: "/avatars/neil.png", initials: "NR" },
-];
-
 const initialUpcomingMatches = [
   { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00", tournamentId: 1 },
   { id: 2, player1: "Mark Selby", player2: "Neil Robertson", date: "2024-08-15", time: "21:00", tournamentId: 1 },
@@ -72,8 +65,16 @@ const initialPlayers: Player[] = [
     { id: 6, name: "Bob Williams", skillLevel: "Beginner", matchesPlayed: 15, winRate: "40%", highestBreak: 45, avatar: "/avatars/bob.png", initials: "BW", wins: 6, losses: 9 },
 ];
 
+interface PlayerStanding {
+  rank: number;
+  name: string;
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+}
+
 export default function DashboardPage() {
-  const [playerStandings, setPlayerStandings] = useState(initialPlayerStandings);
+  const [playerStandings, setPlayerStandings] = useState<PlayerStanding[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState(initialUpcomingMatches);
   const [recentResults, setRecentResults] = useState(initialRecentResults);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
@@ -90,14 +91,26 @@ export default function DashboardPage() {
   useEffect(() => {
     
     const storedPlayers = getFromStorage('players', initialPlayers);
-    const storedStandings = getFromStorage('playerStandings', initialPlayerStandings);
     const storedMatches = getFromStorage('upcomingMatches', initialUpcomingMatches);
     const storedResults = getFromStorage('recentResults', initialRecentResults);
     const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
     const storedTournaments = getFromStorage('tournaments', []);
 
     setPlayers(storedPlayers);
-    setPlayerStandings(storedStandings);
+    
+    const sortedStandings = [...storedPlayers]
+        .sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0))
+        .map((player, index) => ({
+            rank: index + 1,
+            name: player.name,
+            matchesPlayed: player.matchesPlayed,
+            wins: player.wins ?? 0,
+            losses: player.losses ?? 0,
+        }));
+    setPlayerStandings(sortedStandings);
+    saveToStorage('playerStandings', sortedStandings);
+
+
     const sortedMatches = storedMatches.sort((a, b) => {
         const dateA = new Date(`${a.date}T${a.time}`);
         const dateB = new Date(`${b.date}T${b.time}`);
@@ -118,9 +131,6 @@ export default function DashboardPage() {
 
     if (localStorage.getItem('players') === null) {
         saveToStorage('players', initialPlayers);
-    }
-    if (localStorage.getItem('playerStandings') === null) {
-      saveToStorage('playerStandings', initialPlayerStandings);
     }
     if (localStorage.getItem('upcomingMatches') === null) {
       saveToStorage('upcomingMatches', initialUpcomingMatches);
