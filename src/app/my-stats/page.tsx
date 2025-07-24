@@ -8,9 +8,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, BarChart, Percent, Activity, Edit, Save, PlusCircle } from "lucide-react";
+import { Trophy, BarChart, Percent, Activity, Edit, Save, PlusCircle, Swords, Check, X } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,19 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AddMatchDialog } from "@/components/add-match-dialog";
 import type { Notification } from "@/types/notifications";
+
+interface Match {
+  id: number;
+  winner: string;
+  loser: string;
+  score: string;
+  date: string;
+  pendingScore?: {
+    score1: number;
+    score2: number;
+    proposedBy: string;
+  }
+}
 
 const initialStats = {
   name: "John Doe",
@@ -45,6 +59,7 @@ export default function MyStatsPage() {
   const [editedLosses, setEditedLosses] = useState(0);
   const [editedAverageBreak, setEditedAverageBreak] = useState(0);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
 
   const { toast } = useToast();
 
@@ -86,6 +101,13 @@ export default function MyStatsPage() {
       setEditedWins(statsToSet.wins);
       setEditedLosses(statsToSet.losses);
       setEditedAverageBreak(statsToSet.averageBreak);
+
+      const allRecentResults = getFromStorage<Match[]>('recentResults', []);
+      const matchesForApproval = allRecentResults.filter(match => 
+        (match.winner === userData.name || match.loser === userData.name) && 
+        match.pendingScore && match.pendingScore.proposedBy !== userData.email
+      );
+      setPendingMatches(matchesForApproval);
     }
   }, []);
 
@@ -193,6 +215,55 @@ export default function MyStatsPage() {
     toast({ title: "Match Reported", description: "Your new match has been reported and is awaiting approval from your opponent."});
   };
 
+  const handleApproval = (matchId: number, approve: boolean) => {
+    if (!currentUser) return;
+    const allRecentResults = getFromStorage<Match[]>('recentResults', []);
+    const matchIndex = allRecentResults.findIndex(m => m.id === matchId);
+    if (matchIndex === -1) return;
+
+    const match = allRecentResults[matchIndex];
+    if (!match.pendingScore) return;
+
+    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
+    const proposerUser = allUsers.find(u => u.email === match.pendingScore!.proposedBy);
+
+    if (approve) {
+        const { score1, score2 } = match.pendingScore;
+        const winnerName = score1 > score2 ? currentUser.name : proposerUser!.name;
+        const loserName = score1 > score2 ? proposerUser!.name : currentUser.name;
+        
+        allRecentResults[matchIndex] = {
+            ...match,
+            score: `${score1}-${score2}`,
+            winner: winnerName,
+            loser: loserName,
+            pendingScore: undefined
+        };
+        toast({ title: "Approved", description: "The match score has been updated." });
+
+    } else {
+        allRecentResults[matchIndex].pendingScore = undefined;
+        toast({ title: "Rejected", description: "The score change request has been rejected." });
+    }
+
+    saveToStorage('recentResults', allRecentResults);
+    setPendingMatches(prev => prev.filter(m => m.id !== matchId));
+
+    if (proposerUser) {
+        const proposerNotificationKey = `notifications_${proposerUser.email}`;
+        const proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
+        const newNotification: Notification = {
+            id: Date.now().toString(),
+            title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
+            description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
+            read: false,
+            date: new Date().toISOString()
+        };
+        saveToStorage(proposerNotificationKey, [newNotification, ...proposerNotifications]);
+    }
+    window.dispatchEvent(new Event('storage'));
+  }
+
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -215,6 +286,36 @@ export default function MyStatsPage() {
             </Button>
         </div>
       </div>
+      
+      {pendingMatches.length > 0 && (
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Swords /> Pending Match Approvals</CardTitle>
+                <CardDescription>Review match results reported by other players.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ul className="space-y-4">
+                    {pendingMatches.map(match => {
+                        const opponentName = match.winner === currentUser?.name ? match.loser : match.winner;
+                        return (
+                            <li key={match.id} className="p-4 rounded-lg bg-muted/50">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p>vs <strong>{opponentName}</strong></p>
+                                        <p className="text-sm text-muted-foreground">Proposed Score: <span className="font-bold">{match.pendingScore?.score1}-{match.pendingScore?.score2}</span></p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button size="sm" variant="outline" onClick={() => handleApproval(match.id, true)}><Check className="h-4 w-4 mr-2"/>Approve</Button>
+                                        <Button size="sm" variant="destructive" onClick={() => handleApproval(match.id, false)}><X className="h-4 w-4 mr-2"/>Reject</Button>
+                                    </div>
+                                </div>
+                            </li>
+                        )
+                    })}
+                </ul>
+            </CardContent>
+         </Card>
+      )}
 
        {isEditing && (
         <Card>
