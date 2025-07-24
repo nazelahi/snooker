@@ -12,7 +12,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords, Check, X } from "lucide-react";
+import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords, Check, X, Trash2 } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { Notification } from "@/types/notifications";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface Match {
   id: number;
@@ -278,6 +289,38 @@ export default function PlayerProfilePage() {
     window.dispatchEvent(new Event('storage'));
   }
 
+  const handleAdminDeleteMatch = (matchId: number) => {
+    if (!isAdmin) return;
+
+    let allMatches = getFromStorage<Match[]>('recentResults', []);
+    const matchToDelete = allMatches.find(m => m.id === matchId);
+    if (!matchToDelete) return;
+
+    // Update player stats
+    let players = getFromStorage<Player[]>('players', []);
+    const winnerIndex = players.findIndex(p => p.name === matchToDelete.winner);
+    const loserIndex = players.findIndex(p => p.name === matchToDelete.loser);
+
+    if (winnerIndex > -1) {
+        players[winnerIndex].wins = (players[winnerIndex].wins ?? 1) - 1;
+        players[winnerIndex].matchesPlayed -= 1;
+        players[winnerIndex].winRate = players[winnerIndex].matchesPlayed > 0 ? (((players[winnerIndex].wins ?? 0) / players[winnerIndex].matchesPlayed) * 100).toFixed(1) + '%' : '0%';
+    }
+    if (loserIndex > -1) {
+        players[loserIndex].losses = (players[loserIndex].losses ?? 1) - 1;
+        players[loserIndex].matchesPlayed -= 1;
+        players[loserIndex].winRate = players[loserIndex].matchesPlayed > 0 ? (((players[loserIndex].wins ?? 0) / players[loserIndex].matchesPlayed) * 100).toFixed(1) + '%' : '0%';
+    }
+    saveToStorage('players', players);
+
+    // Remove match
+    allMatches = allMatches.filter(m => m.id !== matchId);
+    saveToStorage('recentResults', allMatches);
+
+    toast({ title: 'Match Deleted', description: 'The match has been removed and stats updated.'});
+    window.dispatchEvent(new Event('storage'));
+  }
+
 
   if (!player) {
     return (
@@ -485,6 +528,28 @@ export default function PlayerProfilePage() {
                                     <Edit className="h-4 w-4"/>
                                 </Button>
                             )}
+                             {isAdmin && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button size="sm" variant="destructive" title="Delete Match">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the match
+                                            and recalculate player stats.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleAdminDeleteMatch(match.id)}>Continue</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
                          </div>
                      </div>
                      {pendingChange && (
@@ -530,7 +595,7 @@ export default function PlayerProfilePage() {
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="score1">{player?.name} (You)</Label>
+                    <Label htmlFor="score1">{currentUser?.name.toLowerCase() === selectedMatch?.winner.toLowerCase() || currentUser?.name.toLowerCase() === selectedMatch?.loser.toLowerCase() ? (player?.name === selectedMatch.winner ? selectedMatch.winner : selectedMatch.loser) : player?.name}</Label>
                     <Input id="score1" type="number" value={newScore1} onChange={e => setNewScore1(parseInt(e.target.value, 10) || 0)} />
                 </div>
                 <div className="space-y-2">
@@ -547,7 +612,3 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
-
-    
-
-    

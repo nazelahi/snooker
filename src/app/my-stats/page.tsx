@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AddMatchDialog } from "@/components/add-match-dialog";
 import type { Notification } from "@/types/notifications";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 interface Match {
   id: number;
@@ -60,6 +62,7 @@ export default function MyStatsPage() {
   const [editedAverageBreak, setEditedAverageBreak] = useState(0);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
+  const [matchHistory, setMatchHistory] = useState<Match[]>([]);
 
   const { toast } = useToast();
 
@@ -108,6 +111,11 @@ export default function MyStatsPage() {
         match.pendingScore && match.pendingScore.proposedBy !== userData.email
       );
       setPendingMatches(matchesForApproval);
+
+      const playerMatches = allMatches.filter(
+          (match) => match.winner === userData.name || match.loser === userData.name
+      ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setMatchHistory(playerMatches);
     }
   };
 
@@ -467,6 +475,47 @@ export default function MyStatsPage() {
         </Card>
       </div>
 
+       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Swords />
+            My Match History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {matchHistory.length > 0 ? (
+            <ul className="space-y-4">
+              {matchHistory.map((match) => {
+                const isWinner = match.winner === currentUser?.name;
+                const opponentName = isWinner ? match.loser : match.winner;
+                const opponent = getFromStorage<Player[]>('players', []).find(p => p.name === opponentName);
+
+                return (
+                  <li key={match.id} className="p-4 rounded-lg bg-muted/50">
+                     <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-4">
+                            <Badge variant={isWinner ? "default" : "destructive"}>
+                               {isWinner ? "WIN" : "LOSS"}
+                            </Badge>
+                            <div>
+                               <span>vs <Link href={`/players/${opponent?.id}`} className="hover:underline">{opponentName}</Link></span>
+                               <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
+                            </div>
+                         </div>
+                         <div className="flex items-center gap-4">
+                            <span className="font-bold text-lg">{match.score}</span>
+                         </div>
+                     </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No match history found.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Performance Details</CardTitle>
@@ -498,5 +547,3 @@ export default function MyStatsPage() {
     </div>
   );
 }
-
-    
