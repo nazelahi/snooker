@@ -64,7 +64,7 @@ export default function TournamentDetailsPage() {
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
     const currentUserName = user?.user_metadata.full_name || user?.email;
-    setCurrentUser(user ? { name: currentUserName, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+    setCurrentUser(user ? { name: currentUserName, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
 
     const { data: playersData } = await supabase.from('players').select('*');
     if (playersData) setAllPlayers(playersData);

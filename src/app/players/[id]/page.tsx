@@ -90,7 +90,7 @@ export default function PlayerProfilePage() {
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user;
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
       if (id) {
         await fetchPlayerData(id);
       }
@@ -98,7 +98,7 @@ export default function PlayerProfilePage() {
 
     async function initialize() {
         const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
         if (id) {
           await fetchPlayerData(id);
         }

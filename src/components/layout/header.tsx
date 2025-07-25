@@ -57,7 +57,7 @@ export default function Header() {
         setCurrentUser({
             name: fullName,
             email: user.email!,
-            isAdmin: user.email === 'admin@gmail.com', 
+            isAdmin: user.email === 'imnazelahi@gmail.com', 
             avatar: player?.avatar,
             initials: player?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
         });

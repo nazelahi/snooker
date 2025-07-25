@@ -19,7 +19,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkUserRole = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setIsAdmin(user?.email === 'admin@gmail.com');
+      setIsAdmin(user?.email === 'imnazelahi@gmail.com');
     }
     checkUserRole();
 

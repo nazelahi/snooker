@@ -54,7 +54,7 @@ const UserMenu = () => {
             setCurrentUser({
                 name: fullName,
                 email: user.email!,
-                isAdmin: user.email === 'admin@gmail.com', // Placeholder logic
+                isAdmin: user.email === 'imnazelahi@gmail.com', // Placeholder logic
                 avatar: players?.avatar,
                 initials: players?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
             });
@@ -155,7 +155,7 @@ export default function AppSidebar() {
             setCurrentUser({
                 name: user.user_metadata.full_name || user.email!,
                 email: user.email!,
-                isAdmin: user.email === 'admin@gmail.com', // Placeholder
+                isAdmin: user.email === 'imnazelahi@gmail.com', // Placeholder
             });
         } else {
             setCurrentUser(null);

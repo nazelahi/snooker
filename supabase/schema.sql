@@ -1,26 +1,26 @@
--- Create a table for public players
+-- Create Players Table
 CREATE TABLE players (
-  id SERIAL PRIMARY KEY,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  name TEXT NOT NULL UNIQUE,
-  skill_level TEXT NOT NULL,
-  matches_played INTEGER DEFAULT 0,
-  win_rate TEXT DEFAULT '0%',
-  highest_break INTEGER DEFAULT 0,
-  avatar TEXT,
-  initials TEXT,
-  wins INTEGER DEFAULT 0,
-  losses INTEGER DEFAULT 0,
-  average_break INTEGER DEFAULT 0,
-  achievements JSONB
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    name TEXT NOT NULL UNIQUE,
+    skill_level TEXT,
+    matches_played INTEGER DEFAULT 0,
+    win_rate TEXT,
+    highest_break INTEGER DEFAULT 0,
+    avatar TEXT,
+    initials TEXT,
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    average_break INTEGER DEFAULT 0,
+    achievements JSONB
 );
 
--- TOURNAMENTS
+-- Create Tournaments Table
 CREATE TABLE tournaments (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     format TEXT NOT NULL,
-    players INTEGER NOT NULL,
+    players INTEGER,
     status TEXT NOT NULL,
     rules TEXT[],
     image TEXT,
@@ -31,50 +31,50 @@ CREATE TABLE tournaments (
     bracket JSONB
 );
 
--- MATCHES
+-- Create Matches Table
 CREATE TABLE matches (
     id SERIAL PRIMARY KEY,
     winner TEXT NOT NULL,
     loser TEXT NOT NULL,
     score TEXT NOT NULL,
-    date TIMESTAMPTZ NOT NULL,
+    date TIMESTAMPTZ DEFAULT NOW(),
     media TEXT[],
     comments JSONB,
     pending_score JSONB,
-    tournament_id INTEGER REFERENCES tournaments(id) ON DELETE SET NULL
+    tournament_id INTEGER REFERENCES tournaments(id)
 );
 
--- UPCOMING MATCHES
+-- Create Upcoming Matches Table
 CREATE TABLE upcoming_matches (
     id SERIAL PRIMARY KEY,
     player1 TEXT NOT NULL,
     player2 TEXT NOT NULL,
     date DATE NOT NULL,
     time TIME NOT NULL,
-    tournament_id INTEGER REFERENCES tournaments(id) ON DELETE SET NULL
+    tournament_id INTEGER REFERENCES tournaments(id)
 );
 
--- LIVE MATCHES
+-- Create Live Matches Table
 CREATE TABLE live_matches (
     id SERIAL PRIMARY KEY,
-    tournament_id INTEGER REFERENCES tournaments(id) ON DELETE SET NULL,
+    tournament_id INTEGER REFERENCES tournaments(id),
     tournament_name TEXT,
     player1 TEXT NOT NULL,
     player2 TEXT NOT NULL,
-    score1 INTEGER NOT NULL DEFAULT 0,
-    score2 INTEGER NOT NULL DEFAULT 0
+    score1 INTEGER,
+    score2 INTEGER
 );
 
--- NOTICES
+-- Create Notices Table
 CREATE TABLE notices (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     title TEXT NOT NULL,
     content TEXT NOT NULL,
-    date TIMESTAMPTZ NOT NULL
+    date TIMESTAMPTZ DEFAULT NOW()
 );
 
--- NOTIFICATIONS
+-- Create Notifications Table
 CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -82,127 +82,81 @@ CREATE TABLE notifications (
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     read BOOLEAN DEFAULT FALSE,
-    date TIMESTAMPTZ NOT NULL,
+    date TIMESTAMPTZ,
     link TEXT
 );
 
--- SETTINGS
+-- Create Settings Table
 CREATE TABLE settings (
-  key TEXT PRIMARY KEY,
-  value JSONB
+    key TEXT PRIMARY KEY,
+    value JSONB
 );
 
--- Set up Storage!
+-- Create Storage Bucket for Avatars
 INSERT INTO storage.buckets (id, name, public)
-  VALUES ('avatars', 'avatars', TRUE)
+VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
--- RLS POLICIES --
-
--- Enable RLS for all tables
+-- RLS Policies for Players Table
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to players" ON "public"."players" FOR SELECT USING (true);
+CREATE POLICY "Allow users to update their own player data" ON "public"."players" FOR UPDATE USING ((auth.uid() = (SELECT id FROM auth.users WHERE raw_user_meta_data->>'full_name' = name)));
+CREATE POLICY "Allow admin to manage all players" ON "public"."players" FOR ALL USING ((get_user_email() = 'imnazelahi@gmail.com')) WITH CHECK ((get_user_email() = 'imnazelahi@gmail.com'));
+
+-- RLS Policies for Matches Table
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to matches" ON "public"."matches" FOR SELECT USING (true);
+CREATE POLICY "Allow users to update their own matches" ON "public"."matches" FOR UPDATE USING ((auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'full_name' = winner OR raw_user_meta_data->>'full_name' = loser)));
+CREATE POLICY "Allow admin to manage all matches" ON "public"."matches" FOR ALL USING ((get_user_email() = 'imnazelahi@gmail.com')) WITH CHECK ((get_user_email() = 'imnazelahi@gmail.com'));
+
+-- RLS Policies for Upcoming Matches Table
 ALTER TABLE upcoming_matches ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to upcoming matches" ON "public"."upcoming_matches" FOR SELECT USING (true);
+CREATE POLICY "Allow admin to manage all upcoming matches" ON "public"."upcoming_matches" FOR ALL USING ((get_user_email() = 'imnazelahi@gmail.com')) WITH CHECK ((get_user_email() = 'imnazelahi@gmail.com'));
+
+-- RLS Policies for Live Matches Table
 ALTER TABLE live_matches ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to live matches" ON "public"."live_matches" FOR SELECT USING (true);
+CREATE POLICY "Allow admin to manage all live matches" ON "public"."live_matches" FOR ALL USING ((get_user_email() = 'imnazelahi@gmail.com')) WITH CHECK ((get_user_email() = 'imnazelahi@gmail.com'));
+
+-- RLS Policies for Tournaments Table
+ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to tournaments" ON "public"."tournaments" FOR SELECT USING (true);
+CREATE POLICY "Allow users to apply to tournaments" ON "public"."tournaments" FOR UPDATE WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Allow admin to manage all tournaments" ON "public"."tournaments" FOR ALL USING ((get_user_email() = 'imnazelahi@gmail.com')) WITH CHECK ((get_user_email() = 'imnazelahi@gmail.com'));
+
+
+-- RLS Policies for Notices Table
 ALTER TABLE notices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to notices" ON "public"."notices" FOR SELECT USING (true);
+CREATE POLICY "Allow admin to manage notices" ON "public"."notices" FOR ALL USING ((get_user_email() = 'imnazelahi@gmail.com')) WITH CHECK ((get_user_email() = 'imnazelahi@gmail.com'));
+
+-- RLS Policies for Notifications Table
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow users to access their own notifications" ON "public"."notifications" FOR ALL USING ((get_user_name() = user_name)) WITH CHECK ((get_user_name() = user_name));
+
+-- RLS Policies for Settings Table
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to settings" ON "public"."settings" FOR SELECT USING (true);
+CREATE POLICY "Allow admin to manage settings" ON "public"."settings" FOR ALL USING ((get_user_email() = 'imnazelahi@gmail.com')) WITH CHECK ((get_user_email() = 'imnazelahi@gmail.com'));
 
--- Policies for 'players'
-CREATE POLICY "Players are viewable by everyone." ON players
-  FOR SELECT USING (TRUE);
-CREATE POLICY "Admin can insert players." ON players
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Admin can update players." ON players
-  FOR UPDATE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Admin can delete players." ON players
-  FOR DELETE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
+-- Helper Functions
+CREATE OR REPLACE FUNCTION get_user_email()
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT auth.jwt()->>'email';
+$$;
 
--- Policies for 'tournaments'
-CREATE POLICY "Tournaments are viewable by everyone." ON tournaments
-  FOR SELECT USING (TRUE);
-CREATE POLICY "Admin can insert tournaments." ON tournaments
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Authenticated users can update tournaments (for registration)." ON tournaments
-  FOR UPDATE USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin can delete tournaments." ON tournaments
-  FOR DELETE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-
--- Policies for 'matches'
-CREATE POLICY "Matches are viewable by everyone." ON matches
-  FOR SELECT USING (TRUE);
-CREATE POLICY "Authenticated users can insert matches." ON matches
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Authenticated users can update matches." ON matches
-  FOR UPDATE USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin can delete matches." ON matches
-  FOR DELETE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-
--- Policies for 'upcoming_matches'
-CREATE POLICY "Upcoming matches are viewable by everyone." ON upcoming_matches
-  FOR SELECT USING (TRUE);
-CREATE POLICY "Admin can insert upcoming matches." ON upcoming_matches
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Admin can update upcoming matches." ON upcoming_matches
-  FOR UPDATE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Admin can delete upcoming matches." ON upcoming_matches
-  FOR DELETE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-
--- Policies for 'live_matches'
-CREATE POLICY "Live matches are viewable by everyone." ON live_matches
-  FOR SELECT USING (TRUE);
-CREATE POLICY "Admin can insert live matches." ON live_matches
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Admin can update live matches." ON live_matches
-  FOR UPDATE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Admin can delete live matches." ON live_matches
-  FOR DELETE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-
--- Policies for 'notices'
-CREATE POLICY "Notices are viewable by everyone." ON notices
-  FOR SELECT USING (TRUE);
-CREATE POLICY "Admin can insert notices." ON notices
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Admin can delete notices." ON notices
-  FOR DELETE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-  
--- Helper function to get user's full name
 CREATE OR REPLACE FUNCTION get_user_name()
-RETURNS TEXT AS $$
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  RETURN (
-    SELECT raw_user_meta_data->>'full_name'
-    FROM auth.users
-    WHERE id = auth.uid()
-  );
+  RETURN (SELECT raw_user_meta_data->>'full_name' FROM auth.users WHERE id = auth.uid());
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-
--- Policies for 'notifications'
-CREATE POLICY "Users can view their own notifications." ON notifications
-  FOR SELECT USING (user_name = get_user_name());
-CREATE POLICY "Users can insert their own notifications." ON notifications
-  FOR INSERT WITH CHECK (user_name = get_user_name() OR auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Users can update their own notifications (e.g. mark as read)." ON notifications
-  FOR UPDATE USING (user_name = get_user_name());
-CREATE POLICY "Users can delete their own notifications." ON notifications
-  FOR DELETE USING (user_name = get_user_name());
-
--- Policies for 'settings'
-CREATE POLICY "Settings are viewable by everyone." ON settings
-  FOR SELECT USING (TRUE);
-CREATE POLICY "Admin can update settings." ON settings
-  FOR UPDATE USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
-CREATE POLICY "Admin can insert settings." ON settings
-    FOR INSERT WITH CHECK (auth.jwt() ->> 'email' = 'admin@gmail.com');
-
-
--- Policies for 'avatars' storage bucket
-CREATE POLICY "Avatar images are publicly accessible." ON storage.objects
-  FOR SELECT USING (bucket_id = 'avatars');
-CREATE POLICY "Anyone can upload an avatar." ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'avatars');
-CREATE POLICY "Anyone can update their own avatar." ON storage.objects
-  FOR UPDATE USING (auth.uid() = owner) WITH CHECK (bucket_id = 'avatars');
+$$;

@@ -52,7 +52,7 @@ export default function TournamentsPage() {
   useEffect(() => {
     async function fetchData() {
         const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
         
         const { data: tournamentsData } = await supabase.from('tournaments').select('*');
         if (tournamentsData) setTournaments(tournamentsData);

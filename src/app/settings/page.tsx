@@ -17,7 +17,7 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setIsAuthorized(true);
-        setIsAdmin(user.email === 'admin@gmail.com');
+        setIsAdmin(user.email === 'imnazelahi@gmail.com');
       } else {
         router.push('/login');
       }

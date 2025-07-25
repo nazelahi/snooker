@@ -11,7 +11,7 @@ export default function AdminPage() {
   useEffect(() => {
     const checkAdmin = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      const isAdmin = user?.email === 'admin@gmail.com';
+      const isAdmin = user?.email === 'imnazelahi@gmail.com';
       if (!isAdmin) {
         router.push('/login');
       } else {
