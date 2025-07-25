@@ -102,13 +102,17 @@ export default function Header() {
     router.push('/login');
   };
 
-  const handleNotificationClick = (id: string) => {
+  const handleNotificationClick = (notification: Notification) => {
     const notificationKey = getNotificationKey(currentUser);
     const updatedNotifications = notifications.map(n => 
-        n.id === id ? { ...n, read: true } : n
+        n.id === notification.id ? { ...n, read: true } : n
     );
     setNotifications(updatedNotifications);
     saveToStorage(notificationKey, updatedNotifications);
+
+    if (notification.link) {
+        router.push(notification.link);
+    }
   };
   
   const handleMarkAllRead = () => {
@@ -176,7 +180,7 @@ export default function Header() {
                     <DropdownMenuItem 
                       key={notification.id} 
                       className={!notification.read ? 'font-semibold' : ''}
-                      onClick={() => handleNotificationClick(notification.id)}
+                      onClick={() => handleNotificationClick(notification)}
                     >
                         <div className="flex flex-col">
                             <p className={!notification.read ? 'font-bold' : 'font-semibold'}>{notification.title}</p>

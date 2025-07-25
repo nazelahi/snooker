@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Bell, Trash2, CheckCircle, ArrowLeft } from "lucide-react";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -63,6 +65,15 @@ export default function NotificationsPage() {
     saveToStorage(notificationKey, updatedNotifications);
     setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   };
+  
+  const handleNotificationClick = (notification: Notification) => {
+      if (!notification.read) {
+          handleMarkAsRead(notification.id);
+      }
+      if (notification.link) {
+          router.push(notification.link);
+      }
+  };
 
   const handleClearAllNotifications = () => {
     if (!currentUser) return;
@@ -98,14 +109,20 @@ export default function NotificationsPage() {
            {notifications.length > 0 ? (
              <ul className="space-y-3">
                 {notifications.map(notification => (
-                    <li key={notification.id} className={`flex items-start justify-between p-4 rounded-lg ${notification.read ? 'bg-muted/30' : 'bg-primary/10'}`}>
+                    <li key={notification.id} 
+                        className={cn("flex items-start justify-between p-4 rounded-lg", 
+                                     notification.read ? 'bg-muted/30' : 'bg-primary/10',
+                                     notification.link && 'cursor-pointer hover:bg-muted/50'
+                        )}
+                        onClick={() => handleNotificationClick(notification)}
+                    >
                         <div className="space-y-1">
                             <h3 className={`font-semibold ${!notification.read && 'text-primary'}`}>{notification.title}</h3>
                             <p className="text-sm text-muted-foreground">{notification.description}</p>
                             <p className="text-xs text-muted-foreground/80">{format(new Date(notification.date), "PPP p")}</p>
                         </div>
                         {!notification.read && (
-                            <Button variant="ghost" size="sm" onClick={() => handleMarkAsRead(notification.id)}>
+                            <Button variant="ghost" size="sm" onClick={(e) => {e.stopPropagation(); handleMarkAsRead(notification.id)}}>
                                 <CheckCircle className="mr-2 h-4 w-4" /> Mark as read
                             </Button>
                         )}

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from 'next/navigation';
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
@@ -19,16 +19,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { ArrowLeft, Swords, Calendar, Upload } from "lucide-react";
+import { ArrowLeft, Swords, Calendar, Upload, MessageSquare } from "lucide-react";
 import Image from "next/image";
+import { Textarea } from "@/components/ui/textarea";
+import type { Notification } from "@/types/notifications";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatDistanceToNow } from "date-fns";
+
+interface Comment {
+    id: string;
+    authorName: string;
+    authorEmail: string;
+    content: string;
+    date: string;
+    mentions: string[]; // array of emails
+}
 
 interface Match {
   id: number;
   winner: string;
-  loser: string;
+  loser:string;
   score: string;
   date: string;
   media?: string[];
+  comments?: Comment[];
   pendingScore?: {
     score1: number;
     score2: number;
@@ -41,6 +55,14 @@ export default function MatchDetailsPage() {
   const [match, setMatch] = useState<Match | null>(null);
   const [winnerPlayer, setWinnerPlayer] = useState<Player | null>(null);
   const [loserPlayer, setLoserPlayer] = useState<Player | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; isAdmin?: boolean } | null>(null);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [mentionSuggestions, setMentionSuggestions] = useState<Player[]>([]);
+  const [isMentionPopoverOpen, setIsMentionPopoverOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -55,13 +77,25 @@ export default function MatchDetailsPage() {
         const players = getFromStorage<Player[]>('players', []);
         setWinnerPlayer(players.find(p => p.name === foundMatch.winner) || null);
         setLoserPlayer(players.find(p => p.name === foundMatch.loser) || null);
+        setAllPlayers(players);
     }
   }, []);
 
   useEffect(() => {
+    const userData = getFromStorage<{ name: string; email: string; isAdmin?: boolean } | null>('userData', null);
+    setCurrentUser(userData);
+
     if (id) {
         fetchMatchData(id);
     }
+
+    const handleStorageChange = () => {
+        if(id) fetchMatchData(id);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+
   }, [id, fetchMatchData]);
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,7 +107,6 @@ export default function MatchDetailsPage() {
         reader.onloadend = () => {
           const result = reader.result as string;
           
-          let matchUpdated = false;
           setMatch(prevMatch => {
             if (!prevMatch) return null;
             const updatedMatch = {
@@ -87,19 +120,100 @@ export default function MatchDetailsPage() {
               allMatches[matchIndex] = updatedMatch;
               saveToStorage('recentResults', allMatches);
               setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-              matchUpdated = true;
             }
-
             return updatedMatch;
           });
-
-          if(matchUpdated) {
-            toast({ title: "Media Uploaded", description: "Your photo/video has been added to the match."});
-          }
+          toast({ title: "Media Uploaded", description: "Your photo/video has been added to the match."});
         };
         reader.readAsDataURL(file);
       });
     }
+  };
+
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setNewComment(text);
+
+    const mentionMatch = text.match(/@(\w+)$/);
+    if (mentionMatch) {
+        const query = mentionMatch[1].toLowerCase();
+        const suggestions = allPlayers.filter(p => p.name.toLowerCase().includes(query) && p.name !== currentUser?.name);
+        setMentionSuggestions(suggestions);
+        setIsMentionPopoverOpen(suggestions.length > 0);
+    } else {
+        setIsMentionPopoverOpen(false);
+    }
+  };
+
+  const handleMentionSelect = (playerName: string) => {
+    const currentText = newComment;
+    const updatedText = currentText.replace(/@(\w+)$/, `@${playerName} `);
+    setNewComment(updatedText);
+    setIsMentionPopoverOpen(false);
+    textareaRef.current?.focus();
+  };
+
+
+  const handlePostComment = () => {
+    if (!newComment.trim() || !currentUser || !match) return;
+
+    const mentionRegex = /@(\w+\s\w+)/g;
+    let matchResult;
+    const mentionedNames: string[] = [];
+    while ((matchResult = mentionRegex.exec(newComment)) !== null) {
+        mentionedNames.push(matchResult[1]);
+    }
+
+    const allUsers = getFromStorage<{name:string, email:string}[]>('users', []);
+    const mentionedEmails = mentionedNames
+        .map(name => allUsers.find(u => u.name.toLowerCase() === name.toLowerCase())?.email)
+        .filter((email): email is string => !!email);
+
+    const newCommentObject: Comment = {
+        id: Date.now().toString(),
+        authorName: currentUser.name,
+        authorEmail: currentUser.email,
+        content: newComment,
+        date: new Date().toISOString(),
+        mentions: mentionedEmails
+    };
+
+    setMatch(prevMatch => {
+        if(!prevMatch) return null;
+
+        const updatedMatch = {
+            ...prevMatch,
+            comments: [...(prevMatch.comments || []), newCommentObject]
+        };
+        
+        const allMatches = getFromStorage<Match[]>('recentResults', []);
+        const matchIndex = allMatches.findIndex(m => m.id === updatedMatch.id);
+        if (matchIndex > -1) {
+            allMatches[matchIndex] = updatedMatch;
+            saveToStorage('recentResults', allMatches);
+            setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+        }
+
+        return updatedMatch;
+    });
+
+    // Send notifications
+    mentionedEmails.forEach(email => {
+      const userNotifications = getFromStorage<Notification[]>(`notifications_${email}`, []);
+      const newNotification: Notification = {
+        id: Date.now().toString() + email,
+        title: "You were mentioned in a comment",
+        description: `${currentUser.name} mentioned you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
+        read: false,
+        date: new Date().toISOString(),
+        link: `/match/${match.id}`
+      };
+      saveToStorage(`notifications_${email}`, [newNotification, ...userNotifications]);
+    });
+
+
+    setNewComment("");
+    toast({ title: "Comment Posted", description: "Your comment has been added to the match." });
   };
 
 
@@ -113,6 +227,9 @@ export default function MatchDetailsPage() {
       </div>
     );
   }
+  
+  const getPlayerByEmail = (email: string) => allPlayers.find(p => p.name.toLowerCase() === allUsers.find(u => u.email === email)?.name.toLowerCase());
+
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
@@ -199,9 +316,75 @@ export default function MatchDetailsPage() {
                 </div>
             </CardFooter>
         </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><MessageSquare />Comments</CardTitle>
+                <CardDescription>Discuss the match with other members.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                {currentUser && (
+                    <Popover open={isMentionPopoverOpen} onOpenChange={setIsMentionPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <div className="flex items-start gap-4">
+                                <Avatar>
+                                    <AvatarImage src={allPlayers.find(p => p.name === currentUser.name)?.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={currentUser.name} />
+                                    <AvatarFallback>{currentUser.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 space-y-2">
+                                    <Textarea
+                                        ref={textareaRef}
+                                        value={newComment}
+                                        onChange={handleCommentChange}
+                                        placeholder="Add a comment... Type @ to mention a player."
+                                        className="w-full"
+                                    />
+                                    <Button onClick={handlePostComment} disabled={!newComment.trim()}>Post Comment</Button>
+                                </div>
+                            </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-2">
+                            <ul className="space-y-1">
+                                {mentionSuggestions.map(player => (
+                                    <li key={player.id} onClick={() => handleMentionSelect(player.name)} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer">
+                                        <Avatar className="h-6 w-6">
+                                            <AvatarImage src={player.avatar || `https://placehold.co/24x24.png`} data-ai-hint="player portrait" alt={player.name} />
+                                            <AvatarFallback>{player.initials}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-sm">{player.name}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </PopoverContent>
+                    </Popover>
+                )}
+
+                <div className="space-y-4">
+                    {(match.comments || []).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(comment => {
+                        const author = allPlayers.find(p => p.name === comment.authorName);
+                        return(
+                            <div key={comment.id} className="flex items-start gap-4">
+                                <Avatar>
+                                     <AvatarImage src={author?.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={comment.authorName} />
+                                     <AvatarFallback>{author?.initials || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold">{comment.authorName}</span>
+                                        <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.date), { addSuffix: true })}</span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.content}</p>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+                 {(!match.comments || match.comments.length === 0) && (
+                    <p className="text-muted-foreground text-center py-8">No comments yet. Be the first to start the conversation!</p>
+                )}
+            </CardContent>
+        </Card>
 
     </div>
   );
 }
-
-    
