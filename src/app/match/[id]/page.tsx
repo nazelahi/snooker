@@ -24,6 +24,7 @@ import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 import type { Notification } from "@/types/notifications";
 import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -176,7 +177,7 @@ const CommentInput = ({
               </div>
             )}
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
+              <div className="flex items-center gap-1">
                 <Input
                   id="comment-image-upload"
                   type="file"
@@ -278,14 +279,27 @@ const CommentThread = ({
             </p>
           )}
           {comment.image && (
-            <div className="mt-2 relative aspect-video max-w-sm rounded-lg overflow-hidden">
-              <Image
-                src={comment.image}
-                alt="Comment image"
-                layout="fill"
-                objectFit="cover"
-              />
-            </div>
+             <Dialog>
+                <DialogTrigger asChild>
+                    <div className="mt-2 relative w-48 h-28 rounded-lg overflow-hidden cursor-pointer">
+                        <Image
+                            src={comment.image}
+                            alt="Comment image"
+                            layout="fill"
+                            objectFit="cover"
+                        />
+                    </div>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl p-0">
+                   <Image
+                        src={comment.image}
+                        alt="Comment image full view"
+                        width={1200}
+                        height={800}
+                        className="rounded-lg object-contain"
+                    />
+                </DialogContent>
+            </Dialog>
           )}
           {currentUser && (
             <div className="flex items-center gap-1 mt-1">
