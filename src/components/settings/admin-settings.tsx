@@ -70,9 +70,9 @@ export function AdminSettingsTabsMobile() {
         <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t z-20 overflow-x-auto">
             <nav className="h-full">
                 <Tabs defaultValue="players" className="h-full">
-                    <TabsList className="h-full justify-start px-2 gap-0 w-max">
+                    <TabsList className="h-full justify-around px-2 gap-0 w-full">
                     {adminTabs.map(tab => (
-                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-col h-full items-center justify-center gap-0 w-16 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground">
+                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-1 flex-col h-full items-center justify-center gap-0 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground">
                             <tab.icon className="h-6 w-6" />
                             <span className="sr-only">{tab.label}</span>
                         </TabsTrigger>
@@ -344,7 +344,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="players" value={activeTab} onValueChange={setActiveTab} className="w-full md:grid md:grid-cols-[200px_1fr] md:gap-6" orientation="vertical">
-        <TabsList className="hidden md:grid w-full grid-cols-2 md:flex md:flex-col md:items-stretch md:h-fit">
+        <TabsList className="hidden md:flex md:flex-col md:items-stretch md:h-fit">
           {adminTabs.map(tab => (
             <TabsTrigger key={tab.value} value={tab.value} className="justify-start">
               <tab.icon className="w-4 h-4 mr-2" />{tab.label}
