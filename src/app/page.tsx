@@ -124,8 +124,10 @@ export default function DashboardPage() {
         return dateA.getTime() - dateB.getTime();
     });
     setUpcomingMatches(sortedMatches);
+    
+    const sortedResults = storedResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setRecentResults(sortedResults);
 
-    setRecentResults(storedResults);
     setLiveMatches(storedLiveMatches);
     setTournaments(storedTournaments);
 
