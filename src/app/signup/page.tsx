@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { SiteLogo } from '@/components/site-logo';
 
 export default function SignupPage() {
@@ -27,6 +27,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [clubName, setClubName] = useState("CueScore");
   const [loading, setLoading] = useState(false);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchSiteName = async () => {
@@ -36,7 +37,7 @@ export default function SignupPage() {
         }
     };
     fetchSiteName();
-  }, []);
+  }, [supabase]);
 
   const handleCreateAccount = async () => {
     setLoading(true);
@@ -50,37 +51,28 @@ export default function SignupPage() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
-        },
-      },
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name }),
     });
 
-    if (error) {
-       toast({
+    const result = await response.json();
+
+    if (!response.ok) {
+      toast({
         variant: "destructive",
         title: "Signup Failed",
-        description: error.message,
+        description: result.error,
       });
-    } else if (data.user) {
-        if (data.user.identities?.length === 0) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "An account with this email already exists but is unconfirmed.",
-            });
-        } else {
-            toast({
-                title: "Success!",
-                description: "Your account has been created. Please check your email to verify your account.",
-            });
-            router.push('/login');
-        }
+    } else {
+      toast({
+        title: "Success!",
+        description: "Your account has been created. You can now log in.",
+      });
+      router.push('/login');
     }
+
     setLoading(false);
   };
   
@@ -89,7 +81,7 @@ export default function SignupPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback`,
+        redirectTo: `${location.origin}/api/auth/callback`,
       },
     });
      if (error) {

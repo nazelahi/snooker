@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -27,31 +26,18 @@ import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
 import type { Achievement } from "@/types/achievements";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
+import type { Player as PlayerType } from '@/types/players';
 
-export interface Player {
-  id: number;
-  name: string;
-  skill_level: "Beginner" | "Intermediate" | "Pro";
-  matches_played: number;
-  win_rate: string;
-  highest_break: number;
-  avatar: string;
-  initials: string;
-  wins?: number;
-  losses?: number;
-  average_break?: number;
-  achievements?: Achievement[];
-  created_at: string;
-}
 
 export default function PlayersPage() {
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<PlayerType[]>([]);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
   const [playersToShow, setPlayersToShow] = useState(10);
   const [loading, setLoading] = useState(true);
+  const supabase = createSupabaseBrowserClient();
 
   const fetchPlayers = async () => {
     setLoading(true);
@@ -66,18 +52,19 @@ export default function PlayersPage() {
     fetchPlayers();
   }, []);
 
-  const handleAddPlayer = async (newPlayerData: Omit<Player, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at'>) => {
+  const handleAddPlayer = async (newPlayerData: Omit<PlayerType, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at' | 'user_id'>) => {
     
     // Check for new high score
     const highestBreak = newPlayerData.highest_break;
     const prevHighestBreakPlayer = players.length > 0
         ? players.reduce((prev, curr) => prev.highest_break > curr.highest_break ? prev : curr)
         : { highest_break: 0 };
+    
     if (highestBreak > prevHighestBreakPlayer.highest_break) {
-        const { data: allPlayers } = await supabase.from('players').select('name');
-        if (allPlayers) {
-            const notifications = allPlayers.map(p => ({
-                user_name: p.name,
+        const { data: allUsers } = await supabase.from('users').select('id');
+        if (allUsers) {
+            const notifications = allUsers.map(u => ({
+                user_id: u.id,
                 title: "New Club Record!",
                 description: `${newPlayerData.name} has set a new high break of ${highestBreak}!`,
                 read: false,

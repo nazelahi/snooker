@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { SiteLogo } from '@/components/site-logo';
 
 export default function LoginPage() {
@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [clubName, setClubName] = useState("CueScore");
   const [loading, setLoading] = useState(false);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchSiteName = async () => {
@@ -34,7 +35,7 @@ export default function LoginPage() {
         }
     };
     fetchSiteName();
-  }, []);
+  }, [supabase]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,35 +50,38 @@ export default function LoginPage() {
       return;
     }
     
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     });
 
-    if (error) {
+    const result = await response.json();
+
+    if (!response.ok) {
        toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message,
+        description: result.error,
       });
-    } else if (data.user) {
+    } else {
         toast({
             title: "Success!",
             description: "You have been logged in.",
         });
         
-        // This will trigger the auth listener in RootLayout
         router.push('/');
+        router.refresh();
     }
     setLoading(false);
   };
   
-   const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback`,
+        redirectTo: `${location.origin}/api/auth/callback`,
       },
     });
     if (error) {

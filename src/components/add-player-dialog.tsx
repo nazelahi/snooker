@@ -15,14 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Player } from "@/app/players/page";
+import type { Player } from "@/types/players";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ResponsiveDialog } from "@/components/ui/dialog";
 
 interface AddPlayerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddPlayer: (player: Omit<Player, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at'>) => void;
+  onAddPlayer: (player: Omit<Player, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at' | 'user_id'>) => void;
 }
 
 export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDialogProps) {

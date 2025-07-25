@@ -9,17 +9,27 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AdminSettingsTabsMobile } from '../settings/admin-settings';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseBrowserClient } from '@/lib/supabase';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const [isAdmin, setIsAdmin] = useState(false);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const checkUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsAdmin(user?.email === 'imnazelahi@gmail.com');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: user } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        setIsAdmin(user?.role === 'admin');
+      } else {
+        setIsAdmin(false);
+      }
     }
     checkUserRole();
 
@@ -42,7 +52,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
             {children}
         </main>
-        {showAdminNav ? null : <BottomNav />}
+        {showAdminNav ? <AdminSettingsTabsMobile activeTab="players" onTabChange={() => {}} /> : <BottomNav />}
       </SidebarInset>
     </SidebarProvider>
   );

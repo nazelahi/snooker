@@ -2,12 +2,12 @@
 export interface Comment {
     id: string;
     authorName: string;
-    authorEmail: string;
+    author_id: string; // user id
     content: string;
     date: string;
-    mentions: string[]; // array of emails
-    likes?: string[]; // array of user emails
-    dislikes?: string[]; // array of user emails
+    mentions: string[]; // array of user ids
+    likes?: string[]; // array of user ids
+    dislikes?: string[]; // array of user ids
     image?: string;
     replies?: Comment[];
 }

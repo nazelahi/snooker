@@ -17,24 +17,25 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchUserAndNotifications = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const userName = user.user_metadata.full_name || user.email!;
-        setCurrentUser({ name: userName, email: user.email!, isAdmin: user.email === 'admin@gmail.com' });
+        setCurrentUser(user);
         
         const { data: notificationsData } = await supabase
           .from('notifications')
           .select('*')
-          .eq('user_name', userName)
+          .eq('user_id', user.id)
           .order('date', { ascending: false });
         
         if (notificationsData) {
@@ -57,7 +58,7 @@ export default function NotificationsPage() {
     return () => {
       supabase.removeChannel(notificationsSubscription);
     };
-  }, [router]);
+  }, [router, supabase]);
 
   const handleMarkAsRead = async (id: number) => {
     const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
@@ -88,7 +89,7 @@ export default function NotificationsPage() {
   
    const handleDeleteAllNotifications = async () => {
     if (!currentUser) return;
-    const { error } = await supabase.from('notifications').delete().eq('user_name', currentUser.name);
+    const { error } = await supabase.from('notifications').delete().eq('user_id', currentUser.id);
     if (!error) {
         setNotifications([]);
     }

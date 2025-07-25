@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from '@/components/layout/app-layout';
 import { ThemeProvider } from '@/components/theme-provider';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { SiteLogoProvider } from '@/components/site-logo-provider';
 
 const defaultSettings = { 
@@ -23,6 +23,7 @@ export default function RootLayout({
   const [siteName, setSiteName] = useState(defaultSettings.name);
   const [siteDescription, setSiteDescription] = useState(defaultSettings.description);
   const [siteLogo, setSiteLogo] = useState<string | null>(defaultSettings.logo);
+  const supabase = createSupabaseBrowserClient();
 
   const fetchSiteSettings = async () => {
     const { data } = await supabase
@@ -41,8 +42,6 @@ export default function RootLayout({
     fetchSiteSettings();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      // Refetch settings on auth change, as a new user might have different permissions
-      // or to ensure data is fresh after login/logout.
       fetchSiteSettings();
     });
 

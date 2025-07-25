@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -29,15 +28,17 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CommentInput, CommentThread } from "@/components/comment-thread";
 import type { Comment } from "@/types/comments";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Match } from "@/types/matches";
+import type { User } from "@supabase/supabase-js";
 
 
 export default function MatchDetailsPage() {
   const [match, setMatch] = useState<Match | null>(null);
   const [winnerPlayer, setWinnerPlayer] = useState<Player | null>(null);
   const [loserPlayer, setLoserPlayer] = useState<Player | null>(null);
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; isAdmin?: boolean } | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [commentsToShow, setCommentsToShow] = useState(10);
   
@@ -45,6 +46,7 @@ export default function MatchDetailsPage() {
   const id = params.id as string;
   const { toast } = useToast();
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   const fetchMatchData = useCallback(async (matchId: string) => {
     const { data: matchData, error } = await supabase
@@ -67,12 +69,18 @@ export default function MatchDetailsPage() {
       setWinnerPlayer(playersData.find(p => p.name === matchData.winner) || null);
       setLoserPlayer(playersData.find(p => p.name === matchData.loser) || null);
     }
-  }, [toast]);
+  }, [toast, supabase]);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const user = session?.user;
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        const { data: player } = await supabase.from('players').select('*').eq('user_id', session.user.id).single();
+        setCurrentPlayer(player);
+      } else {
+        setCurrentPlayer(null);
+      }
+
       if (id) {
         await fetchMatchData(id);
       }
@@ -80,8 +88,12 @@ export default function MatchDetailsPage() {
 
     // Initial fetch
     async function initialize() {
-      const { data: { user } } = await supabase.auth.getUser();
-       setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        const { data: player } = await supabase.from('players').select('*').eq('user_id', session.user.id).single();
+        setCurrentPlayer(player);
+      }
       if (id) {
         await fetchMatchData(id);
       }
@@ -91,7 +103,7 @@ export default function MatchDetailsPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [id, fetchMatchData]);
+  }, [id, fetchMatchData, supabase]);
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0 && match) {
@@ -126,7 +138,7 @@ export default function MatchDetailsPage() {
   };
   
   const handlePostComment = async (content: string, image: string | null, parentId: string | null) => {
-    if ((!content.trim() && !image) || !currentUser || !match) return;
+    if ((!content.trim() && !image) || !currentUser || !match || !currentPlayer) return;
 
     const mentionRegex = /@(\w+\s\w+)/g;
     let matchResult;
@@ -134,14 +146,16 @@ export default function MatchDetailsPage() {
     while ((matchResult = mentionRegex.exec(content)) !== null) {
         mentionedNames.push(matchResult[1]);
     }
+    const mentionedPlayers = allPlayers.filter(p => mentionedNames.includes(p.name));
+
 
     const newCommentObject: Comment = {
         id: Date.now().toString(),
-        authorName: currentUser.name,
-        authorEmail: currentUser.email,
+        authorName: currentPlayer.name,
+        author_id: currentUser.id,
         content: content,
         date: new Date().toISOString(),
-        mentions: mentionedNames, // Storing names as Supabase doesn't have a direct user-player email link table yet
+        mentions: mentionedPlayers.map(p => p.user_id).filter(id => !!id) as string[],
         likes: [],
         dislikes: [],
         image: image || undefined,
@@ -149,13 +163,13 @@ export default function MatchDetailsPage() {
     };
     
     let updatedComments = [...(match.comments || [])];
-    let replyAuthorName: string | null = null;
+    let replyAuthorId: string | null = null;
     
     if (parentId) {
         const findAndAddReply = (comments: Comment[]): Comment[] => {
             return comments.map(comment => {
                 if (comment.id === parentId) {
-                    replyAuthorName = comment.authorName;
+                    replyAuthorId = comment.author_id;
                     return { ...comment, replies: [...(comment.replies || []), newCommentObject] };
                 }
                 if (comment.replies) {
@@ -186,10 +200,10 @@ export default function MatchDetailsPage() {
         // --- Send Notifications via Supabase ---
         let notificationsToInsert: Omit<Notification, 'id' | 'created_at'>[] = [];
 
-        const createNotification = (playerName: string, title: string, description: string) => {
-          if (playerName !== currentUser.name) {
+        const createNotification = (userId: string | undefined, title: string, description: string) => {
+          if (userId && userId !== currentUser.id) {
             notificationsToInsert.push({
-              user_name: playerName,
+              user_id: userId,
               title,
               description,
               read: false,
@@ -199,22 +213,22 @@ export default function MatchDetailsPage() {
           }
         };
 
-        if (parentId && replyAuthorName) {
+        if (parentId && replyAuthorId) {
              createNotification(
-                replyAuthorName,
+                replyAuthorId,
                 "Someone replied to your comment",
-                `${currentUser.name} replied to you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`
+                `${currentPlayer.name} replied to you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`
              );
         } else if (!parentId) {
-            if (winnerPlayer) createNotification(winnerPlayer.name, "New comment on your match", `${currentUser.name} commented on your match against ${loserPlayer?.name}.`);
-            if (loserPlayer) createNotification(loserPlayer.name, "New comment on your match", `${currentUser.name} commented on your match against ${winnerPlayer?.name}.`);
+            if (winnerPlayer) createNotification(winnerPlayer.user_id, "New comment on your match", `${currentPlayer.name} commented on your match against ${loserPlayer?.name}.`);
+            if (loserPlayer) createNotification(loserPlayer.user_id, "New comment on your match", `${currentPlayer.name} commented on your match against ${winnerPlayer?.name}.`);
         }
         
-        mentionedNames.forEach(name => {
+        mentionedPlayers.forEach(p => {
             createNotification(
-                name,
+                p.user_id,
                 "You were mentioned in a comment",
-                `${currentUser.name} mentioned you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`
+                `${currentPlayer.name} mentioned you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`
             );
         });
 
@@ -227,37 +241,37 @@ export default function MatchDetailsPage() {
   };
   
   const handleCommentReaction = async (commentId: string, reaction: 'like' | 'dislike') => {
-    if (!currentUser || !match) return;
+    if (!currentUser || !match || !currentPlayer) return;
 
-    let commentAuthorName: string | null = null;
+    let commentAuthorId: string | null = null;
     
     const updateReactionsRecursive = (comments: Comment[]): Comment[] => {
         return comments.map(comment => {
             if (comment.id === commentId) {
-                commentAuthorName = comment.authorName;
+                commentAuthorId = comment.author_id;
                 const likes = comment.likes || [];
                 const dislikes = comment.dislikes || [];
-                const userEmail = currentUser.email;
+                const userId = currentUser.id;
 
-                const hasLiked = likes.includes(userEmail);
-                const hasDisliked = dislikes.includes(userEmail);
+                const hasLiked = likes.includes(userId);
+                const hasDisliked = dislikes.includes(userId);
 
                 let newLikes = [...likes];
                 let newDislikes = [...dislikes];
 
                 if (reaction === 'like') {
                     if (hasLiked) {
-                        newLikes = newLikes.filter(email => email !== userEmail);
+                        newLikes = newLikes.filter(id => id !== userId);
                     } else {
-                        newLikes.push(userEmail);
-                        newDislikes = newDislikes.filter(email => email !== userEmail);
+                        newLikes.push(userId);
+                        newDislikes = newDislikes.filter(id => id !== userId);
                     }
                 } else { // dislike
                     if (hasDisliked) {
-                        newDislikes = newDislikes.filter(email => email !== userEmail);
+                        newDislikes = newDislikes.filter(id => id !== userId);
                     } else {
-                        newDislikes.push(userEmail);
-                        newLikes = newLikes.filter(email => email !== userEmail);
+                        newDislikes.push(userId);
+                        newLikes = newLikes.filter(id => id !== userId);
                     }
                 }
                 return { ...comment, likes: newLikes, dislikes: newDislikes };
@@ -286,11 +300,11 @@ export default function MatchDetailsPage() {
     
     if(data) {
         setMatch(data as Match);
-        if (commentAuthorName && commentAuthorName !== currentUser.name) {
+        if (commentAuthorId && commentAuthorId !== currentUser.id) {
           await supabase.from('notifications').insert([{
-            user_name: commentAuthorName,
+            user_id: commentAuthorId,
             title: `Someone reacted to your comment`,
-            description: `${currentUser.name} ${reaction}d your comment on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
+            description: `${currentPlayer.name} ${reaction}d your comment on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
             read: false,
             date: new Date().toISOString(),
             link: `/match/${match.id}`
@@ -405,11 +419,11 @@ export default function MatchDetailsPage() {
                 <CardDescription>Discuss the match with other members.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                 {currentUser && (
+                 {currentUser && currentPlayer && (
                     <CommentInput
                         onSubmit={(content, image) => handlePostComment(content, image, null)}
                         players={allPlayers}
-                        currentUser={currentUser}
+                        currentUser={currentPlayer}
                     />
                 )}
 
@@ -417,11 +431,12 @@ export default function MatchDetailsPage() {
                     <p className="text-muted-foreground text-center py-8">No comments yet. Be the first to start the conversation!</p>
                 ) : (
                     <CommentThread
-                        comments={sortedComments.slice(0, commentsToShow)}
+                        comments={sortedComments}
                         onPostComment={handlePostComment}
                         onReaction={handleCommentReaction}
                         allPlayers={allPlayers}
                         currentUser={currentUser}
+                        currentPlayer={currentPlayer}
                     />
                 )}
             </CardContent>

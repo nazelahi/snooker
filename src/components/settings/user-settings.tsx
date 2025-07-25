@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,48 +14,58 @@ import {
   CardFooter
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Bell, Trophy, Trash2, CheckCircle, Clock } from "lucide-react";
+import { Settings, Bell, Trophy, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { format } from 'date-fns';
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 export default function UserSettings() {
   const [registeredTournaments, setRegisteredTournaments] = useState<Tournament[]>([]);
   const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
-    async function fetchData() {
-      const {data: {user}} = await supabase.auth.getUser();
-      const userName = user?.user_metadata.full_name || user?.email;
-      if (user && userName) {
-        setCurrentUser({ name: userName, email: user.email! });
+    async function fetchData(user: User | null) {
+      if (user) {
+        setCurrentUser(user);
 
-        const { data: allTournaments } = await supabase.from('tournaments').select('*');
-        if (allTournaments) {
-          const userRegistered = allTournaments.filter(t => 
-            t.registeredPlayers?.includes(userName)
-          );
-          setRegisteredTournaments(userRegistered as Tournament[]);
-          
-          const userPending = allTournaments.filter(t => 
-            t.pendingPlayers?.includes(userName)
-          );
-          setPendingTournaments(userPending as Tournament[]);
+        const { data: player } = await supabase.from('players').select('name').eq('user_id', user.id).single();
+        const playerName = player?.name;
+
+        if (playerName) {
+            const { data: allTournaments } = await supabase.from('tournaments').select('*');
+            if (allTournaments) {
+            const userRegistered = allTournaments.filter(t => 
+                t.registeredPlayers?.includes(playerName)
+            );
+            setRegisteredTournaments(userRegistered as Tournament[]);
+            
+            const userPending = allTournaments.filter(t => 
+                t.pendingPlayers?.includes(playerName)
+            );
+            setPendingTournaments(userPending as Tournament[]);
+            }
         }
 
-        const { data: notificationsData } = await supabase.from('notifications').select('*').eq('user_name', userName);
+
+        const { data: notificationsData } = await supabase.from('notifications').select('*').eq('user_id', user.id);
         if(notificationsData) setNotifications(notificationsData as Notification[]);
       }
     }
-
-    fetchData();
     
+    const initialFetch = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        fetchData(user);
+    }
+    initialFetch();
+
     const notificationsSubscription = supabase
       .channel('public:notifications:user')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
-        fetchData();
+        initialFetch();
       })
       .subscribe();
 
@@ -175,7 +184,6 @@ export default function UserSettings() {
             </CardFooter>
         )}
       </Card>
-
     </div>
   );
 }

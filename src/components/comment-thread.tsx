@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getFromStorage } from "@/lib/storage";
-import type { Player } from "@/app/players/page";
+import type { Player } from "@/types/players";
 import {
   Card,
   CardContent,
@@ -26,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Comment } from "@/types/comments";
+import type { User } from "@supabase/supabase-js";
 
 export const CommentInput = ({
   onSubmit,
@@ -37,7 +37,7 @@ export const CommentInput = ({
 }: {
   onSubmit: (commentText: string, image: string | null) => void;
   players: Player[];
-  currentUser: { name: string; email: string };
+  currentUser: Player;
   buttonLabel?: string;
   placeholder?: string;
   autofocus?: boolean;
@@ -103,19 +103,11 @@ export const CommentInput = ({
         <div className="flex items-start gap-2 w-full">
           <Avatar className="h-8 w-8">
             <AvatarImage
-              src={
-                players.find((p) => p.name === currentUser.name)?.avatar ||
-                `https://placehold.co/40x40.png`
-              }
+              src={currentUser.avatar || `https://placehold.co/40x40.png`}
               data-ai-hint="player portrait"
               alt={currentUser.name}
             />
-            <AvatarFallback>
-              {currentUser.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </AvatarFallback>
+            <AvatarFallback>{currentUser.initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2">
             <PopoverAnchor asChild>
@@ -205,6 +197,7 @@ export const CommentThread = ({
   onReaction,
   allPlayers,
   currentUser,
+  currentPlayer
 }: {
   comments: Comment[];
   onPostComment: (
@@ -214,16 +207,17 @@ export const CommentThread = ({
   ) => void;
   onReaction: (commentId: string, reaction: "like" | "dislike") => void;
   allPlayers: Player[];
-  currentUser: { name: string; email: string; isAdmin?: boolean } | null;
+  currentUser: User | null;
+  currentPlayer: Player | null;
 }) => {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
   const CommentCard = ({ comment }: { comment: Comment }) => {
     const author = allPlayers.find((p) => p.name === comment.authorName);
     const hasLiked =
-      currentUser && (comment.likes || []).includes(currentUser.email);
+      currentUser && (comment.likes || []).includes(currentUser.id);
     const hasDisliked =
-      currentUser && (comment.dislikes || []).includes(currentUser.email);
+      currentUser && (comment.dislikes || []).includes(currentUser.id);
     const isReplying = replyingTo === comment.id;
 
     return (
@@ -312,7 +306,7 @@ export const CommentThread = ({
             </div>
           )}
 
-          {isReplying && currentUser && (
+          {isReplying && currentPlayer && (
             <div className="mt-2">
               <CommentInput
                 onSubmit={(content, image) => {
@@ -320,7 +314,7 @@ export const CommentThread = ({
                   setReplyingTo(null);
                 }}
                 players={allPlayers}
-                currentUser={currentUser}
+                currentUser={currentPlayer}
                 buttonLabel="Post Reply"
                 placeholder={`Replying to ${comment.authorName}...`}
                 autofocus
@@ -328,14 +322,15 @@ export const CommentThread = ({
             </div>
           )}
 
-          {comment.replies && comment.replies.length > 0 && (
+          {(comment.replies || []).length > 0 && (
             <div className="mt-2 pl-4 border-l-2">
               <CommentThread
-                comments={comment.replies}
+                comments={comment.replies!}
                 onPostComment={onPostComment}
                 onReaction={onReaction}
                 allPlayers={allPlayers}
                 currentUser={currentUser}
+                currentPlayer={currentPlayer}
               />
             </div>
           )}

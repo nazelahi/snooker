@@ -1,25 +1,44 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function AdminPage() {
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const isAdmin = user?.email === 'imnazelahi@gmail.com';
-      if (!isAdmin) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         router.push('/login');
-      } else {
-        router.replace('/settings');
+        return;
       }
+      
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+        
+      if (user?.role === 'admin') {
+        setIsAdmin(true);
+        router.replace('/settings');
+      } else {
+        router.push('/login');
+      }
+      setLoading(false);
     };
     checkAdmin();
-  }, [router]);
+  }, [router, supabase]);
  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return null;
 }

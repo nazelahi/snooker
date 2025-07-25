@@ -2,8 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Users, Trophy, LogIn, Home, Settings, LogOut, User as UserIcon, Swords, Bell } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Users, Trophy, LogIn, Home, Settings, LogOut, User as UserIcon, Swords } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,13 +15,11 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
-import { getFromStorage } from "@/lib/storage";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "../ui/dropdown-menu";
-import { useRouter } from "next/navigation";
-import type { Player } from "@/app/players/page";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { SiteLogo } from '../site-logo';
+import type { User } from '@supabase/supabase-js';
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -37,37 +35,43 @@ const bottomNavItems = [
 interface CurrentUser {
     name: string;
     email: string;
-    isAdmin?: boolean;
     avatar?: string;
     initials?: string;
+    role?: string;
 }
 
 const UserMenu = () => {
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const router = useRouter();
+    const supabase = createSupabaseBrowserClient();
 
-    const fetchUserData = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
+    const fetchUserData = async (user: User | null) => {
         if (user) {
-            const { data: players } = await supabase.from('players').select('avatar,initials').eq('name', user.user_metadata.full_name).single();
-            const fullName = user.user_metadata.full_name || user.email;
-            setCurrentUser({
-                name: fullName,
-                email: user.email!,
-                isAdmin: user.email === 'imnazelahi@gmail.com', // Placeholder logic
-                avatar: players?.avatar,
-                initials: players?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
-            });
+            const { data: userData } = await supabase.from('users').select('*').eq('id', user.id).single();
+            if (userData) {
+                 setCurrentUser({
+                    name: userData.name,
+                    email: userData.email,
+                    avatar: userData.avatar,
+                    initials: userData.name.split(' ').map((n:string) => n[0]).join(''),
+                    role: userData.role
+                });
+            }
         } else {
             setCurrentUser(null);
         }
     };
     
     useEffect(() => {
-        fetchUserData();
         const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-          fetchUserData();
+          fetchUserData(session?.user ?? null);
         });
+
+        const fetchInitialUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            fetchUserData(session?.user ?? null);
+        }
+        fetchInitialUser();
         
         return () => {
           authListener.subscription.unsubscribe();
@@ -76,9 +80,10 @@ const UserMenu = () => {
 
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
+        await fetch('/api/auth/logout', { method: 'POST' });
         setCurrentUser(null);
         router.push('/login');
+        router.refresh();
     };
 
     if (!currentUser) {
@@ -110,7 +115,7 @@ const UserMenu = () => {
                 </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="mb-2 w-56">
-                <DropdownMenuLabel>{currentUser.isAdmin ? 'Admin' : 'My Account'}</DropdownMenuLabel>
+                <DropdownMenuLabel>{currentUser.role === 'admin' ? 'Admin' : 'My Account'}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
@@ -145,21 +150,14 @@ const UserMenu = () => {
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [clubName, setClubName] = useState("CueScore");
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchUserAndSettings = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if(user) {
-            setCurrentUser({
-                name: user.user_metadata.full_name || user.email!,
-                email: user.email!,
-                isAdmin: user.email === 'imnazelahi@gmail.com', // Placeholder
-            });
-        } else {
-            setCurrentUser(null);
-        }
+        const { data: { session } } = await supabase.auth.getSession();
+        setIsLoggedIn(!!session);
 
         const { data: settingsData } = await supabase.from('settings').select('value').eq('key', 'siteSettings').single();
         if (settingsData?.value.name) {
@@ -170,6 +168,7 @@ export default function AppSidebar() {
     fetchUserAndSettings();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        setIsLoggedIn(!!session);
         fetchUserAndSettings();
     });
 
@@ -218,7 +217,7 @@ export default function AppSidebar() {
           ))}
           <Separator className="my-2" />
           {bottomNavItems.map((item) => {
-            if (item.auth && !currentUser) return null;
+            if (item.auth && !isLoggedIn) return null;
             return (
                 <SidebarMenuItem key={item.label}>
                 <Link href={item.href} passHref>

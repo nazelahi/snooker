@@ -27,17 +27,15 @@ import { Badge } from "@/components/ui/badge";
 import type { Notification } from "@/types/notifications";
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import type { Player } from "@/app/players/page";
 import { ThemeSwitcher } from "../theme-switcher";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { SiteLogo } from "../site-logo";
-import { useSiteLogo } from '../site-logo-provider';
 
 interface CurrentUser {
     name: string;
     email: string;
-    isAdmin?: boolean;
+    role?: string;
     avatar?: string;
     initials?: string;
 }
@@ -47,29 +45,33 @@ export default function Header() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const router = useRouter();
   const [siteName, setSiteName] = useState("CueScore");
+  const supabase = createSupabaseBrowserClient();
 
-  const fetchUserData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+  const fetchUserData = async (user: SupabaseUser | null) => {
     if (user) {
-        const { data: player } = await supabase.from('players').select('avatar,initials').eq('name', user.user_metadata.full_name).single();
-        const fullName = user.user_metadata.full_name || user.email!;
-        
-        setCurrentUser({
-            name: fullName,
-            email: user.email!,
-            isAdmin: user.email === 'imnazelahi@gmail.com', 
-            avatar: player?.avatar,
-            initials: player?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
-        });
+        const { data: userData } = await supabase.from('users').select('*').eq('id', user.id).single();
 
-        const { data: notificationsData } = await supabase
-            .from('notifications')
-            .select('*')
-            .eq('user_name', fullName)
-            .order('date', { ascending: false });
+        if (userData) {
+            setCurrentUser({
+                name: userData.name,
+                email: userData.email,
+                role: userData.role,
+                avatar: userData.avatar,
+                initials: userData.name.split(' ').map((n:string) => n[0]).join('')
+            });
 
-        if (notificationsData) {
-            setNotifications(notificationsData as Notification[]);
+            const { data: notificationsData } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('date', { ascending: false });
+
+            if (notificationsData) {
+                setNotifications(notificationsData as Notification[]);
+            }
+        } else {
+            setCurrentUser(null);
+            setNotifications([]);
         }
 
     } else {
@@ -79,8 +81,14 @@ export default function Header() {
   }
 
   useEffect(() => {
-    fetchUserData();
-    
+    const fetchInitialSettings = async () => {
+        const { data } = await supabase.from('settings').select('value').eq('key', 'siteSettings').single();
+        if (data?.value) {
+            setSiteName(data.value.name);
+        }
+    };
+    fetchInitialSettings();
+
     const settingsChannel = supabase
       .channel('site-settings-header')
       .on(
@@ -96,13 +104,23 @@ export default function Header() {
     const notificationsSubscription = supabase
         .channel('public:notifications')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
-            fetchUserData();
+            const fetchAndSetUser = async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                fetchUserData(user);
+            }
+            fetchAndSetUser();
         })
         .subscribe();
     
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      fetchUserData();
+      fetchUserData(session?.user ?? null);
     });
+
+    const initialFetch = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        fetchUserData(user);
+    }
+    initialFetch();
 
     return () => {
         supabase.removeChannel(settingsChannel);
@@ -111,20 +129,12 @@ export default function Header() {
     }
   }, []);
 
-  useEffect(() => {
-    const fetchInitialSettings = async () => {
-        const { data } = await supabase.from('settings').select('value').eq('key', 'siteSettings').single();
-        if (data?.value) {
-            setSiteName(data.value.name);
-        }
-    };
-    fetchInitialSettings();
-  }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await fetch('/api/auth/logout', { method: 'POST' });
     setCurrentUser(null);
     router.push('/login');
+    router.refresh();
   };
 
   const handleNotificationClick = async (notification: Notification) => {
