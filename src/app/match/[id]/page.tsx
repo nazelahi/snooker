@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { ArrowLeft, Swords, Calendar, Upload, MessageSquare, ThumbsUp, ThumbsDown, Paperclip, X } from "lucide-react";
+import { ArrowLeft, Swords, Calendar, Upload, MessageSquare, ThumbsUp, ThumbsDown, Paperclip, X, CornerDownRight } from "lucide-react";
 import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 import type { Notification } from "@/types/notifications";
@@ -37,6 +37,7 @@ interface Comment {
     likes?: string[]; // array of user emails
     dislikes?: string[]; // array of user emails
     image?: string;
+    replies?: Comment[];
 }
 
 interface Match {
@@ -55,19 +56,325 @@ interface Match {
   tournamentId?: number;
 }
 
+const CommentInput = ({
+  onSubmit,
+  players,
+  currentUser,
+  buttonLabel = "Post Comment",
+  placeholder = "Add a comment... Type @ to mention a player.",
+  autofocus = false,
+}: {
+  onSubmit: (commentText: string, image: string | null) => void;
+  players: Player[];
+  currentUser: { name: string; email: string };
+  buttonLabel?: string;
+  placeholder?: string;
+  autofocus?: boolean;
+}) => {
+  const [commentText, setCommentText] = useState("");
+  const [commentImage, setCommentImage] = useState<string | null>(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState<Player[]>([]);
+  const [isMentionPopoverOpen, setIsMentionPopoverOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (autofocus) {
+      textareaRef.current?.focus();
+    }
+  }, [autofocus]);
+
+  const handleCommentImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCommentImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setCommentText(text);
+
+    const mentionMatch = text.match(/@(\w*)$/);
+    if (mentionMatch) {
+      const query = mentionMatch[1].toLowerCase();
+      const suggestions = players.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query) && p.name !== currentUser?.name
+      );
+      setMentionSuggestions(suggestions);
+      setIsMentionPopoverOpen(suggestions.length > 0);
+    } else {
+      setIsMentionPopoverOpen(false);
+    }
+  };
+
+  const handleMentionSelect = (playerName: string) => {
+    const currentText = commentText;
+    const updatedText = currentText.replace(/@(\w*)$/, `@${playerName} `);
+    setCommentText(updatedText);
+    setIsMentionPopoverOpen(false);
+    textareaRef.current?.focus();
+  };
+
+  const handleSubmit = () => {
+    if (!commentText.trim() && !commentImage) return;
+    onSubmit(commentText, commentImage);
+    setCommentText("");
+    setCommentImage(null);
+  };
+
+  return (
+    <Popover open={isMentionPopoverOpen} onOpenChange={setIsMentionPopoverOpen}>
+      <PopoverTrigger asChild>
+        <div className="flex items-start gap-4 w-full">
+          <Avatar>
+            <AvatarImage
+              src={
+                players.find((p) => p.name === currentUser.name)?.avatar ||
+                `https://placehold.co/40x40.png`
+              }
+              data-ai-hint="player portrait"
+              alt={currentUser.name}
+            />
+            <AvatarFallback>
+              {currentUser.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 space-y-2">
+            <Textarea
+              ref={textareaRef}
+              value={commentText}
+              onChange={handleCommentChange}
+              placeholder={placeholder}
+              className="w-full"
+            />
+            {commentImage && (
+              <div className="relative w-32 h-32">
+                <Image
+                  src={commentImage}
+                  alt="Comment image preview"
+                  layout="fill"
+                  objectFit="cover"
+                  className="rounded-md"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/75"
+                  onClick={() => setCommentImage(null)}
+                >
+                  <X className="h-4 w-4 text-white" />
+                </Button>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Input
+                  id="comment-image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCommentImageUpload}
+                  className="hidden"
+                />
+                <Label htmlFor="comment-image-upload">
+                  <Button variant="ghost" size="icon" asChild>
+                    <div className="cursor-pointer">
+                      <Paperclip className="h-4 w-4" />
+                    </div>
+                  </Button>
+                </Label>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!commentText.trim() && !commentImage}
+                >
+                  {buttonLabel}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-2">
+        <ul className="space-y-1">
+          {mentionSuggestions.map((player) => (
+            <li
+              key={player.id}
+              onClick={() => handleMentionSelect(player.name)}
+              className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+            >
+              <Avatar className="h-6 w-6">
+                <AvatarImage
+                  src={player.avatar || `https://placehold.co/24x24.png`}
+                  data-ai-hint="player portrait"
+                  alt={player.name}
+                />
+                <AvatarFallback>{player.initials}</AvatarFallback>
+              </Avatar>
+              <span className="text-sm">{player.name}</span>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+
+const CommentThread = ({
+  comments,
+  onPostComment,
+  onReaction,
+  allPlayers,
+  currentUser,
+}: {
+  comments: Comment[];
+  onPostComment: (
+    content: string,
+    image: string | null,
+    parentId: string | null
+  ) => void;
+  onReaction: (commentId: string, reaction: "like" | "dislike") => void;
+  allPlayers: Player[];
+  currentUser: { name: string; email: string; isAdmin?: boolean } | null;
+}) => {
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+
+  const CommentCard = ({ comment }: { comment: Comment }) => {
+    const author = allPlayers.find((p) => p.name === comment.authorName);
+    const hasLiked =
+      currentUser && (comment.likes || []).includes(currentUser.email);
+    const hasDisliked =
+      currentUser && (comment.dislikes || []).includes(currentUser.email);
+    const isReplying = replyingTo === comment.id;
+
+    return (
+      <div className="flex items-start gap-4">
+        <Avatar>
+          <AvatarImage
+            src={author?.avatar || `https://placehold.co/40x40.png`}
+            data-ai-hint="player portrait"
+            alt={comment.authorName}
+          />
+          <AvatarFallback>{author?.initials || "U"}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{comment.authorName}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(comment.date), { addSuffix: true })}
+            </span>
+          </div>
+          {comment.content && (
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">
+              {comment.content}
+            </p>
+          )}
+          {comment.image && (
+            <div className="mt-2 relative aspect-video max-w-sm rounded-lg overflow-hidden">
+              <Image
+                src={comment.image}
+                alt="Comment image"
+                layout="fill"
+                objectFit="cover"
+              />
+            </div>
+          )}
+          {currentUser && (
+            <div className="flex items-center gap-2 mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onReaction(comment.id, "like")}
+                className={cn(
+                  "flex items-center gap-1 text-muted-foreground px-2 h-auto py-1",
+                  { "text-primary": hasLiked }
+                )}
+              >
+                <ThumbsUp className="h-4 w-4" />
+                <span>{(comment.likes || []).length}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onReaction(comment.id, "dislike")}
+                className={cn(
+                  "flex items-center gap-1 text-muted-foreground px-2 h-auto py-1",
+                  { "text-destructive": hasDisliked }
+                )}
+              >
+                <ThumbsDown className="h-4 w-4" />
+                <span>{(comment.dislikes || []).length}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setReplyingTo(isReplying ? null : comment.id)}
+                className="flex items-center gap-1 text-muted-foreground px-2 h-auto py-1"
+              >
+                <CornerDownRight className="h-4 w-4" />
+                Reply
+              </Button>
+            </div>
+          )}
+
+          {isReplying && currentUser && (
+            <div className="mt-4">
+              <CommentInput
+                onSubmit={(content, image) => {
+                  onPostComment(content, image, comment.id);
+                  setReplyingTo(null);
+                }}
+                players={allPlayers}
+                currentUser={currentUser}
+                buttonLabel="Post Reply"
+                placeholder={`Replying to ${comment.authorName}...`}
+                autofocus
+              />
+            </div>
+          )}
+
+          {comment.replies && comment.replies.length > 0 && (
+            <div className="mt-4 pl-6 border-l-2">
+              <CommentThread
+                comments={comment.replies}
+                onPostComment={onPostComment}
+                onReaction={onReaction}
+                allPlayers={allPlayers}
+                currentUser={currentUser}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {comments
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .map((comment) => (
+          <CommentCard key={comment.id} comment={comment} />
+        ))}
+    </div>
+  );
+};
+
+
 export default function MatchDetailsPage() {
   const [match, setMatch] = useState<Match | null>(null);
   const [winnerPlayer, setWinnerPlayer] = useState<Player | null>(null);
   const [loserPlayer, setLoserPlayer] = useState<Player | null>(null);
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; isAdmin?: boolean } | null>(null);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-  const [newComment, setNewComment] = useState("");
-  const [newCommentImage, setNewCommentImage] = useState<string | null>(null);
-  const [mentionSuggestions, setMentionSuggestions] = useState<Player[]>([]);
-  const [isMentionPopoverOpen, setIsMentionPopoverOpen] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-
+  
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -135,48 +442,13 @@ export default function MatchDetailsPage() {
     }
   };
   
-  const handleCommentImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewCommentImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    setNewComment(text);
-
-    const mentionMatch = text.match(/@(\w+)$/);
-    if (mentionMatch) {
-        const query = mentionMatch[1].toLowerCase();
-        const suggestions = allPlayers.filter(p => p.name.toLowerCase().includes(query) && p.name !== currentUser?.name);
-        setMentionSuggestions(suggestions);
-        setIsMentionPopoverOpen(suggestions.length > 0);
-    } else {
-        setIsMentionPopoverOpen(false);
-    }
-  };
-
-  const handleMentionSelect = (playerName: string) => {
-    const currentText = newComment;
-    const updatedText = currentText.replace(/@(\w+)$/, `@${playerName} `);
-    setNewComment(updatedText);
-    setIsMentionPopoverOpen(false);
-    textareaRef.current?.focus();
-  };
-
-
-  const handlePostComment = () => {
-    if ((!newComment.trim() && !newCommentImage) || !currentUser || !match) return;
+  const handlePostComment = (content: string, image: string | null, parentId: string | null) => {
+    if ((!content.trim() && !image) || !currentUser || !match) return;
 
     const mentionRegex = /@(\w+\s\w+)/g;
     let matchResult;
     const mentionedNames: string[] = [];
-    while ((matchResult = mentionRegex.exec(newComment)) !== null) {
+    while ((matchResult = mentionRegex.exec(content)) !== null) {
         mentionedNames.push(matchResult[1]);
     }
 
@@ -189,99 +461,41 @@ export default function MatchDetailsPage() {
         id: Date.now().toString(),
         authorName: currentUser.name,
         authorEmail: currentUser.email,
-        content: newComment,
+        content: content,
         date: new Date().toISOString(),
         mentions: mentionedEmails,
         likes: [],
         dislikes: [],
-        image: newCommentImage || undefined,
+        image: image || undefined,
+        replies: []
     };
-
-    setMatch(prevMatch => {
-        if(!prevMatch) return null;
-
-        const updatedMatch = {
-            ...prevMatch,
-            comments: [...(prevMatch.comments || []), newCommentObject]
-        };
-        
-        const allMatches = getFromStorage<Match[]>('recentResults', []);
-        const matchIndex = allMatches.findIndex(m => m.id === updatedMatch.id);
-        if (matchIndex > -1) {
-            allMatches[matchIndex] = updatedMatch;
-            saveToStorage('recentResults', allMatches);
-            setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-        }
-
-        return updatedMatch;
-    });
-
-    // Send notifications
-    mentionedEmails.forEach(email => {
-      const userNotifications = getFromStorage<Notification[]>(`notifications_${email}`, []);
-      const newNotification: Notification = {
-        id: Date.now().toString() + email,
-        title: "You were mentioned in a comment",
-        description: `${currentUser.name} mentioned you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
-        read: false,
-        date: new Date().toISOString(),
-        link: `/match/${match.id}`
-      };
-      saveToStorage(`notifications_${email}`, [newNotification, ...userNotifications]);
-    });
-
-
-    setNewComment("");
-    setNewCommentImage(null);
-    toast({ title: "Comment Posted", description: "Your comment has been added to the match." });
-  };
-  
-  const handleCommentReaction = (commentId: string, reaction: 'like' | 'dislike') => {
-    if (!currentUser || !match) return;
     
-    let commentAuthorEmail: string | null = null;
-    let originalComment: Comment | null = null;
-
+    // --- Update Match State and Storage ---
     setMatch(prevMatch => {
         if (!prevMatch) return null;
+
+        let updatedComments = [...(prevMatch.comments || [])];
+        let replyAuthorEmail: string | null = null;
         
-        originalComment = prevMatch.comments?.find(c => c.id === commentId) || null;
-        if(originalComment) {
-          commentAuthorEmail = originalComment.authorEmail;
+        if (parentId) {
+            // It's a reply
+            const findAndAddReply = (comments: Comment[]): Comment[] => {
+                return comments.map(comment => {
+                    if (comment.id === parentId) {
+                        replyAuthorEmail = comment.authorEmail;
+                        return { ...comment, replies: [...(comment.replies || []), newCommentObject] };
+                    }
+                    if (comment.replies) {
+                        return { ...comment, replies: findAndAddReply(comment.replies) };
+                    }
+                    return comment;
+                });
+            };
+            updatedComments = findAndAddReply(updatedComments);
+        } else {
+            // It's a top-level comment
+            updatedComments.push(newCommentObject);
         }
-
-        const updatedComments = (prevMatch.comments || []).map(comment => {
-            if (comment.id === commentId) {
-                const likes = comment.likes || [];
-                const dislikes = comment.dislikes || [];
-                const userEmail = currentUser.email;
-
-                const hasLiked = likes.includes(userEmail);
-                const hasDisliked = dislikes.includes(userEmail);
-
-                let newLikes = [...likes];
-                let newDislikes = [...dislikes];
-
-                if (reaction === 'like') {
-                    if (hasLiked) {
-                        newLikes = newLikes.filter(email => email !== userEmail);
-                    } else {
-                        newLikes.push(userEmail);
-                        newDislikes = newDislikes.filter(email => email !== userEmail);
-                    }
-                } else { // dislike
-                    if (hasDisliked) {
-                        newDislikes = newDislikes.filter(email => email !== userEmail);
-                    } else {
-                        newDislikes.push(userEmail);
-                        newLikes = newLikes.filter(email => email !== userEmail);
-                    }
-                }
-                
-                return { ...comment, likes: newLikes, dislikes: newDislikes };
-            }
-            return comment;
-        });
 
         const updatedMatch = { ...prevMatch, comments: updatedComments };
 
@@ -291,23 +505,117 @@ export default function MatchDetailsPage() {
             allMatches[matchIndex] = updatedMatch;
             saveToStorage('recentResults', allMatches);
         }
-
+        
+         // --- Send Notifications ---
+        if (parentId && replyAuthorEmail && replyAuthorEmail !== currentUser.email) {
+            // Notify parent comment author
+             const userNotifications = getFromStorage<Notification[]>(`notifications_${replyAuthorEmail}`, []);
+             const newNotification: Notification = {
+                id: Date.now().toString() + replyAuthorEmail,
+                title: "Someone replied to your comment",
+                description: `${currentUser.name} replied to you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
+                read: false,
+                date: new Date().toISOString(),
+                link: `/match/${match.id}`
+             };
+             saveToStorage(`notifications_${replyAuthorEmail}`, [newNotification, ...userNotifications]);
+        }
+    
+        mentionedEmails.forEach(email => {
+            if(email === currentUser.email) return;
+            const userNotifications = getFromStorage<Notification[]>(`notifications_${email}`, []);
+            const newNotification: Notification = {
+                id: Date.now().toString() + email,
+                title: "You were mentioned in a comment",
+                description: `${currentUser.name} mentioned you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
+                read: false,
+                date: new Date().toISOString(),
+                link: `/match/${match.id}`
+            };
+            saveToStorage(`notifications_${email}`, [newNotification, ...userNotifications]);
+        });
+        
+        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
         return updatedMatch;
     });
 
-    if (commentAuthorEmail && commentAuthorEmail !== currentUser.email) {
-      const userNotifications = getFromStorage<Notification[]>(`notifications_${commentAuthorEmail}`, []);
-      const newNotification: Notification = {
-        id: Date.now().toString() + commentAuthorEmail,
-        title: `Someone reacted to your comment`,
-        description: `${currentUser.name} ${reaction}d your comment on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
-        read: false,
-        date: new Date().toISOString(),
-        link: `/match/${match.id}`
-      };
-      saveToStorage(`notifications_${commentAuthorEmail}`, [newNotification, ...userNotifications]);
-      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-    }
+    toast({ title: parentId ? "Reply Posted" : "Comment Posted", description: `Your ${parentId ? 'reply' : 'comment'} has been added to the match.` });
+  };
+  
+  const handleCommentReaction = (commentId: string, reaction: 'like' | 'dislike') => {
+    if (!currentUser || !match) return;
+
+    setMatch(prevMatch => {
+        if (!prevMatch) return null;
+
+        let commentAuthorEmail: string | null = null;
+        
+        const updateReactionsRecursive = (comments: Comment[]): Comment[] => {
+            return comments.map(comment => {
+                if (comment.id === commentId) {
+                    commentAuthorEmail = comment.authorEmail;
+                    const likes = comment.likes || [];
+                    const dislikes = comment.dislikes || [];
+                    const userEmail = currentUser.email;
+
+                    const hasLiked = likes.includes(userEmail);
+                    const hasDisliked = dislikes.includes(userEmail);
+
+                    let newLikes = [...likes];
+                    let newDislikes = [...dislikes];
+
+                    if (reaction === 'like') {
+                        if (hasLiked) {
+                            newLikes = newLikes.filter(email => email !== userEmail);
+                        } else {
+                            newLikes.push(userEmail);
+                            newDislikes = newDislikes.filter(email => email !== userEmail);
+                        }
+                    } else { // dislike
+                        if (hasDisliked) {
+                            newDislikes = newDislikes.filter(email => email !== userEmail);
+                        } else {
+                            newDislikes.push(userEmail);
+                            newLikes = newLikes.filter(email => email !== userEmail);
+                        }
+                    }
+                    return { ...comment, likes: newLikes, dislikes: newDislikes };
+                }
+                
+                if (comment.replies) {
+                    return { ...comment, replies: updateReactionsRecursive(comment.replies) };
+                }
+
+                return comment;
+            });
+        };
+        
+        const updatedComments = updateReactionsRecursive(prevMatch.comments || []);
+        const updatedMatch = { ...prevMatch, comments: updatedComments };
+
+        const allMatches = getFromStorage<Match[]>('recentResults', []);
+        const matchIndex = allMatches.findIndex(m => m.id === updatedMatch.id);
+        if (matchIndex > -1) {
+            allMatches[matchIndex] = updatedMatch;
+            saveToStorage('recentResults', allMatches);
+        }
+        
+        if (commentAuthorEmail && commentAuthorEmail !== currentUser.email) {
+          const userNotifications = getFromStorage<Notification[]>(`notifications_${commentAuthorEmail}`, []);
+          const newNotification: Notification = {
+            id: Date.now().toString() + commentAuthorEmail,
+            title: `Someone reacted to your comment`,
+            description: `${currentUser.name} ${reaction}d your comment on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
+            read: false,
+            date: new Date().toISOString(),
+            link: `/match/${match.id}`
+          };
+          saveToStorage(`notifications_${commentAuthorEmail}`, [newNotification, ...userNotifications]);
+          setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+        }
+
+        return updatedMatch;
+    });
   };
 
 
@@ -322,9 +630,6 @@ export default function MatchDetailsPage() {
     );
   }
   
-  const getPlayerByEmail = (email: string) => allPlayers.find(p => p.name.toLowerCase() === allUsers.find(u => u.email === email)?.name.toLowerCase());
-
-
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
         <div className="flex justify-between items-start">
@@ -417,114 +722,24 @@ export default function MatchDetailsPage() {
                 <CardDescription>Discuss the match with other members.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                {currentUser && (
-                    <Popover open={isMentionPopoverOpen} onOpenChange={setIsMentionPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <div className="flex items-start gap-4">
-                                <Avatar>
-                                    <AvatarImage src={allPlayers.find(p => p.name === currentUser.name)?.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={currentUser.name} />
-                                    <AvatarFallback>{currentUser.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 space-y-2">
-                                    <Textarea
-                                        ref={textareaRef}
-                                        value={newComment}
-                                        onChange={handleCommentChange}
-                                        placeholder="Add a comment... Type @ to mention a player."
-                                        className="w-full"
-                                    />
-                                    {newCommentImage && (
-                                        <div className="relative w-32 h-32">
-                                            <Image src={newCommentImage} alt="Comment image preview" layout="fill" objectFit="cover" className="rounded-md" />
-                                            <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/75" onClick={() => setNewCommentImage(null)}>
-                                                <X className="h-4 w-4 text-white" />
-                                            </Button>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <Input id="comment-image-upload" type="file" accept="image/*" onChange={handleCommentImageUpload} className="hidden" />
-                                          <Label htmlFor="comment-image-upload">
-                                            <Button variant="ghost" size="icon" asChild>
-                                                <div className="cursor-pointer">
-                                                  <Paperclip className="h-4 w-4" />
-                                                </div>
-                                            </Button>
-                                          </Label>
-                                          <Button onClick={handlePostComment} disabled={!newComment.trim() && !newCommentImage}>Post Comment</Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-2">
-                            <ul className="space-y-1">
-                                {mentionSuggestions.map(player => (
-                                    <li key={player.id} onClick={() => handleMentionSelect(player.name)} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer">
-                                        <Avatar className="h-6 w-6">
-                                            <AvatarImage src={player.avatar || `https://placehold.co/24x24.png`} data-ai-hint="player portrait" alt={player.name} />
-                                            <AvatarFallback>{player.initials}</AvatarFallback>
-                                        </Avatar>
-                                        <span className="text-sm">{player.name}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </PopoverContent>
-                    </Popover>
+                 {currentUser && (
+                    <CommentInput
+                        onSubmit={(content, image) => handlePostComment(content, image, null)}
+                        players={allPlayers}
+                        currentUser={currentUser}
+                    />
                 )}
 
-                <div className="space-y-4">
-                    {(match.comments || []).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(comment => {
-                        const author = allPlayers.find(p => p.name === comment.authorName);
-                        const hasLiked = currentUser && (comment.likes || []).includes(currentUser.email);
-                        const hasDisliked = currentUser && (comment.dislikes || []).includes(currentUser.email);
-
-                        return(
-                            <div key={comment.id} className="flex items-start gap-4">
-                                <Avatar>
-                                     <AvatarImage src={author?.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={comment.authorName} />
-                                     <AvatarFallback>{author?.initials || 'U'}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-semibold">{comment.authorName}</span>
-                                        <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.date), { addSuffix: true })}</span>
-                                    </div>
-                                    {comment.content && <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">{comment.content}</p>}
-                                    {comment.image && (
-                                        <div className="mt-2 relative aspect-video max-w-sm rounded-lg overflow-hidden">
-                                            <Image src={comment.image} alt="Comment image" layout="fill" objectFit="cover" />
-                                        </div>
-                                    )}
-                                    {currentUser && (
-                                        <div className="flex items-center gap-4 mt-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleCommentReaction(comment.id, 'like')}
-                                                className={cn("flex items-center gap-1 text-muted-foreground px-2", { "text-primary": hasLiked })}
-                                            >
-                                                <ThumbsUp className="h-4 w-4" />
-                                                <span>{(comment.likes || []).length}</span>
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleCommentReaction(comment.id, 'dislike')}
-                                                className={cn("flex items-center gap-1 text-muted-foreground px-2", { "text-destructive": hasDisliked })}
-                                            >
-                                                <ThumbsDown className="h-4 w-4" />
-                                                <span>{(comment.dislikes || []).length}</span>
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-                 {(!match.comments || match.comments.length === 0) && (
+                 {(!match.comments || match.comments.length === 0) ? (
                     <p className="text-muted-foreground text-center py-8">No comments yet. Be the first to start the conversation!</p>
+                ) : (
+                    <CommentThread
+                        comments={match.comments}
+                        onPostComment={handlePostComment}
+                        onReaction={handleCommentReaction}
+                        allPlayers={allPlayers}
+                        currentUser={currentUser}
+                    />
                 )}
             </CardContent>
         </Card>
