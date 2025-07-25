@@ -30,6 +30,7 @@ import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import type { Player } from "@/app/players/page";
 import { Icons } from "../icons";
+import { ThemeSwitcher } from "../theme-switcher";
 
 const initialUserNotifications: Notification[] = [
     { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
@@ -141,6 +142,7 @@ export default function Header() {
       </div>
 
       <div className="flex items-center justify-end gap-2 md:gap-4">
+        <ThemeSwitcher />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
