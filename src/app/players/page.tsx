@@ -70,18 +70,23 @@ export default function PlayersPage() {
   const handleAddPlayer = (newPlayer: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed'>) => {
     setPlayers(prevPlayers => {
       const highestBreak = newPlayer.highestBreak;
-      const prevHighestBreakPlayer = prevPlayers.reduce((prev, curr) => prev.highestBreak > curr.highestBreak ? prev : curr);
+      const prevHighestBreakPlayer = prevPlayers.length > 0
+        ? prevPlayers.reduce((prev, curr) => prev.highestBreak > curr.highestBreak ? prev : curr)
+        : { highestBreak: 0 };
 
       if (highestBreak > prevHighestBreakPlayer.highestBreak) {
-         const notifications = getFromStorage<Notification[]>('notifications', []);
-         const newNotification: Notification = {
-            id: Date.now().toString(),
-            title: "New Club Record!",
-            description: `${newPlayer.name} has set a new high break of ${highestBreak}!`,
-            read: false,
-            date: new Date().toISOString()
-         };
-         saveToStorage('notifications', [newNotification, ...notifications]);
+         const allUsers = getFromStorage<{name:string, email:string}[]>('users', []);
+         allUsers.forEach(user => {
+            const notifications = getFromStorage<Notification[]>(`notifications_${user.email}`, []);
+            const newNotification: Notification = {
+                id: Date.now().toString() + user.email,
+                title: "New Club Record!",
+                description: `${newPlayer.name} has set a new high break of ${highestBreak}!`,
+                read: false,
+                date: new Date().toISOString()
+            };
+            saveToStorage(`notifications_${user.email}`, [newNotification, ...notifications]);
+         });
          setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
       }
 
