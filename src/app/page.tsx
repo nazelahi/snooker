@@ -573,7 +573,7 @@ export default function DashboardPage() {
             </TableHeader>
             <TableBody>
               {playerStandings.map((player, index) => (
-                <TableRow key={player.id}>
+                <TableRow key={player.id} className="bg-muted/50 rounded-lg">
                     <TableCell className="font-medium text-center">{index + 1}</TableCell>
                     <TableCell>
                         <div className="flex items-center gap-3">
