@@ -1,5 +1,5 @@
 
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createRouteHandlerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
@@ -14,8 +14,7 @@ export async function POST(req: Request) {
       data: {
         full_name: name,
       },
-      email_confirm: true,
-    }
+    },
   });
 
   if (error) {

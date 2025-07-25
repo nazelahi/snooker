@@ -1,5 +1,5 @@
 
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createRouteHandlerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
@@ -12,6 +12,8 @@ export async function GET(req: Request) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  const url = new URL(req.url);
-  return NextResponse.redirect(url.origin);
+  // URL to redirect to after sign in process completes
+  return NextResponse.redirect(new URL('/', req.url), {
+    status: 302,
+  });
 }

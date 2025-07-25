@@ -56,6 +56,12 @@ const UserMenu = () => {
                     initials: userData.name.split(' ').map((n:string) => n[0]).join(''),
                     role: userData.role
                 });
+            } else {
+                 setCurrentUser({
+                    name: user.user_metadata.full_name || user.email!,
+                    email: user.email!,
+                    initials: (user.user_metadata.full_name || user.email!).split(' ').map((n:string) => n[0]).join('')
+                });
             }
         } else {
             setCurrentUser(null);
@@ -76,11 +82,11 @@ const UserMenu = () => {
         return () => {
           authListener.subscription.unsubscribe();
         };
-    }, []);
+    }, [supabase]);
 
 
     const handleLogout = async () => {
-        await fetch('/api/auth/logout', { method: 'POST' });
+        await supabase.auth.signOut();
         setCurrentUser(null);
         router.push('/login');
         router.refresh();
@@ -169,7 +175,9 @@ export default function AppSidebar() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         setIsLoggedIn(!!session);
-        fetchUserAndSettings();
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+             fetchUserAndSettings();
+        }
     });
 
     const settingsChannel = supabase
@@ -185,7 +193,7 @@ export default function AppSidebar() {
       authListener.subscription.unsubscribe();
       supabase.removeChannel(settingsChannel);
     };
-  }, []);
+  }, [supabase]);
 
 
   const isActive = (href: string) => {

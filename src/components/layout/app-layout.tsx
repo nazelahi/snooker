@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AdminSettingsTabsMobile } from '../settings/admin-settings';
 import { createSupabaseBrowserClient } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -18,29 +19,29 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: user } = await supabase
+    const checkUserRole = async (user: User | null) => {
+      if (user) {
+        const { data: userProfile } = await supabase
           .from('users')
           .select('role')
-          .eq('id', session.user.id)
+          .eq('id', user.id)
           .single();
-        setIsAdmin(user?.role === 'admin');
+        setIsAdmin(userProfile?.role === 'admin');
       } else {
         setIsAdmin(false);
       }
     }
-    checkUserRole();
+    
+    const { data: { session } } = supabase.auth.getSession().then(({data}) => checkUserRole(data.session?.user ?? null));
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      checkUserRole();
+      checkUserRole(session?.user ?? null);
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const showAdminNav = isMobile && isAdmin && pathname === '/settings';
 

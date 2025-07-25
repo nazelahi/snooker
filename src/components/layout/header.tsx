@@ -70,7 +70,13 @@ export default function Header() {
                 setNotifications(notificationsData as Notification[]);
             }
         } else {
-            setCurrentUser(null);
+            // This can happen if the user record in auth exists but not in users table yet.
+            // The DB trigger should handle this, but as a fallback, we can set a basic user object.
+             setCurrentUser({
+                name: user.user_metadata.full_name || user.email!,
+                email: user.email!,
+                initials: (user.user_metadata.full_name || user.email!).split(' ').map((n:string) => n[0]).join('')
+            });
             setNotifications([]);
         }
 
@@ -127,11 +133,11 @@ export default function Header() {
         supabase.removeChannel(notificationsSubscription);
         authListener.subscription.unsubscribe();
     }
-  }, []);
+  }, [supabase]);
 
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await supabase.auth.signOut();
     setCurrentUser(null);
     router.push('/login');
     router.refresh();

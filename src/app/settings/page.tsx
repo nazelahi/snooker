@@ -29,6 +29,17 @@ export default function SettingsPage() {
       }
     };
     checkUserRole();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        if(event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            checkUserRole();
+        }
+    });
+
+    return () => {
+        authListener.subscription.unsubscribe();
+    }
+
   }, [router, supabase]);
 
   if (isAuthorized === null) {
