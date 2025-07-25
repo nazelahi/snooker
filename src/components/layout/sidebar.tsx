@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "../ui/dropdown-menu";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { SiteLogo } from '../site-logo';
 import type { User } from '@supabase/supabase-js';
 
@@ -43,7 +43,6 @@ interface CurrentUser {
 const UserMenu = () => {
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const router = useRouter();
-    const supabase = createSupabaseBrowserClient();
 
     const fetchUserData = async (user: User | null) => {
         if (user) {
@@ -158,7 +157,6 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [clubName, setClubName] = useState("CueScore");
-  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchUserAndSettings = async () => {

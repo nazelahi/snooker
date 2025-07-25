@@ -26,7 +26,7 @@ import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
 import type { Achievement } from "@/types/achievements";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { Player as PlayerType } from '@/types/players';
 
 
@@ -37,7 +37,6 @@ export default function PlayersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [playersToShow, setPlayersToShow] = useState(10);
   const [loading, setLoading] = useState(true);
-  const supabase = createSupabaseBrowserClient();
 
   const fetchPlayers = async () => {
     setLoading(true);

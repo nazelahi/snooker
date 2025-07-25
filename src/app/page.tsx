@@ -36,7 +36,7 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 
 interface Notice {
@@ -56,7 +56,6 @@ export default function DashboardPage() {
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [recentToShow, setRecentToShow] = useState(5);
   const [notices, setNotices] = useState<Notice[]>([]);
-  const supabase = createSupabaseBrowserClient();
   
   const liveMatchesPlugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true }));
   const noticesPlugin = useRef(Autoplay({ delay: 5500, stopOnInteraction: false, stopOnMouseEnter: true }));

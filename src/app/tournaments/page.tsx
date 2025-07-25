@@ -25,7 +25,7 @@ import { PlusCircle, Radio, Pencil, Eye } from "lucide-react";
 import { AddTournamentDialog } from "@/components/add-tournament-dialog";
 import type { Player } from "@/app/players/page";
 import type { Round } from "@/components/tournament-bracket";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { LiveMatch } from "@/types/matches";
 
 export interface Tournament {
@@ -49,7 +49,6 @@ export default function TournamentsPage() {
   const [isAddTournamentOpen, setIsAddTournamentOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     async function fetchData() {

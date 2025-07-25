@@ -28,7 +28,7 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CommentInput, CommentThread } from "@/components/comment-thread";
 import type { Comment } from "@/types/comments";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { Match } from "@/types/matches";
 import type { User } from "@supabase/supabase-js";
 
@@ -46,7 +46,6 @@ export default function MatchDetailsPage() {
   const id = params.id as string;
   const { toast } = useToast();
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   const fetchMatchData = useCallback(async (matchId: string) => {
     const { data: matchData, error } = await supabase

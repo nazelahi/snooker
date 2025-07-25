@@ -20,7 +20,7 @@ import Image from "next/image";
 import { Checkbox } from "./ui/checkbox";
 import { ScrollArea } from "./ui/scroll-area";
 import { ResponsiveDialog } from "@/components/ui/dialog";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 interface AddTournamentDialogProps {
   open: boolean;
@@ -38,7 +38,6 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
   const [location, setLocation] = useState("");
   const [imagePreview, setImagePreview] = useState("");
   const [predefinedRules, setPredefinedRules] = useState<string[]>([]);
-  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchRules = async () => {

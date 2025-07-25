@@ -22,7 +22,7 @@ import { AddMatchDialog } from "@/components/add-match-dialog";
 import type { Notification } from "@/types/notifications";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { Match } from "@/types/matches";
 
 const initialStats = {
@@ -53,7 +53,6 @@ export default function MyStatsPage() {
   const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   const { toast } = useToast();
 
@@ -180,8 +179,8 @@ export default function MyStatsPage() {
     if (!currentUser) return;
 
     const opponent = allPlayers.find(p => p.id === opponentId);
-    if (!opponent) {
-        toast({ variant: "destructive", title: "Error", description: "Opponent not found." });
+    if (!opponent || !opponent.user_id) {
+        toast({ variant: "destructive", title: "Error", description: "Opponent not found or does not have a user account." });
         return;
     }
     
@@ -207,7 +206,7 @@ export default function MyStatsPage() {
     }
     
     await supabase.from('notifications').insert([{
-        user_name: opponent.name,
+        user_id: opponent.user_id,
         title: "New Match Reported",
         description: `${currentUser.name} has reported a new match with you. Please review and approve the score on your profile page.`,
         read: false,
@@ -262,14 +261,17 @@ export default function MyStatsPage() {
         await supabase.from('matches').delete().eq('id', matchId);
         toast({ title: "Rejected", description: "The score has been rejected and the match report removed." });
     }
-
-    await supabase.from('notifications').insert([{
-        user_name: opponentName,
-        title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
-        description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
-        read: false,
-        date: new Date().toISOString()
-    }]);
+    
+    const { data: opponent } = await supabase.from('players').select('user_id').eq('name', opponentName).single();
+    if(opponent?.user_id) {
+        await supabase.from('notifications').insert([{
+            user_id: opponent.user_id,
+            title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
+            description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
+            read: false,
+            date: new Date().toISOString()
+        }]);
+    }
     
     // Refresh all data
     fetchCurrentUserData();

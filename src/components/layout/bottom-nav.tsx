@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Home, Users, Trophy, User as UserIcon, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -19,7 +19,6 @@ const navItems = [
 export default function BottomNav() {
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const checkLoginStatus = async () => {

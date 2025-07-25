@@ -22,7 +22,7 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import type { Notification } from "@/types/notifications";
 import { cn } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 import Image from 'next/image';
 import { SiteLogo } from '../site-logo';
@@ -84,7 +84,6 @@ export default function AdminSettings() {
   const [newNoticeContent, setNewNoticeContent] = useState("");
   const [activeTab, setActiveTab] = useState("players");
   const { toast } = useToast();
-  const supabase = createSupabaseBrowserClient();
   
   const fetchAdminData = async () => {
     const { data: playersData } = await supabase.from('players').select('*');

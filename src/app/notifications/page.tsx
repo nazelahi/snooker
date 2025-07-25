@@ -17,14 +17,13 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchUserAndNotifications = async () => {

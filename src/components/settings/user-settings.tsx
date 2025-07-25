@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Bell, Trophy, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { format } from 'date-fns';
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
 export default function UserSettings() {
@@ -25,7 +25,6 @@ export default function UserSettings() {
   const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     async function fetchData(user: User | null) {

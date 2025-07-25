@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from '@/components/layout/app-layout';
 import { ThemeProvider } from '@/components/theme-provider';
 import { useState, useEffect } from 'react';
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { SiteLogoProvider } from '@/components/site-logo-provider';
 import { useRouter } from 'next/navigation';
 
@@ -24,7 +24,6 @@ export default function RootLayout({
   const [siteName, setSiteName] = useState(defaultSettings.name);
   const [siteDescription, setSiteDescription] = useState(defaultSettings.description);
   const [siteLogo, setSiteLogo] = useState<string | null>(defaultSettings.logo);
-  const supabase = createSupabaseBrowserClient();
   const router = useRouter();
 
   const fetchSiteSettings = async () => {

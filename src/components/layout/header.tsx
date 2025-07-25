@@ -28,7 +28,7 @@ import type { Notification } from "@/types/notifications";
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { ThemeSwitcher } from "../theme-switcher";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { SiteLogo } from "../site-logo";
 
@@ -45,7 +45,6 @@ export default function Header() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const router = useRouter();
   const [siteName, setSiteName] = useState("CueScore");
-  const supabase = createSupabaseBrowserClient();
 
   const fetchUserData = async (user: SupabaseUser | null) => {
     if (user) {

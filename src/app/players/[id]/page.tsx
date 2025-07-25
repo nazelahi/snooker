@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { Match } from "@/types/matches";
 
 
@@ -58,7 +58,6 @@ export default function PlayerProfilePage() {
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
-  const supabase = createSupabaseBrowserClient();
 
   const fetchPlayerData = useCallback(async (playerId: string) => {
     const { data: playerData, error: playerError } = await supabase.from('players').select('*').eq('id', parseInt(playerId)).single();
