@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
-import type { Tournament, LiveMatch } from "@/app/tournaments/page";
+import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
 import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList, Trophy, Radio, Shuffle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TournamentBracket, type Matchup, type Round } from "@/components/tournament-bracket";
 import { supabase } from "@/lib/supabase";
-import { Match, UpcomingMatch } from "@/types/matches";
+import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 
 
 interface EnrolledPlayer {
@@ -59,66 +59,85 @@ export default function TournamentDetailsPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchTournamentData = async () => {
-      if (!id) return;
-      
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+  const fetchTournamentData = async () => {
+    if (!id) return;
+    
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
 
-      const { data: playersData } = await supabase.from('players').select('*');
-      if (playersData) setAllPlayers(playersData);
+    const { data: playersData } = await supabase.from('players').select('*');
+    if (playersData) setAllPlayers(playersData);
 
-      const { data: tournamentData, error } = await supabase.from('tournaments').select('*').eq('id', parseInt(id)).single();
-      
-      if (error || !tournamentData) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Tournament not found.' });
-        setTournament(null);
-        return;
-      }
+    const { data: tournamentData, error } = await supabase.from('tournaments').select('*').eq('id', parseInt(id)).single();
+    
+    if (error || !tournamentData) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Tournament not found.' });
+      setTournament(null);
+      return;
+    }
 
-      setTournament(tournamentData);
-      setEditedTournament({ ...tournamentData });
+    setTournament(tournamentData as Tournament);
+    setEditedTournament({ ...tournamentData } as Tournament);
 
-      if (user && (tournamentData.registeredPlayers?.includes(user.email) || tournamentData.pendingPlayers?.includes(user.email))) {
-        setHasApplied(true);
-      }
-      if (tournamentData.winner && playersData) {
-        setWinnerPlayer(playersData.find(p => p.name === tournamentData.winner) || null);
-      }
-
-      const allUsers = getFromStorage<{ name: string; email: string; }[]>('users', []);
-      const getPlayerDetails = (email: string) => {
-        const user = allUsers.find(u => u.email === email);
-        const player = playersData?.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
-        return {
-          id: player?.id || 0,
-          name: user?.name || 'Unknown User',
-          avatar: player?.avatar || '',
-          initials: player?.initials || 'UU',
-          email: email,
+    if (user && ((tournamentData as Tournament).registeredPlayers?.includes(user.email!) || (tournamentData as Tournament).pendingPlayers?.includes(user.email!))) {
+      setHasApplied(true);
+    }
+    if ((tournamentData as Tournament).winner && playersData) {
+      setWinnerPlayer(playersData.find(p => p.name === (tournamentData as Tournament).winner) || null);
+    }
+    
+    if(playersData) {
+        const allUsersFromPlayers = playersData.map(p => ({name: p.name, email: 'placeholder'}));
+        const getPlayerDetails = (email: string) => {
+            const player = playersData.find(p => p.name.toLowerCase() === allUsersFromPlayers.find(u => u.email === email)?.name.toLowerCase());
+             const matchingUser = allPlayers.find(p => (tournamentData.registeredPlayers?.includes(p.name) || tournamentData.pendingPlayers?.includes(p.name)) )
+            // This part is tricky without a proper users table mapping emails to player names.
+            // This is a temporary solution and might not work perfectly.
+            // A dedicated `profiles` table linking auth users to players is recommended.
+            const p = playersData.find(p => p.name === email); // This is a guess
+            return {
+                id: p?.id || 0,
+                name: p?.name || email,
+                avatar: p?.avatar || '',
+                initials: p?.initials || '?',
+                email: email,
+            };
         };
-      };
+        const enrolled = (tournamentData as Tournament).registeredPlayers || [];
+        const pending = (tournamentData as Tournament).pendingPlayers || [];
+        
+        setEnrolledPlayers(enrolled.map(email => allPlayers.find(p => p.name === email)!).filter(p => p).map(p => ({id: p.id, name: p.name, avatar: p.avatar, initials: p.initials, email: p.name })));
+        setPendingPlayers(pending.map(email => allPlayers.find(p => p.name === email)!).filter(p => p).map(p => ({id: p.id, name: p.name, avatar: p.avatar, initials: p.initials, email: p.name })));
+    }
+    
+    const { data: matchesData } = await supabase.from('matches').select('*').eq('tournament_id', (tournamentData as Tournament).id);
+    if (matchesData) setTournamentMatches(matchesData as Match[]);
+    
+    const { data: upcomingData } = await supabase.from('upcoming_matches').select('*').eq('tournament_id', (tournamentData as Tournament).id);
+    if(upcomingData) setTournamentUpcoming(upcomingData as UpcomingMatch[]);
+    
+    const { data: liveData } = await supabase.from('live_matches').select('*').eq('tournament_id', (tournamentData as Tournament).id);
+    if(liveData) setTournamentLive(liveData as LiveMatch[]);
+  };
 
-      setEnrolledPlayers((tournamentData.registeredPlayers || []).map(getPlayerDetails));
-      setPendingPlayers((tournamentData.pendingPlayers || []).map(getPlayerDetails));
-      
-      const { data: matchesData } = await supabase.from('matches').select('*').eq('tournament_id', tournamentData.id);
-      if (matchesData) setTournamentMatches(matchesData as Match[]);
-      
-      const { data: upcomingData } = await supabase.from('upcoming_matches').select('*').eq('tournament_id', tournamentData.id);
-      if(upcomingData) setTournamentUpcoming(upcomingData as UpcomingMatch[]);
-      
-      const { data: liveData } = await supabase.from('live_matches').select('*').eq('tournament_id', tournamentData.id);
-      if(liveData) setTournamentLive(liveData);
-    };
-
+  useEffect(() => {
     fetchTournamentData();
 
     // Still need local storage for rules until migrated
     const storedRules = getFromStorage<string[]>('tournamentRules', []);
     setPredefinedRules(storedRules);
+    
+    const tournamentsSubscription = supabase
+      .channel(`tournaments:${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${id}` }, (payload) => {
+        fetchTournamentData();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(tournamentsSubscription);
+    };
 
   }, [id, toast]);
 
@@ -142,7 +161,7 @@ export default function TournamentDetailsPage() {
         return;
     }
 
-    const newPendingPlayers = [...(tournament.pendingPlayers || []), currentUser.email];
+    const newPendingPlayers = [...(tournament.pendingPlayers || []), currentUser.name];
     const { data, error } = await supabase.from('tournaments').update({ pendingPlayers: newPendingPlayers }).eq('id', tournament.id).select().single();
 
     if(error) {
@@ -151,66 +170,51 @@ export default function TournamentDetailsPage() {
     }
 
     if(data) {
-      setTournament(data);
+      setTournament(data as Tournament);
       setHasApplied(true);
       toast({ title: "Application Sent!", description: `Your application for "${tournament?.name}" is pending approval.` });
     }
   }
 
-  const handleApproval = (playerEmail: string, isApproved: boolean) => {
-    // This function will need to be updated once notifications are migrated
+  const handleApproval = async (playerName: string, isApproved: boolean) => {
     if (!tournament) return;
-    const tournaments = getFromStorage<Tournament[]>('tournaments', []);
-    const tournamentIndex = tournaments.findIndex(t => t.id === tournament.id);
 
-    if (tournamentIndex !== -1) {
-        const currentTournament = tournaments[tournamentIndex];
-        const updatedPending = (currentTournament.pendingPlayers || []).filter(email => email !== playerEmail);
-        let updatedRegistered = currentTournament.registeredPlayers || [];
+    const updatedPending = (tournament.pendingPlayers || []).filter(name => name !== playerName);
+    let updatedRegistered = tournament.registeredPlayers || [];
 
-        if (isApproved) {
-            updatedRegistered = [...updatedRegistered, playerEmail];
-        }
+    if (isApproved) {
+        updatedRegistered = [...updatedRegistered, playerName];
+    }
 
-        const updatedTournament = {
-            ...currentTournament,
-            pendingPlayers: updatedPending,
-            registeredPlayers: updatedRegistered
-        };
+    const {data, error} = await supabase.from('tournaments').update({
+        pendingPlayers: updatedPending,
+        registeredPlayers: updatedRegistered
+    }).eq('id', tournament.id).select().single();
 
-        tournaments[tournamentIndex] = updatedTournament;
-        saveToStorage('tournaments', tournaments);
+    if (error) {
+        toast({ variant: "destructive", title: "Error", description: "Could not process application." });
+        return;
+    }
 
-        setTournament(updatedTournament);
-        setEditedTournament(updatedTournament ? {...updatedTournament} : null);
-
-        const allPlayers = getFromStorage<Player[]>('players', []);
-        const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-        const getPlayerDetails = (email: string) => {
-            const user = allUsers.find(u => u.email === email);
-            const player = allPlayers.find(p => p.name.toLowerCase() === user?.name.toLowerCase());
-            return {
-                id: player?.id || 0,
-                name: user?.name || 'Unknown User',
-                avatar: player?.avatar || '',
-                initials: player?.initials || 'UU',
-                email: email,
+    if(data) {
+        setTournament(data as Tournament);
+        setEditedTournament(data as Tournament);
+        const playerToNotify = allPlayers.find(p => p.name === playerName);
+        
+        // This notification logic still uses local storage.
+        // A full migration would require a notifications table in Supabase.
+        if (playerToNotify) {
+            const userNotifications = getFromStorage<Notification[]>(`notifications_${playerToNotify.name}`, []); // Using name as a key for now
+            const newNotification: Notification = {
+              id: Date.now().toString(),
+              title: `Application ${isApproved ? 'Approved' : 'Rejected'}`,
+              description: `Your application for the "${tournament.name}" tournament has been ${isApproved ? 'approved' : 'rejected'}.`,
+              read: false,
+              date: new Date().toISOString(),
             };
-        };
+            saveToStorage(`notifications_${playerToNotify.name}`, [newNotification, ...userNotifications]);
+        }
         
-        setPendingPlayers(updatedPending.map(getPlayerDetails));
-        setEnrolledPlayers(updatedRegistered.map(getPlayerDetails));
-        
-        const userNotifications = getFromStorage<Notification[]>(`notifications_${playerEmail}`, []);
-        const newNotification: Notification = {
-          id: Date.now().toString(),
-          title: `Application ${isApproved ? 'Approved' : 'Rejected'}`,
-          description: `Your application for the "${tournament.name}" tournament has been ${isApproved ? 'approved' : 'rejected'}.`,
-          read: false,
-          date: new Date().toISOString(),
-        };
-        saveToStorage(`notifications_${playerEmail}`, [newNotification, ...userNotifications]);
-
         toast({
             title: isApproved ? "Player Approved" : "Player Rejected",
             description: `The application has been processed.`,
@@ -218,16 +222,24 @@ export default function TournamentDetailsPage() {
     }
   }
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!editedTournament) return;
-    const tournaments = getFromStorage<Tournament[]>('tournaments', []);
-    const tournamentIndex = tournaments.findIndex(t => t.id === editedTournament.id);
-    if (tournamentIndex !== -1) {
-      tournaments[tournamentIndex] = editedTournament;
-      saveToStorage('tournaments', tournaments);
-      setTournament(editedTournament);
-      if (editedTournament.winner) {
-        const winner = allPlayers.find(p => p.name === editedTournament.winner);
+    const { data, error } = await supabase
+      .from('tournaments')
+      .update(editedTournament)
+      .eq('id', editedTournament.id)
+      .select()
+      .single();
+
+    if(error) {
+      toast({ variant: "destructive", title: "Error", description: "Could not save changes." });
+      return;
+    }
+    
+    if(data) {
+      setTournament(data as Tournament);
+      if ((data as Tournament).winner) {
+        const winner = allPlayers.find(p => p.name === (data as Tournament).winner);
         setWinnerPlayer(winner || null);
       }
       toast({
@@ -261,22 +273,18 @@ export default function TournamentDetailsPage() {
     setEditedTournament({ ...editedTournament, rules: updatedRules });
   };
   
-  const handleGenerateBracket = () => {
+  const handleGenerateBracket = async () => {
      if (!tournament || tournament.format !== 'Knockout' || !tournament.registeredPlayers) {
         toast({ variant: 'destructive', title: "Error", description: "Cannot generate bracket for this tournament."});
         return;
     }
 
-    const allUsers = getFromStorage<{name:string, email:string}[]>("users", []);
     const shuffledPlayers = [...(tournament.registeredPlayers || [])].sort(() => 0.5 - Math.random());
     
     const firstRoundMatchups: Matchup[] = [];
     for (let i = 0; i < shuffledPlayers.length; i += 2) {
-        const player1Email = shuffledPlayers[i];
-        const player2Email = shuffledPlayers[i+1]; // Might be undefined for odd number of players
-
-        const player1Name = allUsers.find(u => u.email === player1Email)?.name;
-        const player2Name = player2Email ? allUsers.find(u => u.email === player2Email)?.name : undefined;
+        const player1Name = shuffledPlayers[i];
+        const player2Name = shuffledPlayers[i+1]; // Might be undefined for odd number of players
 
         firstRoundMatchups.push({
             id: i / 2,
@@ -304,21 +312,17 @@ export default function TournamentDetailsPage() {
         roundNum++;
     }
 
-    const updatedTournament: Tournament = {
-        ...tournament,
-        bracket: bracket,
-        status: "In Progress"
-    };
-    
-    const tournaments = getFromStorage<Tournament[]>('tournaments', []);
-    const tournamentIndex = tournaments.findIndex(t => t.id === tournament.id);
-    if(tournamentIndex > -1){
-        tournaments[tournamentIndex] = updatedTournament;
-        saveToStorage('tournaments', tournaments);
-        setTournament(updatedTournament);
-        setEditedTournament(updatedTournament);
-        toast({title: "Bracket Generated!", description: "The tournament is now In Progress."});
+    const { error } = await supabase
+      .from('tournaments')
+      .update({ bracket: bracket, status: 'In Progress' })
+      .eq('id', tournament.id);
+
+    if (error) {
+       toast({variant: 'destructive', title: "Error", description: "Could not generate bracket."});
+       return;
     }
+
+    toast({title: "Bracket Generated!", description: "The tournament is now In Progress."});
   };
 
 
@@ -331,8 +335,8 @@ export default function TournamentDetailsPage() {
   }
 
   const isAdmin = !!currentUser?.isAdmin;
-  const applicationStatus = tournament.registeredPlayers?.includes(currentUser?.email || '') ? 'Approved' : 
-                            tournament.pendingPlayers?.includes(currentUser?.email || '') ? 'Pending' : 'Not Applied';
+  const applicationStatus = tournament.registeredPlayers?.includes(currentUser?.name || '') ? 'Approved' : 
+                            tournament.pendingPlayers?.includes(currentUser?.name || '') ? 'Pending' : 'Not Applied';
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8">
@@ -485,7 +489,7 @@ export default function TournamentDetailsPage() {
         </Card>
       )}
       
-      {tournament.format === 'Knockout' && tournament.bracket && (
+      {tournament.format === 'Knockout' && tournament.bracket && tournament.bracket.length > 0 && (
           <Card>
               <CardHeader>
                   <CardTitle>Tournament Bracket</CardTitle>
@@ -635,10 +639,10 @@ export default function TournamentDetailsPage() {
                                   </Link>
                               </div>
                               <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" onClick={() => handleApproval(player.email, true)}>
+                                  <Button size="sm" variant="outline" onClick={() => handleApproval(player.name, true)}>
                                       <Check className="h-4 w-4 mr-2"/> Approve
                                   </Button>
-                                  <Button size="sm" variant="destructive" onClick={() => handleApproval(player.email, false)}>
+                                  <Button size="sm" variant="destructive" onClick={() => handleApproval(player.name, false)}>
                                       <X className="h-4 w-4 mr-2"/> Reject
                                   </Button>
                               </div>

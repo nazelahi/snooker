@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight, Camera, Megaphone } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
-import type { LiveMatch, Tournament } from "@/app/tournaments/page";
+import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -38,7 +38,7 @@ import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { Match, UpcomingMatch } from "@/types/matches";
+import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 
 interface Notice {
   id: string;
@@ -87,13 +87,14 @@ export default function DashboardPage() {
 
     const { data: liveData } = await supabase.from('live_matches').select('*');
     if(liveData) setLiveMatches(liveData);
+
+    const { data: tournamentsData } = await supabase.from('tournaments').select('*');
+    if (tournamentsData) setTournaments(tournamentsData);
     
     // Remaining data from localStorage (to be migrated)
-    const storedTournaments = getFromStorage('tournaments', []);
     const storedNotices = getFromStorage('notices', initialNotices);
     
     setNotices(storedNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    setTournaments(storedTournaments);
   }
 
   useEffect(() => {
@@ -102,9 +103,6 @@ export default function DashboardPage() {
     // Set initial values if they don't exist
     if (localStorage.getItem('notices') === null) {
         saveToStorage('notices', initialNotices);
-    }
-    if (localStorage.getItem('tournaments') === null) {
-        saveToStorage('tournaments', []);
     }
 
     const handleStorageChange = (event: StorageEvent) => {
@@ -153,7 +151,7 @@ export default function DashboardPage() {
                             <CarouselItem key={match.id}>
                                 <div className="p-1 rounded-lg">
                                     <div className="relative text-center mb-1">
-                                        <span className="text-xs text-muted-foreground">{match.tournamentName}</span>
+                                        <span className="text-xs text-muted-foreground">{match.tournament_name}</span>
                                         <div className="absolute right-0 top-0 flex items-center gap-2">
                                             <span className="relative flex h-2 w-2">
                                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>

@@ -81,20 +81,21 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("players");
   const { toast } = useToast();
   
+  const fetchAdminData = async () => {
+    const { data: playersData } = await supabase.from('players').select('*');
+    if (playersData) setPlayers(playersData);
+
+    const { data: tournamentsData } = await supabase.from('tournaments').select('*');
+    if (tournamentsData) setTournaments(tournamentsData as Tournament[]);
+
+    const { data: liveMatchesData } = await supabase.from('live_matches').select('*');
+    if (liveMatchesData) setLiveMatches(liveMatchesData as LiveMatch[]);
+
+    const { data: upcomingMatchesData } = await supabase.from('upcoming_matches').select('*');
+    if (upcomingMatchesData) setUpcomingMatches(upcomingMatchesData as UpcomingMatch[]);
+  }
+
   useEffect(() => {
-    async function fetchAdminData() {
-        const { data: playersData } = await supabase.from('players').select('*');
-        if (playersData) setPlayers(playersData);
-
-        const { data: tournamentsData } = await supabase.from('tournaments').select('*');
-        if (tournamentsData) setTournaments(tournamentsData);
-
-        const { data: liveMatchesData } = await supabase.from('live_matches').select('*');
-        if (liveMatchesData) setLiveMatches(liveMatchesData);
-
-        const { data: upcomingMatchesData } = await supabase.from('upcoming_matches').select('*');
-        if (upcomingMatchesData) setUpcomingMatches(upcomingMatchesData as UpcomingMatch[]);
-    }
     fetchAdminData();
 
     setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
@@ -295,7 +296,7 @@ export default function AdminSettings() {
     if (key === 'siteSettings' || key === 'tournamentRules' || key === 'notices') {
         saveToStorage(key, data);
     } else {
-        const { error } = await supabase.from(key).upsert(data);
+        const { error } = await supabase.from(key).upsert(data, { onConflict: 'id' });
         if (error) {
             toast({ variant: 'destructive', title: "Save Failed!", description: error.message });
             return;

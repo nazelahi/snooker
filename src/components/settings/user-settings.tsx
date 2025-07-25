@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Bell, Trophy, Trash2, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { format } from 'date-fns';
+import { supabase } from "@/lib/supabase";
 
 export default function UserSettings() {
   const [registeredTournaments, setRegisteredTournaments] = useState<Tournament[]>([]);
@@ -32,30 +33,35 @@ export default function UserSettings() {
   }
 
   useEffect(() => {
-    const userData = getFromStorage<{name: string, email: string} | null>('userData', null);
-    setCurrentUser(userData);
+    async function fetchData() {
+      const {data: {user}} = await supabase.auth.getUser();
+      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email! } : null);
 
-    if (userData) {
-      const allTournaments = getFromStorage<Tournament[]>('tournaments', []);
-      const userRegistered = allTournaments.filter(t => 
-        t.registeredPlayers?.includes(userData.email)
-      );
-      setRegisteredTournaments(userRegistered);
-      
-      const userPending = allTournaments.filter(t => 
-        t.pendingPlayers?.includes(userData.email)
-      );
-      setPendingTournaments(userPending);
+      if (user) {
+        const { data: allTournaments } = await supabase.from('tournaments').select('*');
+        if (allTournaments) {
+          const userRegistered = allTournaments.filter(t => 
+            t.registeredPlayers?.includes(user.user_metadata.full_name)
+          );
+          setRegisteredTournaments(userRegistered as Tournament[]);
+          
+          const userPending = allTournaments.filter(t => 
+            t.pendingPlayers?.includes(user.user_metadata.full_name)
+          );
+          setPendingTournaments(userPending as Tournament[]);
+        }
 
-      const notificationKey = getNotificationKey(userData);
-      const userNotifications = getFromStorage<Notification[]>(notificationKey, []);
-      setNotifications(userNotifications);
+        const notificationKey = getNotificationKey({email: user.email!});
+        const userNotifications = getFromStorage<Notification[]>(notificationKey, []);
+        setNotifications(userNotifications);
+      }
     }
+
+    fetchData();
     
     const handleStorageChange = () => {
-      const user = getFromStorage<{name: string, email: string} | null>('userData', null);
-      if (user) {
-        const notificationKey = getNotificationKey(user);
+      if(currentUser) {
+        const notificationKey = getNotificationKey(currentUser);
         const storedNotifications = getFromStorage<Notification[]>(notificationKey, []);
         setNotifications(storedNotifications);
       }
@@ -66,7 +72,7 @@ export default function UserSettings() {
       window.removeEventListener('storage', handleStorageChange);
     };
 
-  }, []);
+  }, [currentUser?.email]);
 
   const handleMarkAsRead = (id: string) => {
     if (!currentUser) return;

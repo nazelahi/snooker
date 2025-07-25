@@ -25,7 +25,7 @@ import { ResponsiveDialog } from "@/components/ui/dialog";
 interface AddTournamentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddTournament: (tournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers'>) => void;
+  onAddTournament: (tournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers' | 'bracket'>) => void;
 }
 
 export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: AddTournamentDialogProps) {

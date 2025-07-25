@@ -21,7 +21,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Radio, Pencil, Eye } from "lucide-react";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddTournamentDialog } from "@/components/add-tournament-dialog";
 import type { Player } from "@/app/players/page";
 import type { Round } from "@/components/tournament-bracket";
@@ -59,7 +58,7 @@ export default function TournamentsPage() {
         if (tournamentsData) setTournaments(tournamentsData);
 
         const { data: liveMatchesData } = await supabase.from('live_matches').select('*');
-        if (liveMatchesData) setLiveMatches(liveMatchesData);
+        if (liveMatchesData) setLiveMatches(liveMatchesData as LiveMatch[]);
 
         const { data: playersData } = await supabase.from('players').select('*');
         if(playersData) setPlayers(playersData);
@@ -70,16 +69,26 @@ export default function TournamentsPage() {
       fetchData();
     });
 
+    const tournamentsSubscription = supabase
+      .channel('custom-all-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, (payload) => {
+        fetchData();
+      })
+      .subscribe();
+
+
     return () => {
       authListener.subscription.unsubscribe();
+      supabase.removeChannel(tournamentsSubscription);
     }
   }, []);
 
-  const handleAddTournament = async (newTournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers'>) => {
+  const handleAddTournament = async (newTournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers' | 'bracket' >) => {
     const { data, error } = await supabase.from('tournaments').insert([{
       ...newTournament,
       pendingPlayers: [],
       registeredPlayers: [],
+      bracket: [],
     }]).select();
 
     if (data) {
