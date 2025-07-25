@@ -12,8 +12,8 @@ export async function GET(req: Request) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
+  const url = new URL(req.url);
+
   // URL to redirect to after sign in process completes
-  return NextResponse.redirect(new URL('/', req.url), {
-    status: 302,
-  });
+  return NextResponse.redirect(`${url.origin}/`);
 }
