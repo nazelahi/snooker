@@ -30,9 +30,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       } else {
         setIsAdmin(false);
       }
-    }
-    
-    const { data: { session } } = supabase.auth.getSession().then(({data}) => checkUserRole(data.session?.user ?? null));
+    };
+
+    const initializeUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      checkUserRole(session?.user ?? null);
+    };
+
+    initializeUser();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       checkUserRole(session?.user ?? null);
