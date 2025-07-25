@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
 
 
@@ -84,7 +84,7 @@ export default function PlayerProfilePage() {
     if (matchesData) {
       setMatchHistory(matchesData as Match[]);
     }
-  }, [supabase, id]);
+  }, [id]);
 
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export default function PlayerProfilePage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [id, fetchPlayerData, supabase]);
+  }, [id, fetchPlayerData]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
