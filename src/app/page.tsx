@@ -379,22 +379,19 @@ export default function DashboardPage() {
                         {notices.map((notice) => (
                              <CarouselItem key={notice.id} className="w-full">
                                 <div className="p-1">
-                                    <div className="p-4 rounded-lg bg-muted/50">
+                                    <div className="p-3 rounded-lg bg-muted/50">
                                         <div className="flex items-start gap-3">
-                                            <div className="hidden">
-                                                <Megaphone className="h-5 w-5 text-primary mt-0.5 shrink-0"/>
-                                            </div>
                                             <div>
-                                                <h3 className="font-semibold text-lg">{notice.title}</h3>
-                                                <p className="text-sm text-muted-foreground mt-1">{notice.content}</p>
+                                                <h3 className="font-semibold text-base">{notice.title}</h3>
+                                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{notice.content}</p>
                                                 <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
                                             </div>
                                         </div>
-                                        <Accordion type="single" collapsible className="w-full mt-2">
+                                        <Accordion type="single" collapsible className="w-full mt-1">
                                             <AccordionItem value="item-1" className="border-b-0">
-                                                <AccordionTrigger>
-                                                    <div className="flex items-center gap-2 text-sm">
-                                                        <MessageSquare className="h-4 w-4" />
+                                                <AccordionTrigger className="py-2">
+                                                    <div className="flex items-center gap-2 text-xs">
+                                                        <MessageSquare className="h-3 w-3" />
                                                         <span>Comments ({notice.comments?.length || 0})</span>
                                                     </div>
                                                 </AccordionTrigger>
