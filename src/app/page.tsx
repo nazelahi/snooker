@@ -95,6 +95,7 @@ export default function DashboardPage() {
   const [mediaApi, setMediaApi] = useState<CarouselApi>();
   const [noticeApi, setNoticeApi] = useState<CarouselApi>();
   const [upcomingTournamentsApi, setUpcomingTournamentsApi] = useState<CarouselApi>();
+  const [finishedTournamentsApi, setFinishedTournamentsApi] = useState<CarouselApi>();
   const [currentUser, setCurrentUser] = useState<{name: string; email: string; isAdmin?: boolean} | null>(null);
   const { toast } = useToast();
 
@@ -516,16 +517,19 @@ export default function DashboardPage() {
                   Finished Tournaments
               </CardTitle>
               <Carousel
+                  setApi={setFinishedTournamentsApi}
                   opts={{
                       align: "start",
+                      loop: true,
                   }}
+                  plugins={[Autoplay({ delay: 6000, stopOnInteraction: true })]}
                   className="w-full"
               >
-                  <CarouselContent className="-ml-2">
+                  <CarouselContent>
                       {finishedTournaments.map((tournament) => {
                         const winner = getPlayerAvatar(tournament.winner || '');
                         return (
-                          <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-1/3 pl-2">
+                          <CarouselItem key={tournament.id}>
                               <Card className="overflow-hidden">
                                 <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/50">
                                     <Trophy className="h-8 w-8 text-amber-400"/>
@@ -550,6 +554,7 @@ export default function DashboardPage() {
                         );
                       })}
                   </CarouselContent>
+                  {finishedTournaments.length > 1 && finishedTournamentsApi && <CarouselDots api={finishedTournamentsApi} />}
               </Carousel>
         </div>
       )}
