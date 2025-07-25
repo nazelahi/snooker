@@ -49,15 +49,14 @@ const UserMenu = () => {
     const fetchUserData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            const players = getFromStorage<Player[]>('players', []);
+            const { data: players } = await supabase.from('players').select('avatar,initials').eq('name', user.user_metadata.full_name).single();
             const fullName = user.user_metadata.full_name || user.email;
-            const player = players.find(p => p.name.toLowerCase() === fullName.toLowerCase());
             setCurrentUser({
                 name: fullName,
                 email: user.email!,
                 isAdmin: user.email === 'admin@gmail.com', // Placeholder logic
-                avatar: player?.avatar,
-                initials: player?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
+                avatar: players?.avatar,
+                initials: players?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
             });
         } else {
             setCurrentUser(null);
@@ -66,8 +65,13 @@ const UserMenu = () => {
     
     useEffect(() => {
         fetchUserData();
-        window.addEventListener('storage', fetchUserData);
-        return () => window.removeEventListener('storage', fetchUserData);
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+          fetchUserData();
+        });
+        
+        return () => {
+          authListener.subscription.unsubscribe();
+        };
     }, []);
 
 
@@ -144,32 +148,44 @@ export default function AppSidebar() {
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const [clubName, setClubName] = useState("CueScore");
 
-  const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if(user) {
-          setCurrentUser({
-              name: user.user_metadata.full_name || user.email!,
-              email: user.email!,
-              isAdmin: user.email === 'admin@gmail.com', // Placeholder
-          });
-      } else {
-          setCurrentUser(null);
-      }
-  }
-
   useEffect(() => {
-    fetchUser();
-    const siteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
-    setClubName(siteSettings.name);
+    const fetchUserAndSettings = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if(user) {
+            setCurrentUser({
+                name: user.user_metadata.full_name || user.email!,
+                email: user.email!,
+                isAdmin: user.email === 'admin@gmail.com', // Placeholder
+            });
+        } else {
+            setCurrentUser(null);
+        }
 
-    const handleStorageChange = () => {
-        fetchUser();
-        const newSiteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
-        setClubName(newSiteSettings.name);
+        const { data: settingsData } = await supabase.from('settings').select('value').eq('key', 'siteSettings').single();
+        if (settingsData?.value.name) {
+            setClubName(settingsData.value.name);
+        }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    fetchUserAndSettings();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        fetchUserAndSettings();
+    });
+
+    const settingsChannel = supabase
+      .channel('site-settings-sidebar')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'key=eq.siteSettings' },
+        (payload) => {
+          setClubName(payload.new.value.name);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      authListener.subscription.unsubscribe();
+      supabase.removeChannel(settingsChannel);
+    };
   }, []);
 
 

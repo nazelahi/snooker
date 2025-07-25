@@ -101,20 +101,21 @@ export default function AdminSettings() {
     
     const { data: noticesData } = await supabase.from('notices').select('*').order('date', { ascending: false });
     if (noticesData) setNotices(noticesData as Notice[]);
+
+    const { data: settingsData } = await supabase.from('settings').select('value').eq('key', 'siteSettings').single();
+    if (settingsData?.value) {
+      setSiteSettings(settingsData.value);
+      setLogoPreview(settingsData.value.logo);
+    }
+
+    const { data: rulesData } = await supabase.from('settings').select('value').eq('key', 'tournamentRules').single();
+    if(rulesData?.value){
+      setRules(rulesData.value);
+    }
   }
 
   useEffect(() => {
     fetchAdminData();
-
-    const storedSettings = getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."});
-    setSiteSettings(storedSettings);
-    setLogoPreview(storedSettings.logo);
-    
-    const storedRules = getFromStorage<string[]>("tournamentRules", []);
-    setRules(storedRules);
-    if(localStorage.getItem('tournamentRules') === null) {
-      saveToStorage('tournamentRules', []);
-    }
   }, []);
 
   const handlePlayerChange = (id: number, field: keyof Player, value: any) => {
@@ -305,9 +306,12 @@ export default function AdminSettings() {
 
   const handleSaveData = async (key: string, data: any, name: string) => {
     if (key === 'siteSettings' || key === 'tournamentRules') {
-        saveToStorage(key, data);
-        toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
-        setTimeout(() => window.dispatchEvent(new Event('storage')), 0); // Trigger storage event
+        const { error } = await supabase.from('settings').upsert({ key: key, value: data }, { onConflict: 'key' });
+        if (error) {
+            toast({ variant: 'destructive', title: "Save Failed!", description: error.message });
+        } else {
+            toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
+        }
     } else {
         const { error } = await supabase.from(key).upsert(data, { onConflict: 'id' });
         if (error) {

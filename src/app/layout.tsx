@@ -6,37 +6,63 @@ import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from '@/components/layout/app-layout';
 import { ThemeProvider } from '@/components/theme-provider';
 import { useState, useEffect } from 'react';
-import { getFromStorage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
+import { SiteLogoProvider } from '@/components/site-logo-provider';
+
+const defaultSettings = { 
+  name: 'CueScore', 
+  description: 'The ultimate snooker club management app.',
+  logo: null 
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [siteName, setSiteName] = useState("CueScore");
-  const [siteDescription, setSiteDescription] = useState("The ultimate snooker club management app.");
+  const [siteName, setSiteName] = useState(defaultSettings.name);
+  const [siteDescription, setSiteDescription] = useState(defaultSettings.description);
+  const [siteLogo, setSiteLogo] = useState<string | null>(defaultSettings.logo);
+
+  const fetchSiteSettings = async () => {
+    const { data } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'siteSettings')
+      .single();
+    
+    const settings = data?.value || defaultSettings;
+    setSiteName(settings.name);
+    setSiteDescription(settings.description);
+    setSiteLogo(settings.logo);
+  };
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      const settings = getFromStorage('siteSettings', { name: 'CueScore', description: 'The ultimate snooker club management app.' });
-      setSiteName(settings.name);
-      setSiteDescription(settings.description);
-    };
-
-    handleStorageChange(); // Initial call
+    fetchSiteSettings();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      // For now, we just trigger a storage event to make other components update
-      // In the future, this can be handled more elegantly with a global state manager
-      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+      // Refetch settings on auth change, as a new user might have different permissions
+      // or to ensure data is fresh after login/logout.
+      fetchSiteSettings();
     });
 
-    window.addEventListener('storage', handleStorageChange);
-    
+    const settingsChannel = supabase
+      .channel('site-settings-channel')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'key=eq.siteSettings' },
+        (payload) => {
+           const newSettings = payload.new.value;
+           setSiteName(newSettings.name);
+           setSiteDescription(newSettings.description);
+           setSiteLogo(newSettings.logo);
+        }
+      )
+      .subscribe();
+
     return () => {
       authListener.subscription.unsubscribe();
-      window.removeEventListener('storage', handleStorageChange);
+      supabase.removeChannel(settingsChannel);
     };
   }, []);
 
@@ -56,9 +82,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppLayout>
-            {children}
-          </AppLayout>
+          <SiteLogoProvider logoSrc={siteLogo}>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </SiteLogoProvider>
           <Toaster />
         </ThemeProvider>
       </body>

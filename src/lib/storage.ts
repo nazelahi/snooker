@@ -24,6 +24,8 @@ export function saveToStorage<T>(key: string, value: T) {
   try {
     const item = JSON.stringify(value);
     localStorage.setItem(key, item);
+    // Dispatch a storage event to notify other tabs/windows of the change.
+    window.dispatchEvent(new Event('storage'));
   } catch (e) {
     console.error(`Error saving to localStorage for key "${key}"`, e);
   }

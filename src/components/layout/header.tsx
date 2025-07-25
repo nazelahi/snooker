@@ -33,6 +33,7 @@ import { ThemeSwitcher } from "../theme-switcher";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { SiteLogo } from "../site-logo";
+import { useSiteLogo } from '../site-logo-provider';
 
 const initialUserNotifications: Notification[] = [
     { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
@@ -51,8 +52,8 @@ interface CurrentUser {
 export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [clubName, setClubName] = useState("CueScore");
   const router = useRouter();
+  const [siteName, setSiteName] = useState("CueScore");
 
   const getNotificationKey = (user: {email: string, isAdmin?: boolean} | null) => {
     if (!user) return 'notifications'; // Default for logged-out users
@@ -63,8 +64,6 @@ export default function Header() {
   const fetchUserData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-        // Here, you might fetch profile details from a 'profiles' table in Supabase
-        // For now, we'll use the user metadata and local player data
         const players = getFromStorage<Player[]>('players', []);
         const fullName = user.user_metadata.full_name || user.email;
         const player = players.find(p => p.name.toLowerCase() === fullName.toLowerCase());
@@ -72,8 +71,7 @@ export default function Header() {
         setCurrentUser({
             name: fullName,
             email: user.email!,
-            // You'll need a way to determine if a user is an admin, e.g., from a custom claim or a 'profiles' table
-            isAdmin: user.email === 'admin@gmail.com', // Placeholder logic
+            isAdmin: user.email === 'admin@gmail.com', 
             avatar: player?.avatar,
             initials: player?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
         });
@@ -83,20 +81,44 @@ export default function Header() {
   }
 
   useEffect(() => {
+    fetchUserData();
+    
+    const settingsChannel = supabase
+      .channel('site-settings-header')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'key=eq.siteSettings' },
+        (payload) => {
+           const newSettings = payload.new.value;
+           setSiteName(newSettings.name);
+        }
+      )
+      .subscribe();
+      
     const handleStorageChange = () => {
-        fetchUserData();
         const currentKey = getNotificationKey(currentUser);
         const stored = getFromStorage(currentKey, initialUserNotifications);
         setNotifications(stored.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-
-        const newSiteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
-        setClubName(newSiteSettings.name);
     };
-
-    handleStorageChange(); // Initial call
+    handleStorageChange();
+    
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        supabase.removeChannel(settingsChannel);
+    }
   }, [currentUser?.email]);
+
+  useEffect(() => {
+    const fetchInitialSettings = async () => {
+        const { data } = await supabase.from('settings').select('value').eq('key', 'siteSettings').single();
+        if (data?.value) {
+            setSiteName(data.value.name);
+        }
+    };
+    fetchInitialSettings();
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -138,7 +160,7 @@ export default function Header() {
       <div className="flex-1 text-center md:text-left">
         <Link href="/" className="flex items-center justify-center md:justify-start gap-2 text-xl font-semibold md:hidden">
           <SiteLogo className="h-7 w-7 text-primary" />
-          <span>{clubName}</span>
+          <span>{siteName}</span>
         </Link>
       </div>
 
