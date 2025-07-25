@@ -24,7 +24,7 @@ import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 import type { Notification } from "@/types/notifications";
 import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -291,6 +291,9 @@ const CommentThread = ({
                     </div>
                 </DialogTrigger>
                 <DialogContent className="max-w-3xl p-0">
+                    <DialogHeader>
+                        <DialogTitle className="sr-only">Comment Image</DialogTitle>
+                    </DialogHeader>
                    <Image
                         src={comment.image}
                         alt="Comment image full view"
@@ -803,5 +806,7 @@ export default function MatchDetailsPage() {
     
 
 
+
+    
 
     
