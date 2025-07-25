@@ -66,7 +66,8 @@ export default function LoginPage() {
             description: "You have been logged in.",
         });
         
-        window.location.href = '/';
+        router.push('/');
+        router.refresh();
     }
     setLoading(false);
   };
