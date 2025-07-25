@@ -89,6 +89,8 @@ export default function DashboardPage() {
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [recentToShow, setRecentToShow] = useState(5);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const autoplay = useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
+
 
   const fetchDashboardData = () => {
     const storedPlayers = getFromStorage('players', initialPlayers);
@@ -181,11 +183,7 @@ export default function DashboardPage() {
                         align: "start",
                         loop: true,
                     }}
-                    plugins={[
-                        Autoplay({
-                        delay: 5000,
-                        }),
-                    ]}
+                    plugins={[autoplay.current]}
                     className="w-full relative"
                     >
                     <CarouselContent>
@@ -330,26 +328,43 @@ export default function DashboardPage() {
                   <Radio className="text-primary" />
                   In Progress Tournaments
               </CardTitle>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {inProgressTournaments.slice(0,3).map((tournament) => (
-                    <Card key={tournament.id} className="overflow-hidden">
-                        <CardHeader className="p-0">
-                            <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                            <h3 className="text-lg font-bold">{tournament.name}</h3>
-                            <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
-                        </CardContent>
-                        <CardFooter className="p-4 bg-muted/50">
-                            <Button variant="outline" asChild>
-                               <Link href={`/tournaments/${tournament.id}`}>
-                                 View Details <ArrowRight className="ml-2 h-4 w-4"/>
-                               </Link>
-                            </Button>
-                        </CardFooter>
-                     </Card>
-                ))}
-              </div>
+               <Carousel
+                    opts={{
+                        align: "start",
+                    }}
+                    plugins={[
+                        Autoplay({
+                        delay: 4500,
+                        }),
+                    ]}
+                    className="w-full relative"
+                >
+                    <CarouselContent className="-ml-4">
+                        {inProgressTournaments.map((tournament) => (
+                            <CarouselItem key={tournament.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                                <Card className="overflow-hidden h-full flex flex-col">
+                                    <CardHeader className="p-0">
+                                        <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                                    </CardHeader>
+                                    <CardContent className="p-4 flex-grow">
+                                        <h3 className="text-lg font-bold">{tournament.name}</h3>
+                                        <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
+                                    </CardContent>
+                                    <CardFooter className="p-4 bg-muted/50">
+                                        <Button variant="outline" asChild>
+                                        <Link href={`/tournaments/${tournament.id}`}>
+                                            View Details <ArrowRight className="ml-2 h-4 w-4"/>
+                                        </Link>
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="hidden lg:flex" />
+                    <CarouselNext className="hidden lg:flex" />
+                    <CarouselDots />
+                </Carousel>
         </div>
       )}
       
@@ -359,33 +374,50 @@ export default function DashboardPage() {
                   <Trophy className="text-primary" />
                   Finished Tournaments
               </CardTitle>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {finishedTournaments.slice(0,3).map((tournament) => {
-                  const winner = getPlayerAvatar(tournament.winner || '');
-                  return (
-                    <Card key={tournament.id} className="overflow-hidden">
-                      <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/50">
-                          <Trophy className="h-8 w-8 text-amber-400"/>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Winner</p>
-                            <h3 className="text-lg font-bold"><PlayerLink name={tournament.winner!} /></h3>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                            <h3 className="text-md font-semibold">{tournament.name}</h3>
-                            <p className="text-sm text-muted-foreground">{tournament.format}</p>
-                        </CardContent>
-                        <CardFooter className="p-4">
-                            <Button variant="outline" asChild>
-                               <Link href={`/tournaments/${tournament.id}`}>
-                                 View Results <ArrowRight className="ml-2 h-4 w-4"/>
-                               </Link>
-                            </Button>
-                        </CardFooter>
-                     </Card>
-                  );
-                })}
-              </div>
+              <Carousel
+                    opts={{
+                        align: "start",
+                    }}
+                    plugins={[
+                        Autoplay({
+                        delay: 5000,
+                        }),
+                    ]}
+                    className="w-full relative"
+                >
+                    <CarouselContent className="-ml-4">
+                        {finishedTournaments.map((tournament) => {
+                          const winner = getPlayerAvatar(tournament.winner || '');
+                          return (
+                            <CarouselItem key={tournament.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                                <Card className="overflow-hidden h-full flex flex-col">
+                                    <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/50">
+                                        <Trophy className="h-8 w-8 text-amber-400"/>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">Winner</p>
+                                            <h3 className="text-lg font-bold"><PlayerLink name={tournament.winner!} /></h3>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-4 flex-grow">
+                                        <h3 className="text-md font-semibold">{tournament.name}</h3>
+                                        <p className="text-sm text-muted-foreground">{tournament.format}</p>
+                                    </CardContent>
+                                    <CardFooter className="p-4">
+                                        <Button variant="outline" asChild>
+                                        <Link href={`/tournaments/${tournament.id}`}>
+                                            View Results <ArrowRight className="ml-2 h-4 w-4"/>
+                                        </Link>
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            </CarouselItem>
+                          );
+                        })}
+                    </CarouselContent>
+                    <CarouselPrevious className="hidden lg:flex" />
+                    <CarouselNext className="hidden lg:flex" />
+                    <CarouselDots />
+                </Carousel>
         </div>
       )}
       
