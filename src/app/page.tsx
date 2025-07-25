@@ -251,18 +251,16 @@ export default function DashboardPage() {
             >
                 <CarouselContent>
                     {matchMedia.map((media, index) => (
-                        <CarouselItem key={index}>
+                        <CarouselItem key={index} className="basis-full">
                              <Card className="overflow-hidden">
-                                <CardHeader className="p-0">
+                                <CardHeader className="p-0 relative">
                                     <Image src={media.mediaUrl} width={600} height={400} alt={`Media from match ${media.id}`} className="w-full h-48 md:h-64 object-cover" />
-                                </CardHeader>
-                                <CardFooter className="p-4 bg-muted/50">
-                                    <Button variant="outline" asChild>
+                                    <Button variant="outline" asChild className="absolute top-4 right-4">
                                         <Link href={`/match/${media.id}`}>
                                             View Match <ArrowRight className="ml-2 h-4 w-4"/>
                                         </Link>
                                     </Button>
-                                </CardFooter>
+                                </CardHeader>
                             </Card>
                         </CarouselItem>
                     ))}
@@ -337,20 +335,18 @@ export default function DashboardPage() {
                         {inProgressTournaments.map((tournament) => (
                             <CarouselItem key={tournament.id} className="pl-4 basis-full">
                                 <Card className="overflow-hidden h-full flex flex-col">
-                                    <CardHeader className="p-0">
+                                    <CardHeader className="p-0 relative">
                                         <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                                        <Button variant="outline" asChild className="absolute top-4 right-4">
+                                            <Link href={`/tournaments/${tournament.id}`}>
+                                                View Details <ArrowRight className="ml-2 h-4 w-4"/>
+                                            </Link>
+                                        </Button>
                                     </CardHeader>
                                     <CardContent className="p-4 flex-grow">
                                         <h3 className="text-lg font-bold">{tournament.name}</h3>
                                         <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
                                     </CardContent>
-                                    <CardFooter className="p-4 bg-muted/50">
-                                        <Button variant="outline" asChild>
-                                        <Link href={`/tournaments/${tournament.id}`}>
-                                            View Details <ArrowRight className="ml-2 h-4 w-4"/>
-                                        </Link>
-                                        </Button>
-                                    </CardFooter>
                                 </Card>
                             </CarouselItem>
                         ))}
@@ -620,5 +616,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
