@@ -200,11 +200,11 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="grid grid-cols-3 items-center text-center">
                                     <div className="flex items-center justify-end gap-2">
-                                        <div className="font-bold text-sm text-right"><PlayerLink name={match.player1} /></div>
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                             <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
                                         </Avatar>
+                                        <div className="font-bold text-sm text-right"><PlayerLink name={match.player1} /></div>
                                     </div>
 
                                     <div className="text-xl md:text-2xl font-bold">
@@ -214,11 +214,11 @@ export default function DashboardPage() {
                                     </div>
 
                                     <div className="flex items-center justify-start gap-2">
+                                        <div className="font-bold text-sm text-left"><PlayerLink name={match.player2} /></div>
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
                                             <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
                                         </Avatar>
-                                        <div className="font-bold text-sm text-left"><PlayerLink name={match.player2} /></div>
                                     </div>
                                     </div>
                                 </div>
