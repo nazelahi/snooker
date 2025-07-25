@@ -22,11 +22,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, List, LayoutGrid, Search } from "lucide-react";
+import { PlusCircle, List, LayoutGrid, Search, ArrowLeftRight } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
+import type { Achievement } from "@/types/achievements";
 
 export interface Player {
   id: number;
@@ -40,6 +41,7 @@ export interface Player {
   wins?: number;
   losses?: number;
   averageBreak?: number;
+  achievements?: Achievement[];
 }
 
 const initialPlayers: Player[] = [
@@ -144,6 +146,12 @@ export default function PlayersPage() {
             <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')} className="shrink-0">
                 <LayoutGrid className="h-5 w-5" />
             </Button>
+             <Button asChild className="hidden md:flex shrink-0">
+                <Link href="/compare">
+                    <ArrowLeftRight className="mr-2 h-4 w-4"/>
+                    Compare
+                </Link>
+            </Button>
             <Button onClick={() => setIsAddPlayerOpen(true)} className="hidden md:flex shrink-0">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Player
@@ -237,14 +245,27 @@ export default function PlayersPage() {
             </div>
         )}
 
-      <Button
-        onClick={() => setIsAddPlayerOpen(true)}
-        className="md:hidden fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
-        size="icon"
-      >
-        <PlusCircle className="h-6 w-6" />
-        <span className="sr-only">Add Player</span>
-      </Button>
+      <div className="md:hidden fixed bottom-20 right-4 flex flex-col gap-2">
+         <Button
+            onClick={() => setIsAddPlayerOpen(true)}
+            className="h-14 w-14 rounded-full shadow-lg"
+            size="icon"
+          >
+            <PlusCircle className="h-6 w-6" />
+            <span className="sr-only">Add Player</span>
+          </Button>
+          <Button
+            asChild
+            className="h-14 w-14 rounded-full shadow-lg"
+            size="icon"
+            variant="outline"
+          >
+             <Link href="/compare">
+                <ArrowLeftRight className="h-6 w-6"/>
+                <span className="sr-only">Compare Players</span>
+            </Link>
+          </Button>
+      </div>
 
       <AddPlayerDialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen} onAddPlayer={handleAddPlayer} />
     </div>
