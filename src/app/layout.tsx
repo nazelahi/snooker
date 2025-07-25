@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { useState, useEffect } from 'react';
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { SiteLogoProvider } from '@/components/site-logo-provider';
+import { useRouter } from 'next/navigation';
 
 const defaultSettings = { 
   name: 'CueScore', 
@@ -24,6 +25,7 @@ export default function RootLayout({
   const [siteDescription, setSiteDescription] = useState(defaultSettings.description);
   const [siteLogo, setSiteLogo] = useState<string | null>(defaultSettings.logo);
   const supabase = createSupabaseBrowserClient();
+  const router = useRouter();
 
   const fetchSiteSettings = async () => {
     const { data } = await supabase
@@ -43,6 +45,9 @@ export default function RootLayout({
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       fetchSiteSettings();
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        router.refresh();
+      }
     });
 
     const settingsChannel = supabase
