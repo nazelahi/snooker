@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -483,7 +482,7 @@ export default function MyStatsPage() {
 
        <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle>
             <Swords />
             My Match History
           </CardTitle>
@@ -580,6 +579,7 @@ export default function MyStatsPage() {
     
 
     
+
 
 
 
