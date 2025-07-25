@@ -445,10 +445,9 @@ export default function MatchDetailsPage() {
                                         <div className="flex items-center gap-2">
                                           <Input id="comment-image-upload" type="file" accept="image/*" onChange={handleCommentImageUpload} className="hidden" />
                                           <Label htmlFor="comment-image-upload">
-                                            <Button variant="ghost" asChild>
-                                                <div className="cursor-pointer flex items-center gap-2">
+                                            <Button variant="ghost" size="icon" asChild>
+                                                <div className="cursor-pointer">
                                                   <Paperclip className="h-4 w-4" />
-                                                  <span className="hidden sm:inline">Attach Image</span>
                                                 </div>
                                             </Button>
                                           </Label>
