@@ -19,12 +19,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { ArrowLeft, Swords, Calendar, Upload, MessageSquare } from "lucide-react";
+import { ArrowLeft, Swords, Calendar, Upload, MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react";
 import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 import type { Notification } from "@/types/notifications";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Comment {
     id: string;
@@ -33,6 +34,8 @@ interface Comment {
     content: string;
     date: string;
     mentions: string[]; // array of emails
+    likes?: string[]; // array of user emails
+    dislikes?: string[]; // array of user emails
 }
 
 interface Match {
@@ -175,7 +178,9 @@ export default function MatchDetailsPage() {
         authorEmail: currentUser.email,
         content: newComment,
         date: new Date().toISOString(),
-        mentions: mentionedEmails
+        mentions: mentionedEmails,
+        likes: [],
+        dislikes: [],
     };
 
     setMatch(prevMatch => {
@@ -214,6 +219,59 @@ export default function MatchDetailsPage() {
 
     setNewComment("");
     toast({ title: "Comment Posted", description: "Your comment has been added to the match." });
+  };
+  
+  const handleCommentReaction = (commentId: string, reaction: 'like' | 'dislike') => {
+    if (!currentUser || !match) return;
+
+    setMatch(prevMatch => {
+        if (!prevMatch) return null;
+
+        const updatedComments = (prevMatch.comments || []).map(comment => {
+            if (comment.id === commentId) {
+                const likes = comment.likes || [];
+                const dislikes = comment.dislikes || [];
+                const userEmail = currentUser.email;
+
+                const hasLiked = likes.includes(userEmail);
+                const hasDisliked = dislikes.includes(userEmail);
+
+                let newLikes = [...likes];
+                let newDislikes = [...dislikes];
+
+                if (reaction === 'like') {
+                    if (hasLiked) {
+                        newLikes = newLikes.filter(email => email !== userEmail);
+                    } else {
+                        newLikes.push(userEmail);
+                        newDislikes = newDislikes.filter(email => email !== userEmail);
+                    }
+                } else { // dislike
+                    if (hasDisliked) {
+                        newDislikes = newDislikes.filter(email => email !== userEmail);
+                    } else {
+                        newDislikes.push(userEmail);
+                        newLikes = newLikes.filter(email => email !== userEmail);
+                    }
+                }
+                
+                return { ...comment, likes: newLikes, dislikes: newDislikes };
+            }
+            return comment;
+        });
+
+        const updatedMatch = { ...prevMatch, comments: updatedComments };
+
+        const allMatches = getFromStorage<Match[]>('recentResults', []);
+        const matchIndex = allMatches.findIndex(m => m.id === updatedMatch.id);
+        if (matchIndex > -1) {
+            allMatches[matchIndex] = updatedMatch;
+            saveToStorage('recentResults', allMatches);
+            // No need for a full storage event dispatch here, local state is enough
+        }
+
+        return updatedMatch;
+    });
   };
 
 
@@ -362,6 +420,9 @@ export default function MatchDetailsPage() {
                 <div className="space-y-4">
                     {(match.comments || []).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(comment => {
                         const author = allPlayers.find(p => p.name === comment.authorName);
+                        const hasLiked = currentUser && (comment.likes || []).includes(currentUser.email);
+                        const hasDisliked = currentUser && (comment.dislikes || []).includes(currentUser.email);
+
                         return(
                             <div key={comment.id} className="flex items-start gap-4">
                                 <Avatar>
@@ -373,7 +434,29 @@ export default function MatchDetailsPage() {
                                         <span className="font-semibold">{comment.authorName}</span>
                                         <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.date), { addSuffix: true })}</span>
                                     </div>
-                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.content}</p>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">{comment.content}</p>
+                                    {currentUser && (
+                                        <div className="flex items-center gap-4 mt-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleCommentReaction(comment.id, 'like')}
+                                                className={cn("flex items-center gap-1 text-muted-foreground px-2", { "text-primary": hasLiked })}
+                                            >
+                                                <ThumbsUp className="h-4 w-4" />
+                                                <span>{(comment.likes || []).length}</span>
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleCommentReaction(comment.id, 'dislike')}
+                                                className={cn("flex items-center gap-1 text-muted-foreground px-2", { "text-destructive": hasDisliked })}
+                                            >
+                                                <ThumbsDown className="h-4 w-4" />
+                                                <span>{(comment.dislikes || []).length}</span>
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )
