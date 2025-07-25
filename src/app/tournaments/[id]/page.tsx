@@ -14,9 +14,9 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
-import type { Tournament } from "@/app/tournaments/page";
+import type { Tournament, LiveMatch } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
-import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList, Trophy } from "lucide-react";
+import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList, Trophy, Radio } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -64,6 +64,7 @@ export default function TournamentDetailsPage() {
   const [predefinedRules, setPredefinedRules] = useState<string[]>([]);
   const [tournamentMatches, setTournamentMatches] = useState<Match[]>([]);
   const [tournamentUpcoming, setTournamentUpcoming] = useState<UpcomingMatch[]>([]);
+  const [tournamentLive, setTournamentLive] = useState<LiveMatch[]>([]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [winnerPlayer, setWinnerPlayer] = useState<Player | null>(null);
 
@@ -123,6 +124,9 @@ export default function TournamentDetailsPage() {
 
             const allUpcomingMatches = getFromStorage<UpcomingMatch[]>('upcomingMatches', []);
             setTournamentUpcoming(allUpcomingMatches.filter(m => m.tournamentId === foundTournament.id));
+            
+            const allLiveMatches = getFromStorage<LiveMatch[]>('liveMatches', []);
+            setTournamentLive(allLiveMatches.filter(m => m.tournamentId === foundTournament.id));
       }
     }
   }, [id]);
@@ -132,7 +136,7 @@ export default function TournamentDetailsPage() {
     return player ? {avatar: player.avatar, initials: player.initials, id: player.id} : {avatar: '', initials: name.split(' ').map(n=>n[0]).join(''), id: null};
   }
 
-  const PlayerLink = ({name}: {name: string}) => {
+  const PlayerLink = ({name, className}: {name: string, className?: string}) => {
     const player = getPlayerAvatar(name);
     if (!player.id) {
         return <span className="font-medium">{name}</span>;
@@ -445,6 +449,48 @@ export default function TournamentDetailsPage() {
         </Card>
       )}
 
+      {tournamentLive.length > 0 && (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Radio className="text-primary animate-pulse" />
+                    Live Matches
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ul className="space-y-4">
+                {tournamentLive.map((match) => (
+                    <li key={match.id} className="p-4 rounded-lg bg-muted/50">
+                        <div className="grid grid-cols-3 items-center text-center">
+                          <div className="flex items-center justify-end gap-2 md:gap-4">
+                              <div className="font-bold text-lg text-right"><PlayerLink name={match.player1} /></div>
+                              <Avatar>
+                                  <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                                  <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
+                              </Avatar>
+                          </div>
+
+                          <div className="text-2xl md:text-4xl font-bold">
+                              <span className="text-primary">{match.score1}</span>
+                              <span className="mx-2 md:mx-4">-</span>
+                              <span>{match.score2}</span>
+                          </div>
+
+                          <div className="flex items-center justify-start gap-2 md:gap-4">
+                              <Avatar>
+                                  <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                                  <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
+                              </Avatar>
+                              <div className="font-bold text-lg text-left"><PlayerLink name={match.player2} /></div>
+                          </div>
+                        </div>
+                    </li>
+                ))}
+                </ul>
+            </CardContent>
+        </Card>
+      )}
+
       {tournamentMatches.length > 0 && (
           <Card>
             <CardHeader>
@@ -579,3 +625,5 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
+
+    
