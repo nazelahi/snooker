@@ -187,38 +187,38 @@ export default function DashboardPage() {
                     <CarouselContent>
                         {liveMatches.map((match) => (
                             <CarouselItem key={match.id}>
-                                <div className="p-4 rounded-lg">
+                                <div className="p-3 rounded-lg">
                                     <div className="relative text-center mb-2">
-                                        <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
+                                        <span className="text-xs text-muted-foreground">{match.tournamentName}</span>
                                         <div className="absolute right-0 top-0 flex items-center gap-2">
-                                            <span className="relative flex h-3 w-3">
+                                            <span className="relative flex h-2 w-2">
                                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                                             </span>
-                                            <span className="text-sm font-medium text-green-400">Live</span>
+                                            <span className="text-xs font-medium text-green-400">Live</span>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-3 items-center text-center">
-                                    <div className="flex items-center justify-end gap-2 md:gap-4">
-                                        <div className="font-bold text-base text-right"><PlayerLink name={match.player1} /></div>
-                                        <Avatar>
+                                    <div className="flex items-center justify-end gap-2">
+                                        <div className="font-bold text-sm text-right"><PlayerLink name={match.player1} /></div>
+                                        <Avatar className="h-8 w-8">
                                             <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                             <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
                                         </Avatar>
                                     </div>
 
-                                    <div className="text-2xl md:text-4xl font-bold">
+                                    <div className="text-xl md:text-2xl font-bold">
                                         <span className="text-primary">{match.score1}</span>
-                                        <span className="mx-2 md:mx-4">-</span>
+                                        <span className="mx-2">-</span>
                                         <span>{match.score2}</span>
                                     </div>
 
-                                    <div className="flex items-center justify-start gap-2 md:gap-4">
-                                        <Avatar>
+                                    <div className="flex items-center justify-start gap-2">
+                                        <Avatar className="h-8 w-8">
                                             <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
                                             <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
                                         </Avatar>
-                                        <div className="font-bold text-base text-left"><PlayerLink name={match.player2} /></div>
+                                        <div className="font-bold text-sm text-left"><PlayerLink name={match.player2} /></div>
                                     </div>
                                     </div>
                                 </div>
@@ -290,6 +290,7 @@ export default function DashboardPage() {
                     </CarouselItem>
                 ))}
             </CarouselContent>
+            <CarouselDots />
         </Carousel>
       )}
 
@@ -310,9 +311,9 @@ export default function DashboardPage() {
                     ]}
                     className="w-full relative"
                 >
-                    <CarouselContent className="-ml-4">
+                    <CarouselContent>
                         {upcomingTournaments.map((tournament) => (
-                            <CarouselItem key={tournament.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                            <CarouselItem key={tournament.id} className="basis-full md:basis-1/2 lg:basis-1/3">
                                  <Card className="overflow-hidden h-full flex flex-col">
                                     <CardHeader className="p-0">
                                         <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
@@ -606,5 +607,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
