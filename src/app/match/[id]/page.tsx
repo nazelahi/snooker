@@ -223,9 +223,17 @@ export default function MatchDetailsPage() {
   
   const handleCommentReaction = (commentId: string, reaction: 'like' | 'dislike') => {
     if (!currentUser || !match) return;
+    
+    let commentAuthorEmail: string | null = null;
+    let originalComment: Comment | null = null;
 
     setMatch(prevMatch => {
         if (!prevMatch) return null;
+        
+        originalComment = prevMatch.comments?.find(c => c.id === commentId) || null;
+        if(originalComment) {
+          commentAuthorEmail = originalComment.authorEmail;
+        }
 
         const updatedComments = (prevMatch.comments || []).map(comment => {
             if (comment.id === commentId) {
@@ -267,11 +275,24 @@ export default function MatchDetailsPage() {
         if (matchIndex > -1) {
             allMatches[matchIndex] = updatedMatch;
             saveToStorage('recentResults', allMatches);
-            // No need for a full storage event dispatch here, local state is enough
         }
 
         return updatedMatch;
     });
+
+    if (commentAuthorEmail && commentAuthorEmail !== currentUser.email) {
+      const userNotifications = getFromStorage<Notification[]>(`notifications_${commentAuthorEmail}`, []);
+      const newNotification: Notification = {
+        id: Date.now().toString() + commentAuthorEmail,
+        title: `Someone reacted to your comment`,
+        description: `${currentUser.name} ${reaction}d your comment on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
+        read: false,
+        date: new Date().toISOString(),
+        link: `/match/${match.id}`
+      };
+      saveToStorage(`notifications_${commentAuthorEmail}`, [newNotification, ...userNotifications]);
+      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+    }
   };
 
 
