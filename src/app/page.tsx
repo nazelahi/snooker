@@ -232,77 +232,65 @@ export default function DashboardPage() {
       )}
 
       {notices.length > 0 && (
-        <div className="space-y-4">
-            <CardTitle className="flex items-center gap-2">
-                <Megaphone className="text-primary"/>
-                Notice Board
-            </CardTitle>
-            <Carousel
-                opts={{ align: "start", loop: true, }}
-                plugins={[ Autoplay({ delay: 5500, stopOnInteraction: true }) ]}
-                className="w-full relative"
-            >
-                <CarouselContent>
-                    {notices.map((notice) => (
-                        <CarouselItem key={notice.id} className="basis-full">
-                             <Card className="bg-muted/50">
-                                <CardHeader>
-                                    <CardTitle className="text-lg">{notice.title}</CardTitle>
-                                    <CardDescription>{format(new Date(notice.date), "PPP")}</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-muted-foreground line-clamp-2">{notice.content}</p>
-                                </CardContent>
-                                <CardFooter>
-                                    <Button variant="outline" asChild>
-                                        <Link href="/notices">Read More</Link>
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-                <CarouselDots />
-            </Carousel>
-        </div>
+        <Carousel
+            opts={{ align: "start", loop: true, }}
+            plugins={[ Autoplay({ delay: 5500, stopOnInteraction: true }) ]}
+            className="w-full relative"
+        >
+            <CarouselContent>
+                {notices.map((notice) => (
+                    <CarouselItem key={notice.id} className="basis-full">
+                         <Card className="bg-muted/50">
+                            <CardHeader>
+                                <CardTitle className="text-lg">{notice.title}</CardTitle>
+                                <CardDescription>{format(new Date(notice.date), "PPP")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground line-clamp-2">{notice.content}</p>
+                            </CardContent>
+                            <CardFooter>
+                                <Button variant="outline" asChild>
+                                    <Link href="/notices">Read More</Link>
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselDots />
+        </Carousel>
       )}
 
       {matchMedia.length > 0 && (
-        <div className="space-y-4">
-            <CardTitle className="flex items-center gap-2">
-                <Camera className="text-primary" />
-                Match Media
-            </CardTitle>
-            <Carousel
-                 opts={{
-                    align: "start",
-                    loop: true,
-                }}
-                plugins={[
-                    Autoplay({
-                    delay: 4000,
-                    }),
-                ]}
-                className="w-full relative"
-            >
-                <CarouselContent>
-                    {matchMedia.map((media, index) => (
-                        <CarouselItem key={index} className="basis-full">
-                             <Card className="overflow-hidden">
-                                <CardHeader className="p-0 relative">
-                                    <Image src={media.mediaUrl} width={600} height={400} alt={`Media from match ${media.id}`} className="w-full h-48 md:h-64 object-cover" />
-                                    <Button variant="outline" asChild className="absolute top-4 right-4">
-                                        <Link href={`/match/${media.id}`}>
-                                            View Match <ArrowRight className="ml-2 h-4 w-4"/>
-                                        </Link>
-                                    </Button>
-                                </CardHeader>
-                            </Card>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-            </Carousel>
-        </div>
+        <Carousel
+             opts={{
+                align: "start",
+                loop: true,
+            }}
+            plugins={[
+                Autoplay({
+                delay: 4000,
+                }),
+            ]}
+            className="w-full relative"
+        >
+            <CarouselContent>
+                {matchMedia.map((media, index) => (
+                    <CarouselItem key={index} className="basis-full">
+                         <Card className="overflow-hidden">
+                            <CardHeader className="p-0 relative">
+                                <Image src={media.mediaUrl} width={600} height={400} alt={`Media from match ${media.id}`} className="w-full h-48 md:h-64 object-cover" />
+                                <Button variant="outline" asChild className="absolute top-4 right-4">
+                                    <Link href={`/match/${media.id}`}>
+                                        View Match <ArrowRight className="ml-2 h-4 w-4"/>
+                                    </Link>
+                                </Button>
+                            </CardHeader>
+                        </Card>
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+        </Carousel>
       )}
 
       {upcomingTournaments.length > 0 && (
@@ -366,9 +354,9 @@ export default function DashboardPage() {
                     ]}
                     className="w-full relative"
                 >
-                    <CarouselContent className="-ml-4">
+                    <CarouselContent>
                         {inProgressTournaments.map((tournament) => (
-                            <CarouselItem key={tournament.id} className="pl-4 basis-full">
+                            <CarouselItem key={tournament.id} className="basis-full">
                                 <Card className="overflow-hidden h-full flex flex-col">
                                     <CardHeader className="p-0 relative">
                                         <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
@@ -408,11 +396,11 @@ export default function DashboardPage() {
                     ]}
                     className="w-full relative"
                 >
-                    <CarouselContent className="-ml-4">
+                    <CarouselContent>
                         {finishedTournaments.map((tournament) => {
                           const winner = getPlayerAvatar(tournament.winner || '');
                           return (
-                            <CarouselItem key={tournament.id} className="pl-4 basis-full">
+                            <CarouselItem key={tournament.id} className="basis-full">
                                 <Card className="overflow-hidden h-full flex flex-col">
                                     <CardHeader className="relative flex flex-row items-center gap-4 p-4 bg-muted/50">
                                         <Trophy className="h-8 w-8 text-amber-400"/>
@@ -619,3 +607,4 @@ export default function DashboardPage() {
   );
 }
 
+    
