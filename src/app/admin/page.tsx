@@ -4,7 +4,6 @@
 import { useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { getFromStorage } from "@/lib/storage";
-import AdminSettings from "@/components/settings/admin-settings";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -18,9 +17,5 @@ export default function AdminPage() {
     }
   }, [router]);
  
-  return (
-      <div className="flex items-center justify-center h-full">
-        <p>Redirecting to settings...</p>
-      </div>
-  );
+  return null;
 }
