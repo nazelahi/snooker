@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -26,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TournamentBracket, type Matchup, type Round } from "@/components/tournament-bracket";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 
 
@@ -52,7 +51,6 @@ export default function TournamentDetailsPage() {
   const [tournamentLive, setTournamentLive] = useState<LiveMatch[]>([]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [winnerPlayer, setWinnerPlayer] = useState<Player | null>(null);
-  const supabase = createSupabaseBrowserClient();
 
 
   const params = useParams();
@@ -139,7 +137,7 @@ export default function TournamentDetailsPage() {
       supabase.removeChannel(tournamentsSubscription);
     };
 
-  }, [id, toast, supabase]);
+  }, [id, toast]);
 
   const getPlayerAvatar = (name: string) => {
     const player = allPlayers.find(p => p.name === name);

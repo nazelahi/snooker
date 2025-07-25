@@ -22,7 +22,7 @@ import { AddMatchDialog } from "@/components/add-match-dialog";
 import type { Notification } from "@/types/notifications";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
 
 const initialStats = {

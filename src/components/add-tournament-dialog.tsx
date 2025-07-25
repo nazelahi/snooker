@@ -20,7 +20,7 @@ import Image from "next/image";
 import { Checkbox } from "./ui/checkbox";
 import { ScrollArea } from "./ui/scroll-area";
 import { ResponsiveDialog } from "@/components/ui/dialog";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 interface AddTournamentDialogProps {
   open: boolean;

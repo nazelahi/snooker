@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeftRight, Swords, BarChart2 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
 
 interface Comparison {

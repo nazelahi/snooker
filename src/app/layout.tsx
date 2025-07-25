@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from '@/components/layout/app-layout';
 import { ThemeProvider } from '@/components/theme-provider';
 import { useState, useEffect } from 'react';
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { SiteLogoProvider } from '@/components/site-logo-provider';
 import { useRouter } from 'next/navigation';
 

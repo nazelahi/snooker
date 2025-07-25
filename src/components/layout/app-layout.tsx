@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AdminSettingsTabsMobile } from '../settings/admin-settings';
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase/client";
 import type { User } from '@supabase/supabase-js';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -45,7 +45,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
 
   const showAdminNav = isMobile && isAdmin && pathname === '/settings';
 

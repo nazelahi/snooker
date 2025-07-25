@@ -26,7 +26,7 @@ import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
 import type { Achievement } from "@/types/achievements";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import type { Player as PlayerType } from '@/types/players';
 
 

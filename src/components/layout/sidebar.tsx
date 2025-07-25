@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "../ui/dropdown-menu";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { SiteLogo } from '../site-logo';
 import type { User } from '@supabase/supabase-js';
 
@@ -81,7 +81,7 @@ const UserMenu = () => {
         return () => {
           authListener.subscription.unsubscribe();
         };
-    }, [supabase]);
+    }, []);
 
 
     const handleLogout = async () => {
@@ -191,7 +191,7 @@ export default function AppSidebar() {
       authListener.subscription.unsubscribe();
       supabase.removeChannel(settingsChannel);
     };
-  }, [supabase]);
+  }, []);
 
 
   const isActive = (href: string) => {

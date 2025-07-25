@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { SiteLogo } from '@/components/site-logo';
 
 export default function SignupPage() {
@@ -36,7 +36,7 @@ export default function SignupPage() {
         }
     };
     fetchSiteName();
-  }, [supabase]);
+  }, []);
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();

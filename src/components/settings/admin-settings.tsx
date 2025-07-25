@@ -22,7 +22,7 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import type { Notification } from "@/types/notifications";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 import Image from 'next/image';
 import { SiteLogo } from '../site-logo';

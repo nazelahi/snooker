@@ -28,7 +28,7 @@ import type { Notification } from "@/types/notifications";
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { ThemeSwitcher } from "../theme-switcher";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { SiteLogo } from "../site-logo";
 
@@ -132,7 +132,7 @@ export default function Header() {
         supabase.removeChannel(notificationsSubscription);
         authListener.subscription.unsubscribe();
     }
-  }, [supabase]);
+  }, []);
 
 
   const handleLogout = async () => {

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Megaphone } from "lucide-react";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 interface Notice {
   id: string;

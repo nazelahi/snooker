@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 export default function NotificationsPage() {
@@ -57,7 +57,7 @@ export default function NotificationsPage() {
     return () => {
       supabase.removeChannel(notificationsSubscription);
     };
-  }, [router, supabase]);
+  }, [router]);
 
   const handleMarkAsRead = async (id: number) => {
     const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);

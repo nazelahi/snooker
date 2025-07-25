@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -25,7 +24,7 @@ import { PlusCircle, Radio, Pencil, Eye } from "lucide-react";
 import { AddTournamentDialog } from "@/components/add-tournament-dialog";
 import type { Player } from "@/app/players/page";
 import type { Round } from "@/components/tournament-bracket";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { LiveMatch } from "@/types/matches";
 
 export interface Tournament {
@@ -87,7 +86,7 @@ export default function TournamentsPage() {
       authListener.subscription.unsubscribe();
       supabase.removeChannel(tournamentsSubscription);
     }
-  }, [supabase]);
+  }, []);
 
   const handleAddTournament = async (newTournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers' | 'bracket' >) => {
     const { data, error } = await supabase.from('tournaments').insert([{

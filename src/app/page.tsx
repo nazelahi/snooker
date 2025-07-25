@@ -36,7 +36,7 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 
 interface Notice {

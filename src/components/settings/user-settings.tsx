@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Bell, Trophy, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { format } from 'date-fns';
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 export default function UserSettings() {
