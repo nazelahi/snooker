@@ -245,7 +245,7 @@ export default function DashboardPage() {
             <CarouselContent>
                 {notices.map((notice) => (
                     <CarouselItem key={notice.id} className="basis-full">
-                         <Card className="bg-muted/50">
+                         <Card className="bg-muted/50 animate-flash">
                             <CardHeader>
                                 <CardTitle className="text-lg">{notice.title}</CardTitle>
                                 <CardDescription>{format(new Date(notice.date), "PPP")}</CardDescription>
