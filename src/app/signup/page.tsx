@@ -52,28 +52,37 @@ export default function SignupPage() {
       return;
     }
 
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        }
+      }
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      toast({
+    if (error) {
+       toast({
         variant: "destructive",
         title: "Signup Failed",
-        description: result.error || "An unknown error occurred.",
+        description: error.message,
       });
-    } else {
-      toast({
-        title: "Success!",
-        description: "Your account has been created. Please check your email to verify your account before logging in.",
-      });
-      router.push('/login');
+    } else if (data.user) {
+        if(data.user.identities && data.user.identities.length === 0){
+             toast({
+                variant: "destructive",
+                title: "Signup Failed",
+                description: "This email is already in use by another account.",
+            });
+        } else {
+            toast({
+                title: "Success!",
+                description: "Your account has been created. Please check your email to verify your account before logging in.",
+            });
+            router.push('/login');
+        }
     }
-
     setLoading(false);
   };
   
