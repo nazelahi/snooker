@@ -46,11 +46,11 @@ export const CommentInput = ({
   const [commentImage, setCommentImage] = useState<string | null>(null);
   const [mentionSuggestions, setMentionSuggestions] = useState<Player[]>([]);
   const [isMentionPopoverOpen, setIsMentionPopoverOpen] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (autofocus) {
-      textareaRef.current?.focus();
+      inputRef.current?.focus();
     }
   }, [autofocus]);
 
@@ -65,7 +65,7 @@ export const CommentInput = ({
     }
   };
 
-  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value;
     setCommentText(text);
 
@@ -88,7 +88,7 @@ export const CommentInput = ({
     const updatedText = currentText.replace(/@(\w*)$/, `@${playerName} `);
     setCommentText(updatedText);
     setIsMentionPopoverOpen(false);
-    textareaRef.current?.focus();
+    inputRef.current?.focus();
   };
 
   const handleSubmit = () => {
@@ -119,8 +119,8 @@ export const CommentInput = ({
           </Avatar>
           <div className="flex-1 space-y-2">
             <PopoverAnchor asChild>
-                <Textarea
-                ref={textareaRef}
+                <Input
+                ref={inputRef}
                 value={commentText}
                 onChange={handleCommentChange}
                 placeholder={placeholder}
