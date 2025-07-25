@@ -55,6 +55,35 @@ interface Notice {
   date: string;
 }
 
+const adminTabs = [
+    { value: "players", label: "Players", icon: Users },
+    { value: "tournaments", label: "Tournaments", icon: Trophy },
+    { value: "liveMatches", label: "Live Matches", icon: Radio },
+    { value: "upcomingMatches", label: "Upcoming", icon: Calendar },
+    { value: "rules", label: "Rules", icon: ListChecks },
+    { value: "notices", label: "Notices", icon: Megaphone },
+    { value: "siteSettings", label: "Site", icon: Settings2 },
+]
+
+export function AdminSettingsTabsMobile() {
+    return (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t z-20 overflow-x-auto">
+            <nav className="h-full">
+                <Tabs defaultValue="players" className="h-full">
+                    <TabsList className="h-full justify-start px-2 gap-0 w-max">
+                    {adminTabs.map(tab => (
+                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-col h-full items-center justify-center gap-1 w-20 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground">
+                            <tab.icon className="h-5 w-5" />
+                            <span className="text-xs">{tab.label}</span>
+                        </TabsTrigger>
+                    ))}
+                    </TabsList>
+                </Tabs>
+            </nav>
+        </div>
+    )
+}
+
 export default function AdminSettings() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -66,6 +95,7 @@ export default function AdminSettings() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [newNoticeTitle, setNewNoticeTitle] = useState("");
   const [newNoticeContent, setNewNoticeContent] = useState("");
+  const [activeTab, setActiveTab] = useState("players");
   const { toast } = useToast();
   
   useEffect(() => {
@@ -313,15 +343,13 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      <Tabs defaultValue="players" className="w-full md:grid md:grid-cols-[200px_1fr] md:gap-6" orientation="vertical">
-        <TabsList className="grid w-full grid-cols-2 md:flex md:flex-col md:items-stretch md:h-fit">
-          <TabsTrigger value="players"><Users className="w-4 h-4 mr-2" />Players</TabsTrigger>
-          <TabsTrigger value="tournaments"><Trophy className="w-4 h-4 mr-2" />Tournaments</TabsTrigger>
-          <TabsTrigger value="liveMatches"><Radio className="w-4 h-4 mr-2" />Live Matches</TabsTrigger>
-          <TabsTrigger value="upcomingMatches"><Calendar className="w-4 h-4 mr-2" />Upcoming</TabsTrigger>
-          <TabsTrigger value="rules"><ListChecks className="w-4 h-4 mr-2" />Rules</TabsTrigger>
-          <TabsTrigger value="notices"><Megaphone className="w-4 h-4 mr-2" />Notices</TabsTrigger>
-          <TabsTrigger value="siteSettings"><Settings2 className="w-4 h-4 mr-2" />Site</TabsTrigger>
+      <Tabs defaultValue="players" value={activeTab} onValueChange={setActiveTab} className="w-full md:grid md:grid-cols-[200px_1fr] md:gap-6" orientation="vertical">
+        <TabsList className="hidden md:grid w-full grid-cols-2 md:flex md:flex-col md:items-stretch md:h-fit">
+          {adminTabs.map(tab => (
+            <TabsTrigger key={tab.value} value={tab.value} className="justify-start">
+              <tab.icon className="w-4 h-4 mr-2" />{tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
         <div className="mt-4 md:mt-0">
             <TabsContent value="players">
