@@ -269,8 +269,6 @@ export default function DashboardPage() {
                         </CarouselItem>
                     ))}
                 </CarouselContent>
-                <CarouselPrevious />
-                <CarouselNext />
                 <CarouselDots />
             </Carousel>
         </div>
