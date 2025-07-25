@@ -231,6 +231,42 @@ export default function DashboardPage() {
          </Card>
       )}
 
+      {notices.length > 0 && (
+        <div className="space-y-4">
+            <CardTitle className="flex items-center gap-2">
+                <Megaphone className="text-primary"/>
+                Notice Board
+            </CardTitle>
+            <Carousel
+                opts={{ align: "start", loop: true, }}
+                plugins={[ Autoplay({ delay: 5500, stopOnInteraction: true }) ]}
+                className="w-full relative"
+            >
+                <CarouselContent>
+                    {notices.map((notice) => (
+                        <CarouselItem key={notice.id} className="basis-full">
+                             <Card className="bg-muted/50">
+                                <CardHeader>
+                                    <CardTitle className="text-lg">{notice.title}</CardTitle>
+                                    <CardDescription>{format(new Date(notice.date), "PPP")}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-muted-foreground line-clamp-2">{notice.content}</p>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button variant="outline" asChild>
+                                        <Link href="/notices">Read More</Link>
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselDots />
+            </Carousel>
+        </div>
+      )}
+
       {matchMedia.length > 0 && (
         <div className="space-y-4">
             <CardTitle className="flex items-center gap-2">
@@ -265,7 +301,6 @@ export default function DashboardPage() {
                         </CarouselItem>
                     ))}
                 </CarouselContent>
-                <CarouselDots />
             </Carousel>
         </div>
       )}
@@ -541,39 +576,6 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <Megaphone className="text-primary"/>
-                Notice Board
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-            {notices.length > 0 ? (
-                 <div className="grid md:grid-cols-2 gap-4">
-                    {notices.slice(0, 2).map((notice) => (
-                        <Card key={notice.id} className="bg-muted/50">
-                            <CardHeader>
-                                <CardTitle className="text-lg">{notice.title}</CardTitle>
-                                <CardDescription>{format(new Date(notice.date), "PPP")}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground line-clamp-3">{notice.content}</p>
-                            </CardContent>
-                            <CardFooter>
-                                <Button variant="outline" asChild>
-                                    <Link href="/notices">Read More</Link>
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
-                 </div>
-            ) : (
-                <p className="text-muted-foreground text-center py-8">No club notices at the moment.</p>
-            )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>Player Standings</CardTitle>
           <CardDescription>Top players in the club league.</CardDescription>
         </CardHeader>
@@ -616,3 +618,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
