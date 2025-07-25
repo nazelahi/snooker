@@ -50,19 +50,16 @@ export default function LoginPage() {
       return;
     }
     
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
+    if (error) {
        toast({
         variant: "destructive",
         title: "Login Failed",
-        description: result.error,
+        description: error.message,
       });
     } else {
         toast({
