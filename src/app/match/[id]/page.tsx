@@ -23,7 +23,7 @@ import { ArrowLeft, Swords, Calendar, Upload, MessageSquare, ThumbsUp, ThumbsDow
 import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 import type { Notification } from "@/types/notifications";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/components/ui/popover";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -129,7 +129,6 @@ const CommentInput = ({
 
   return (
     <Popover open={isMentionPopoverOpen} onOpenChange={setIsMentionPopoverOpen}>
-      <PopoverTrigger asChild>
         <div className="flex items-start gap-4 w-full">
           <Avatar>
             <AvatarImage
@@ -148,13 +147,15 @@ const CommentInput = ({
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2">
-            <Textarea
-              ref={textareaRef}
-              value={commentText}
-              onChange={handleCommentChange}
-              placeholder={placeholder}
-              className="w-full"
-            />
+            <PopoverAnchor asChild>
+                <Textarea
+                ref={textareaRef}
+                value={commentText}
+                onChange={handleCommentChange}
+                placeholder={placeholder}
+                className="w-full"
+                />
+            </PopoverAnchor>
             {commentImage && (
               <div className="relative w-32 h-32">
                 <Image
@@ -200,7 +201,6 @@ const CommentInput = ({
             </div>
           </div>
         </div>
-      </PopoverTrigger>
       <PopoverContent className="w-64 p-2">
         <ul className="space-y-1">
           {mentionSuggestions.map((player) => (
@@ -747,4 +747,3 @@ export default function MatchDetailsPage() {
     </div>
   );
 }
-
