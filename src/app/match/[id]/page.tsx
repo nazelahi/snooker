@@ -129,8 +129,8 @@ const CommentInput = ({
 
   return (
     <Popover open={isMentionPopoverOpen} onOpenChange={setIsMentionPopoverOpen}>
-        <div className="flex items-start gap-4 w-full">
-          <Avatar>
+        <div className="flex items-start gap-2 w-full">
+          <Avatar className="h-8 w-8">
             <AvatarImage
               src={
                 players.find((p) => p.name === currentUser.name)?.avatar ||
@@ -176,7 +176,7 @@ const CommentInput = ({
               </div>
             )}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center">
                 <Input
                   id="comment-image-upload"
                   type="file"
@@ -194,6 +194,7 @@ const CommentInput = ({
                 <Button
                   onClick={handleSubmit}
                   disabled={!commentText.trim() && !commentImage}
+                  size="sm"
                 >
                   {buttonLabel}
                 </Button>
@@ -255,8 +256,8 @@ const CommentThread = ({
     const isReplying = replyingTo === comment.id;
 
     return (
-      <div className="flex items-start gap-4">
-        <Avatar>
+      <div className="flex items-start gap-2">
+        <Avatar className="h-8 w-8">
           <AvatarImage
             src={author?.avatar || `https://placehold.co/40x40.png`}
             data-ai-hint="player portrait"
@@ -266,7 +267,7 @@ const CommentThread = ({
         </Avatar>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-semibold">{comment.authorName}</span>
+            <span className="font-semibold text-sm">{comment.authorName}</span>
             <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(comment.date), { addSuffix: true })}
             </span>
@@ -287,45 +288,45 @@ const CommentThread = ({
             </div>
           )}
           {currentUser && (
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-1 mt-1">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onReaction(comment.id, "like")}
                 className={cn(
-                  "flex items-center gap-1 text-muted-foreground px-2 h-auto py-1",
+                  "flex items-center gap-1 text-muted-foreground px-1 h-auto py-1",
                   { "text-primary": hasLiked }
                 )}
               >
-                <ThumbsUp className="h-4 w-4" />
-                <span>{(comment.likes || []).length}</span>
+                <ThumbsUp className="h-3 w-3" />
+                <span className="text-xs">{(comment.likes || []).length}</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onReaction(comment.id, "dislike")}
                 className={cn(
-                  "flex items-center gap-1 text-muted-foreground px-2 h-auto py-1",
+                  "flex items-center gap-1 text-muted-foreground px-1 h-auto py-1",
                   { "text-destructive": hasDisliked }
                 )}
               >
-                <ThumbsDown className="h-4 w-4" />
-                <span>{(comment.dislikes || []).length}</span>
+                <ThumbsDown className="h-3 w-3" />
+                <span className="text-xs">{(comment.dislikes || []).length}</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setReplyingTo(isReplying ? null : comment.id)}
-                className="flex items-center gap-1 text-muted-foreground px-2 h-auto py-1"
+                className="flex items-center gap-1 text-muted-foreground px-1 h-auto py-1 text-xs"
               >
-                <CornerDownRight className="h-4 w-4" />
+                <CornerDownRight className="h-3 w-3" />
                 Reply
               </Button>
             </div>
           )}
 
           {isReplying && currentUser && (
-            <div className="mt-4">
+            <div className="mt-2">
               <CommentInput
                 onSubmit={(content, image) => {
                   onPostComment(content, image, comment.id);
@@ -341,7 +342,7 @@ const CommentThread = ({
           )}
 
           {comment.replies && comment.replies.length > 0 && (
-            <div className="mt-4 pl-6 border-l-2">
+            <div className="mt-2 pl-4 border-l-2">
               <CommentThread
                 comments={comment.replies}
                 onPostComment={onPostComment}
@@ -357,7 +358,7 @@ const CommentThread = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {comments
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .map((comment) => (
@@ -724,7 +725,7 @@ export default function MatchDetailsPage() {
                 <CardTitle className="flex items-center gap-2"><MessageSquare />Comments</CardTitle>
                 <CardDescription>Discuss the match with other members.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
                  {currentUser && (
                     <CommentInput
                         onSubmit={(content, image) => handlePostComment(content, image, null)}
@@ -761,5 +762,7 @@ export default function MatchDetailsPage() {
     </div>
   );
 }
+
+    
 
     
