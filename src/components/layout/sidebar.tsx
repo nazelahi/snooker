@@ -31,7 +31,6 @@ const navItems = [
 ];
 
 const bottomNavItems = [
-  { href: "/notifications", label: "Notifications", icon: Bell, auth: true },
   { href: "/settings", label: "Settings", icon: Settings, auth: true },
 ];
 
