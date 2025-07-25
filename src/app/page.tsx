@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight, Camera, Megaphone } from "lucide-react";
+import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight, Camera, Megaphone, MessageSquare } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { LiveMatch, Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
@@ -40,6 +40,10 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CommentInput, CommentThread } from "@/components/comment-thread";
+import type { Comment } from "@/types/comments";
+import { useToast } from "@/hooks/use-toast";
 
 const initialUpcomingMatches = [
   { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00", tournamentId: 1 },
@@ -72,6 +76,7 @@ interface Notice {
   title: string;
   content: string;
   date: string;
+  comments?: Comment[];
 }
 
 export default function DashboardPage() {
@@ -89,6 +94,8 @@ export default function DashboardPage() {
   const [liveMatchApi, setLiveMatchApi] = useState<CarouselApi>();
   const [mediaApi, setMediaApi] = useState<CarouselApi>();
   const [noticeApi, setNoticeApi] = useState<CarouselApi>();
+  const [currentUser, setCurrentUser] = useState<{name: string; email: string; isAdmin?: boolean} | null>(null);
+  const { toast } = useToast();
 
 
   const fetchDashboardData = () => {
@@ -98,7 +105,9 @@ export default function DashboardPage() {
     const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
     const storedTournaments = getFromStorage('tournaments', []);
     const storedNotices = getFromStorage('notices', []);
-
+    const userData = getFromStorage<{name: string; email: string; isAdmin?: boolean} | null>('userData', null);
+    
+    setCurrentUser(userData);
     setPlayers(storedPlayers);
     setNotices(storedNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     
@@ -172,6 +181,121 @@ export default function DashboardPage() {
     }
     return <Link href={`/players/${player.id}`} className={cn("font-medium hover:underline", className)}>{name}</Link>
   }
+  
+  const handlePostNoticeComment = (noticeId: string, content: string, image: string | null, parentId: string | null) => {
+    if ((!content.trim() && !image) || !currentUser) return;
+
+    const mentionRegex = /@(\w+\s\w+)/g;
+    let matchResult;
+    const mentionedNames: string[] = [];
+    while ((matchResult = mentionRegex.exec(content)) !== null) {
+        mentionedNames.push(matchResult[1]);
+    }
+
+    const allUsers = getFromStorage<{name:string, email:string}[]>('users', []);
+    const mentionedEmails = mentionedNames
+        .map(name => allUsers.find(u => u.name.toLowerCase() === name.toLowerCase())?.email)
+        .filter((email): email is string => !!email);
+
+    const newCommentObject: Comment = {
+        id: Date.now().toString(),
+        authorName: currentUser.name,
+        authorEmail: currentUser.email,
+        content: content,
+        date: new Date().toISOString(),
+        mentions: mentionedEmails,
+        likes: [],
+        dislikes: [],
+        image: image || undefined,
+        replies: []
+    };
+    
+    setNotices(prevNotices => {
+        const updatedNotices = prevNotices.map(notice => {
+            if (notice.id === noticeId) {
+                let updatedComments = [...(notice.comments || [])];
+                let replyAuthorEmail: string | null = null;
+                
+                if (parentId) {
+                    const findAndAddReply = (comments: Comment[]): Comment[] => {
+                        return comments.map(comment => {
+                            if (comment.id === parentId) {
+                                replyAuthorEmail = comment.authorEmail;
+                                return { ...comment, replies: [...(comment.replies || []), newCommentObject] };
+                            }
+                            if (comment.replies) {
+                                return { ...comment, replies: findAndAddReply(comment.replies) };
+                            }
+                            return comment;
+                        });
+                    };
+                    updatedComments = findAndAddReply(updatedComments);
+                } else {
+                    updatedComments.push(newCommentObject);
+                }
+                return { ...notice, comments: updatedComments };
+            }
+            return notice;
+        });
+
+        saveToStorage('notices', updatedNotices);
+        return updatedNotices;
+    });
+
+    toast({ title: parentId ? "Reply Posted" : "Comment Posted" });
+    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+  };
+  
+  const handleNoticeCommentReaction = (noticeId: string, commentId: string, reaction: 'like' | 'dislike') => {
+    if (!currentUser) return;
+
+    setNotices(prevNotices => {
+      const updatedNotices = prevNotices.map(notice => {
+        if (notice.id === noticeId) {
+          const updateReactionsRecursive = (comments: Comment[]): Comment[] => {
+            return comments.map(comment => {
+              if (comment.id === commentId) {
+                const likes = comment.likes || [];
+                const dislikes = comment.dislikes || [];
+                const userEmail = currentUser.email;
+                const hasLiked = likes.includes(userEmail);
+                const hasDisliked = dislikes.includes(userEmail);
+                let newLikes = [...likes];
+                let newDislikes = [...dislikes];
+
+                if (reaction === 'like') {
+                  if (hasLiked) {
+                    newLikes = newLikes.filter(email => email !== userEmail);
+                  } else {
+                    newLikes.push(userEmail);
+                    newDislikes = newDislikes.filter(email => email !== userEmail);
+                  }
+                } else { // dislike
+                  if (hasDisliked) {
+                    newDislikes = newDislikes.filter(email => email !== userEmail);
+                  } else {
+                    newDislikes.push(userEmail);
+                    newLikes = newLikes.filter(email => email !== userEmail);
+                  }
+                }
+                return { ...comment, likes: newLikes, dislikes: newDislikes };
+              }
+              if (comment.replies) {
+                return { ...comment, replies: updateReactionsRecursive(comment.replies) };
+              }
+              return comment;
+            });
+          };
+          const updatedComments = updateReactionsRecursive(notice.comments || []);
+          return { ...notice, comments: updatedComments };
+        }
+        return notice;
+      });
+
+      saveToStorage('notices', updatedNotices);
+      return updatedNotices;
+    });
+  };
 
 
   return (
@@ -260,6 +384,38 @@ export default function DashboardPage() {
                                                 <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
                                             </div>
                                         </div>
+                                        <Accordion type="single" collapsible className="w-full mt-2">
+                                            <AccordionItem value="item-1" className="border-b-0">
+                                                <AccordionTrigger>
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <MessageSquare className="h-4 w-4" />
+                                                        <span>Comments ({notice.comments?.length || 0})</span>
+                                                    </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="space-y-4 pt-4">
+                                                        {currentUser && (
+                                                            <CommentInput
+                                                                onSubmit={(content, image) => handlePostNoticeComment(notice.id, content, image, null)}
+                                                                players={players}
+                                                                currentUser={currentUser}
+                                                            />
+                                                        )}
+                                                        {(notice.comments || []).length > 0 ? (
+                                                          <CommentThread
+                                                              comments={(notice.comments || []).slice(0, 10)}
+                                                              onPostComment={(content, image, parentId) => handlePostNoticeComment(notice.id, content, image, parentId)}
+                                                              onReaction={(commentId, reaction) => handleNoticeCommentReaction(notice.id, commentId, reaction)}
+                                                              allPlayers={players}
+                                                              currentUser={currentUser}
+                                                          />
+                                                        ) : (
+                                                          <p className="text-muted-foreground text-center py-4">No comments yet.</p>
+                                                        )}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
                                     </div>
                                 </div>
                             </CarouselItem>
@@ -569,5 +725,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
