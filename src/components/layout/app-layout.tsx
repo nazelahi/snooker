@@ -8,8 +8,8 @@ import BottomNav from './bottom-nav';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getFromStorage } from '@/lib/storage';
-import { AdminSettingsTabsMobile } from '../settings/admin-settings';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { AdminSettingsTabsMobile } from '../settings/admin-settings';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,7 +36,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
             {children}
         </main>
-        {showAdminNav ? <AdminSettingsTabsMobile /> : <BottomNav />}
+        {showAdminNav ? null : <BottomNav />}
       </SidebarInset>
     </SidebarProvider>
   );

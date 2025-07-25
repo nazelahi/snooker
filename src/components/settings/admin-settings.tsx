@@ -66,14 +66,14 @@ const adminTabs = [
     { value: "siteSettings", label: "Site", icon: Settings2 },
 ]
 
-export function AdminSettingsTabsMobile() {
+export function AdminSettingsTabsMobile({ activeTab, onTabChange }: { activeTab: string, onTabChange: (value: string) => void }) {
     return (
         <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t z-20 overflow-x-auto">
             <nav className="h-full">
-                <Tabs defaultValue="players" className="h-full">
-                    <TabsList className="h-full justify-around px-0 gap-0 w-full">
+                <Tabs value={activeTab} onValueChange={onTabChange} className="h-full">
+                    <TabsList className="h-full justify-around px-0 gap-0 w-full flex-nowrap">
                     {adminTabs.map(tab => (
-                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-1 flex-col h-full items-center justify-center gap-0 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground p-0">
+                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-1 flex-col h-full items-center justify-center gap-1 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground p-0">
                             <tab.icon className="h-6 w-6" />
                             <span className="sr-only">{tab.label}</span>
                         </TabsTrigger>
@@ -674,8 +674,7 @@ export default function AdminSettings() {
             </TabsContent>
         </div>
       </Tabs>
+      <AdminSettingsTabsMobile activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 }
-
-    
