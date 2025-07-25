@@ -38,23 +38,7 @@ import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-
-const initialUpcomingMatches = [
-  { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00", tournamentId: 1 },
-  { id: 2, player1: "Mark Selby", player2: "Neil Robertson", date: "2024-08-15", time: "21:00", tournamentId: 1 },
-  { id: 3, player1: "Alice Johnson", player2: "Bob Williams", date: "2024-08-16", time: "20:00", tournamentId: 2 },
-];
-
-const initialRecentResults = [
-  { id: 1, winner: "Ronnie O'Sullivan", loser: "John Higgins", score: "6-2", date: "2024-08-10", tournamentId: 1, media: ["https://placehold.co/600x400.png"] },
-  { id: 2, winner: "Judd Trump", loser: "Kyren Wilson", score: "6-4", date: "2024-08-09", tournamentId: 1, media: ["https://placehold.co/600x400.png"] },
-  { id: 3, winner: "Mark Selby", loser: "Neil Robertson", score: "5-1", date: "2024-08-11", tournamentId: 2, media: ["https://placehold.co/600x400.png"] },
-];
-
-const initialLiveMatches: LiveMatch[] = [
-    { id: 1, tournamentId: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
-    { id: 2, tournamentId: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
-];
+import { Match, UpcomingMatch } from "@/types/matches";
 
 interface Notice {
   id: string;
@@ -71,8 +55,8 @@ const initialNotices: Notice[] = [
 
 export default function DashboardPage() {
   const [playerStandings, setPlayerStandings] = useState<Player[]>([]);
-  const [upcomingMatches, setUpcomingMatches] = useState(initialUpcomingMatches);
-  const [recentResults, setRecentResults] = useState(initialRecentResults);
+  const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
+  const [recentResults, setRecentResults] = useState<Match[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -88,35 +72,27 @@ export default function DashboardPage() {
   const finishedTournamentsPlugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true }));
 
   const fetchDashboardData = async () => {
-    const { data: playersData, error } = await supabase.from('players').select('*');
+    // Fetch all data from Supabase
+    const { data: playersData } = await supabase.from('players').select('*').order('wins', { ascending: false });
     if (playersData) {
         setPlayers(playersData);
-        const sortedStandings = [...playersData]
-            .sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0));
-        setPlayerStandings(sortedStandings);
+        setPlayerStandings(playersData);
     }
+
+    const { data: upcomingData } = await supabase.from('upcoming_matches').select('*').order('date').order('time').limit(10);
+    if(upcomingData) setUpcomingMatches(upcomingData as UpcomingMatch[]);
     
-    // Remaining data from localStorage
-    const storedMatches = getFromStorage('upcomingMatches', initialUpcomingMatches);
-    const storedResults = getFromStorage('recentResults', initialRecentResults);
-    const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
+    const { data: resultsData } = await supabase.from('matches').select('*').order('date', { ascending: false }).limit(10);
+    if(resultsData) setRecentResults(resultsData as Match[]);
+
+    const { data: liveData } = await supabase.from('live_matches').select('*');
+    if(liveData) setLiveMatches(liveData);
+    
+    // Remaining data from localStorage (to be migrated)
     const storedTournaments = getFromStorage('tournaments', []);
     const storedNotices = getFromStorage('notices', initialNotices);
     
     setNotices(storedNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    
-
-    const sortedMatches = storedMatches.sort((a, b) => {
-        const dateA = new Date(`${a.date}T${a.time}`);
-        const dateB = new Date(`${b.date}T${b.time}`);
-        return dateA.getTime() - dateB.getTime();
-    });
-    setUpcomingMatches(sortedMatches);
-    
-    const sortedResults = storedResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setRecentResults(sortedResults);
-
-    setLiveMatches(storedLiveMatches);
     setTournaments(storedTournaments);
   }
 
@@ -124,15 +100,6 @@ export default function DashboardPage() {
     fetchDashboardData();
 
     // Set initial values if they don't exist
-    if (localStorage.getItem('upcomingMatches') === null) {
-      saveToStorage('upcomingMatches', initialUpcomingMatches);
-    }
-     if (localStorage.getItem('recentResults') === null) {
-      saveToStorage('recentResults', initialRecentResults);
-    }
-    if (localStorage.getItem('liveMatches') === null) {
-        saveToStorage('liveMatches', initialLiveMatches);
-    }
     if (localStorage.getItem('notices') === null) {
         saveToStorage('notices', initialNotices);
     }
@@ -141,6 +108,7 @@ export default function DashboardPage() {
     }
 
     const handleStorageChange = (event: StorageEvent) => {
+        // This can be simplified once all data is in Supabase
         fetchDashboardData();
     };
 
@@ -196,11 +164,11 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="grid grid-cols-3 items-center text-center">
                                     <div className="flex items-center justify-end gap-2">
+                                        <div className="font-bold text-base text-right"><PlayerLink name={match.player1} /></div>
                                         <Avatar className="h-6 w-6">
                                             <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                             <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
                                         </Avatar>
-                                        <div className="font-bold text-base text-right"><PlayerLink name={match.player1} /></div>
                                     </div>
 
                                     <div className="text-xl font-bold">
@@ -210,11 +178,11 @@ export default function DashboardPage() {
                                     </div>
 
                                     <div className="flex items-center justify-start gap-2">
-                                        <div className="font-bold text-base text-left"><PlayerLink name={match.player2} /></div>
                                         <Avatar className="h-6 w-6">
                                             <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
                                             <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
                                         </Avatar>
+                                        <div className="font-bold text-base text-left"><PlayerLink name={match.player2} /></div>
                                     </div>
                                     </div>
                                 </div>

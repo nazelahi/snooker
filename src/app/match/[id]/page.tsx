@@ -30,22 +30,8 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CommentInput, CommentThread } from "@/components/comment-thread";
 import type { Comment } from "@/types/comments";
-
-interface Match {
-  id: number;
-  winner: string;
-  loser:string;
-  score: string;
-  date: string;
-  media?: string[];
-  comments?: Comment[];
-  pendingScore?: {
-    score1: number;
-    score2: number;
-    proposedBy: string;
-  };
-  tournamentId?: number;
-}
+import { supabase } from "@/lib/supabase";
+import { Match } from "@/types/matches";
 
 
 export default function MatchDetailsPage() {
@@ -61,71 +47,89 @@ export default function MatchDetailsPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const fetchMatchData = useCallback((matchId: string) => {
-    const matches = getFromStorage<Match[]>('recentResults', []);
-    const foundMatch = matches.find(m => m.id === parseInt(matchId));
-    setMatch(foundMatch || null);
+  const fetchMatchData = useCallback(async (matchId: string) => {
+    const { data: matchData, error } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('id', parseInt(matchId))
+      .single();
 
-    if (foundMatch) {
-        const players = getFromStorage<Player[]>('players', []);
-        setWinnerPlayer(players.find(p => p.name === foundMatch.winner) || null);
-        setLoserPlayer(players.find(p => p.name === foundMatch.loser) || null);
-        setAllPlayers(players);
+    if (error || !matchData) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Match not found.' });
+      setMatch(null);
+      return;
     }
-  }, []);
+    
+    setMatch(matchData as Match);
+
+    const { data: playersData } = await supabase.from('players').select('*');
+    if (playersData) {
+      setAllPlayers(playersData);
+      setWinnerPlayer(playersData.find(p => p.name === matchData.winner) || null);
+      setLoserPlayer(playersData.find(p => p.name === matchData.loser) || null);
+    }
+  }, [toast]);
 
   useEffect(() => {
-    const userData = getFromStorage<{ name: string; email: string; isAdmin?: boolean } | null>('userData', null);
-    setCurrentUser(userData);
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const user = session?.user;
+      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+      if (id) {
+        await fetchMatchData(id);
+      }
+    });
 
-    if (id) {
-        fetchMatchData(id);
+    // Initial fetch
+    async function initialize() {
+      const { data: { user } } = await supabase.auth.getUser();
+       setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+      if (id) {
+        await fetchMatchData(id);
+      }
     }
+    initialize();
 
-    const handleStorageChange = () => {
-        if(id) fetchMatchData(id);
+    return () => {
+      authListener.subscription.unsubscribe();
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-
   }, [id, fetchMatchData]);
 
-  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0 && match) {
       const files = Array.from(e.target.files);
+      const newMediaUrls: string[] = [];
       
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          
-          setMatch(prevMatch => {
-            if (!prevMatch) return null;
-            const updatedMatch = {
-              ...prevMatch,
-              media: [...(prevMatch.media || []), result]
-            };
-            
-            const allMatches = getFromStorage<Match[]>('recentResults', []);
-            const matchIndex = allMatches.findIndex(m => m.id === updatedMatch.id);
-            if (matchIndex > -1) {
-              allMatches[matchIndex] = updatedMatch;
-              saveToStorage('recentResults', allMatches);
-              setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-            }
-            return updatedMatch;
+      for (const file of files) {
+          const reader = new FileReader();
+          const readAsDataURL = new Promise<string>((resolve) => {
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(file);
           });
-          toast({ title: "Media Uploaded", description: "Your photo/video has been added to the match."});
-        };
-        reader.readAsDataURL(file);
-      });
+          newMediaUrls.push(await readAsDataURL);
+      }
+      
+      const updatedMedia = [...(match.media || []), ...newMediaUrls];
+
+      const { data, error } = await supabase
+        .from('matches')
+        .update({ media: updatedMedia })
+        .eq('id', match.id)
+        .select()
+        .single();
+      
+      if (error) {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+      } else if(data) {
+        setMatch(data as Match);
+        toast({ title: "Media Uploaded", description: "Your photo/video has been added to the match."});
+      }
     }
   };
   
-  const handlePostComment = (content: string, image: string | null, parentId: string | null) => {
+  const handlePostComment = async (content: string, image: string | null, parentId: string | null) => {
     if ((!content.trim() && !image) || !currentUser || !match) return;
 
+    // This part remains mostly the same as it deals with local state/notifications, which we haven't migrated yet
     const mentionRegex = /@(\w+\s\w+)/g;
     let matchResult;
     const mentionedNames: string[] = [];
@@ -152,44 +156,45 @@ export default function MatchDetailsPage() {
     };
     
     // --- Update Match State and Storage ---
-    setMatch(prevMatch => {
-        if (!prevMatch) return null;
+    let updatedComments = [...(match.comments || [])];
+    let replyAuthorEmail: string | null = null;
+    
+    if (parentId) {
+        // It's a reply
+        const findAndAddReply = (comments: Comment[]): Comment[] => {
+            return comments.map(comment => {
+                if (comment.id === parentId) {
+                    replyAuthorEmail = comment.authorEmail;
+                    return { ...comment, replies: [...(comment.replies || []), newCommentObject] };
+                }
+                if (comment.replies) {
+                    return { ...comment, replies: findAndAddReply(comment.replies) };
+                }
+                return comment;
+            });
+        };
+        updatedComments = findAndAddReply(updatedComments);
+    } else {
+        // It's a top-level comment
+        updatedComments.push(newCommentObject);
+    }
 
-        let updatedComments = [...(prevMatch.comments || [])];
-        let replyAuthorEmail: string | null = null;
-        
-        if (parentId) {
-            // It's a reply
-            const findAndAddReply = (comments: Comment[]): Comment[] => {
-                return comments.map(comment => {
-                    if (comment.id === parentId) {
-                        replyAuthorEmail = comment.authorEmail;
-                        return { ...comment, replies: [...(comment.replies || []), newCommentObject] };
-                    }
-                    if (comment.replies) {
-                        return { ...comment, replies: findAndAddReply(comment.replies) };
-                    }
-                    return comment;
-                });
-            };
-            updatedComments = findAndAddReply(updatedComments);
-        } else {
-            // It's a top-level comment
-            updatedComments.push(newCommentObject);
-        }
+    const { data, error } = await supabase
+      .from('matches')
+      .update({ comments: updatedComments })
+      .eq('id', match.id)
+      .select()
+      .single();
 
-        const updatedMatch = { ...prevMatch, comments: updatedComments };
-
-        const allMatches = getFromStorage<Match[]>('recentResults', []);
-        const matchIndex = allMatches.findIndex(m => m.id === updatedMatch.id);
-        if (matchIndex > -1) {
-            allMatches[matchIndex] = updatedMatch;
-            saveToStorage('recentResults', allMatches);
-        }
-        
-         // --- Send Notifications ---
+    if(error) {
+      toast({ variant: 'destructive', title: 'Error', description: "Could not post comment." });
+      return;
+    }
+    
+    if (data) {
+        setMatch(data as Match);
+        // --- Send Notifications (Local Storage part) ---
         if (parentId && replyAuthorEmail && replyAuthorEmail !== currentUser.email) {
-            // Notify parent comment author
              const userNotifications = getFromStorage<Notification[]>(`notifications_${replyAuthorEmail}`, []);
              const newNotification: Notification = {
                 id: Date.now().toString() + replyAuthorEmail,
@@ -201,7 +206,6 @@ export default function MatchDetailsPage() {
              };
              saveToStorage(`notifications_${replyAuthorEmail}`, [newNotification, ...userNotifications]);
         } else if (!parentId) {
-            // It's a top-level comment, notify match players
             const winnerUser = allUsers.find(u => u.name === winnerPlayer?.name);
             const loserUser = allUsers.find(u => u.name === loserPlayer?.name);
 
@@ -222,7 +226,6 @@ export default function MatchDetailsPage() {
             notifyPlayer(winnerUser);
             notifyPlayer(loserUser);
         }
-    
         mentionedEmails.forEach(email => {
             if(email === currentUser.email) return;
             const userNotifications = getFromStorage<Notification[]>(`notifications_${email}`, []);
@@ -236,72 +239,71 @@ export default function MatchDetailsPage() {
             };
             saveToStorage(`notifications_${email}`, [newNotification, ...userNotifications]);
         });
-        
         setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-        return updatedMatch;
-    });
-
-    toast({ title: parentId ? "Reply Posted" : "Comment Posted", description: `Your ${parentId ? 'reply' : 'comment'} has been added to the match.` });
+        toast({ title: parentId ? "Reply Posted" : "Comment Posted" });
+    }
   };
   
-  const handleCommentReaction = (commentId: string, reaction: 'like' | 'dislike') => {
+  const handleCommentReaction = async (commentId: string, reaction: 'like' | 'dislike') => {
     if (!currentUser || !match) return;
 
-    setMatch(prevMatch => {
-        if (!prevMatch) return null;
+    let commentAuthorEmail: string | null = null;
+    
+    const updateReactionsRecursive = (comments: Comment[]): Comment[] => {
+        return comments.map(comment => {
+            if (comment.id === commentId) {
+                commentAuthorEmail = comment.authorEmail;
+                const likes = comment.likes || [];
+                const dislikes = comment.dislikes || [];
+                const userEmail = currentUser.email;
 
-        let commentAuthorEmail: string | null = null;
-        
-        const updateReactionsRecursive = (comments: Comment[]): Comment[] => {
-            return comments.map(comment => {
-                if (comment.id === commentId) {
-                    commentAuthorEmail = comment.authorEmail;
-                    const likes = comment.likes || [];
-                    const dislikes = comment.dislikes || [];
-                    const userEmail = currentUser.email;
+                const hasLiked = likes.includes(userEmail);
+                const hasDisliked = dislikes.includes(userEmail);
 
-                    const hasLiked = likes.includes(userEmail);
-                    const hasDisliked = dislikes.includes(userEmail);
+                let newLikes = [...likes];
+                let newDislikes = [...dislikes];
 
-                    let newLikes = [...likes];
-                    let newDislikes = [...dislikes];
-
-                    if (reaction === 'like') {
-                        if (hasLiked) {
-                            newLikes = newLikes.filter(email => email !== userEmail);
-                        } else {
-                            newLikes.push(userEmail);
-                            newDislikes = newDislikes.filter(email => email !== userEmail);
-                        }
-                    } else { // dislike
-                        if (hasDisliked) {
-                            newDislikes = newDislikes.filter(email => email !== userEmail);
-                        } else {
-                            newDislikes.push(userEmail);
-                            newLikes = newLikes.filter(email => email !== userEmail);
-                        }
+                if (reaction === 'like') {
+                    if (hasLiked) {
+                        newLikes = newLikes.filter(email => email !== userEmail);
+                    } else {
+                        newLikes.push(userEmail);
+                        newDislikes = newDislikes.filter(email => email !== userEmail);
                     }
-                    return { ...comment, likes: newLikes, dislikes: newDislikes };
+                } else { // dislike
+                    if (hasDisliked) {
+                        newDislikes = newDislikes.filter(email => email !== userEmail);
+                    } else {
+                        newDislikes.push(userEmail);
+                        newLikes = newLikes.filter(email => email !== userEmail);
+                    }
                 }
-                
-                if (comment.replies) {
-                    return { ...comment, replies: updateReactionsRecursive(comment.replies) };
-                }
+                return { ...comment, likes: newLikes, dislikes: newDislikes };
+            }
+            
+            if (comment.replies) {
+                return { ...comment, replies: updateReactionsRecursive(comment.replies) };
+            }
 
-                return comment;
-            });
-        };
-        
-        const updatedComments = updateReactionsRecursive(prevMatch.comments || []);
-        const updatedMatch = { ...prevMatch, comments: updatedComments };
-
-        const allMatches = getFromStorage<Match[]>('recentResults', []);
-        const matchIndex = allMatches.findIndex(m => m.id === updatedMatch.id);
-        if (matchIndex > -1) {
-            allMatches[matchIndex] = updatedMatch;
-            saveToStorage('recentResults', allMatches);
-        }
-        
+            return comment;
+        });
+    };
+    
+    const updatedComments = updateReactionsRecursive(match.comments || []);
+    const { data, error } = await supabase
+      .from('matches')
+      .update({ comments: updatedComments })
+      .eq('id', match.id)
+      .select()
+      .single();
+    
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: "Could not update reaction." });
+      return;
+    }
+    
+    if(data) {
+        setMatch(data as Match);
         if (commentAuthorEmail && commentAuthorEmail !== currentUser.email) {
           const userNotifications = getFromStorage<Notification[]>(`notifications_${commentAuthorEmail}`, []);
           const newNotification: Notification = {
@@ -315,16 +317,14 @@ export default function MatchDetailsPage() {
           saveToStorage(`notifications_${commentAuthorEmail}`, [newNotification, ...userNotifications]);
           setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
         }
-
-        return updatedMatch;
-    });
+    }
   };
 
 
   if (!match || !winnerPlayer || !loserPlayer) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <p className="text-lg mb-4">Match not found or data is incomplete.</p>
+        <p className="text-lg mb-4">Loading match data...</p>
         <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
         </Button>

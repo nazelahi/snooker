@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import type { Tournament } from "@/app/tournaments/page";
-import type { LiveMatch } from "@/app/tournaments/page";
 import { Trash2, PlusCircle, CheckCircle, Megaphone, Users, Trophy, Radio, Calendar, Settings2, ListChecks, ShieldCheck, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,29 +23,12 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import type { Notification } from "@/types/notifications";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 
 interface SiteSettings {
   name: string;
   description: string;
-}
-
-interface UpcomingMatch {
-    id: number;
-    player1: string;
-    player2: string;
-    date: string;
-    time: string;
-    tournamentId?: number;
-}
-
-interface RecentResult {
-    id: number;
-    winner: string;
-    loser: string;
-    score: string;
-    date: string;
-    tournamentId?: number;
-    media?: string[];
 }
 
 interface Notice {
@@ -100,10 +82,21 @@ export default function AdminSettings() {
   const { toast } = useToast();
   
   useEffect(() => {
-    setPlayers(getFromStorage<Player[]>("players", []));
-    setTournaments(getFromStorage<Tournament[]>("tournaments", []));
-    setLiveMatches(getFromStorage<LiveMatch[]>("liveMatches", []));
-    setUpcomingMatches(getFromStorage<UpcomingMatch[]>("upcomingMatches", []));
+    async function fetchAdminData() {
+        const { data: playersData } = await supabase.from('players').select('*');
+        if (playersData) setPlayers(playersData);
+
+        const { data: tournamentsData } = await supabase.from('tournaments').select('*');
+        if (tournamentsData) setTournaments(tournamentsData);
+
+        const { data: liveMatchesData } = await supabase.from('live_matches').select('*');
+        if (liveMatchesData) setLiveMatches(liveMatchesData);
+
+        const { data: upcomingMatchesData } = await supabase.from('upcoming_matches').select('*');
+        if (upcomingMatchesData) setUpcomingMatches(upcomingMatchesData as UpcomingMatch[]);
+    }
+    fetchAdminData();
+
     setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
     setNotices(getFromStorage<Notice[]>("notices", []));
     
@@ -116,23 +109,22 @@ export default function AdminSettings() {
 
   const handlePlayerChange = (id: number, field: keyof Player, value: any) => {
     setPlayers(prevPlayers => {
-        const updatedPlayers = prevPlayers.map(p => {
+        return prevPlayers.map(p => {
             if (p.id === id) {
                 const updatedPlayer = { ...p, [field]: value };
                 
                 if (field === 'wins' || field === 'losses') {
-                    const wins = field === 'wins' ? value : updatedPlayer.wins ?? 0;
-                    const losses = field === 'losses' ? value : updatedPlayer.losses ?? 0;
+                    const wins = field === 'wins' ? Number(value) : updatedPlayer.wins ?? 0;
+                    const losses = field === 'losses' ? Number(value) : updatedPlayer.losses ?? 0;
                     const matchesPlayed = wins + losses;
-                    updatedPlayer.matchesPlayed = matchesPlayed;
-                    updatedPlayer.winRate = matchesPlayed > 0 ? ((wins / matchesPlayed) * 100).toFixed(1) + '%' : '0%';
+                    updatedPlayer.matches_played = matchesPlayed;
+                    updatedPlayer.win_rate = matchesPlayed > 0 ? ((wins / matchesPlayed) * 100).toFixed(1) + '%' : '0%';
                 }
                 
                 return updatedPlayer;
             }
             return p;
         });
-        return updatedPlayers;
     });
   };
 
@@ -144,9 +136,9 @@ export default function AdminSettings() {
   const handleLiveMatchChange = (id: number, field: keyof LiveMatch, value: any) => {
     const updatedMatches = liveMatches.map(m => {
         if (m.id === id) {
-            if (field === 'tournamentId') {
+            if (field === 'tournament_id') {
                 const tournament = tournaments.find(t => t.id === value);
-                return { ...m, tournamentId: value, tournamentName: tournament?.name || m.tournamentName };
+                return { ...m, tournament_id: value, tournament_name: tournament?.name || m.tournament_name };
             }
             return { ...m, [field]: value };
         }
@@ -160,120 +152,103 @@ export default function AdminSettings() {
     setUpcomingMatches(updatedMatches);
   };
 
-  const handleAddUpcomingMatch = () => {
-    let newMatch: UpcomingMatch;
+  const handleAddUpcomingMatch = async () => {
     const inProgressTournaments = tournaments.filter(t => t.status === 'In Progress');
-    setUpcomingMatches(prev => {
-        const newId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
-        newMatch = {
-            id: newId,
-            player1: players[0]?.name || "Player 1",
-            player2: players[1]?.name || "Player 2",
-            date: new Date().toISOString().split('T')[0],
-            time: "19:00",
-            tournamentId: inProgressTournaments[0]?.id || undefined,
-        };
-        return [...prev, newMatch];
-    });
-
-    setTimeout(() => {
-        const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-        
-        const player1User = allUsers.find(u => u.name === newMatch.player1);
-        const player2User = allUsers.find(u => u.name === newMatch.player2);
-
-        const createNotification = (player: {name: string, email: string}, opponentName: string, date: string, time: string) => {
-            const notifications = getFromStorage<Notification[]>(`notifications_${player.email}`, []);
-            const newNotification: Notification = {
-                id: Date.now().toString() + Math.random(),
-                title: "New Match Scheduled",
-                description: `A new match has been scheduled for you against ${opponentName} on ${new Date(date).toLocaleDateString()} at ${time}.`,
-                read: false,
-                date: new Date().toISOString()
-            };
-            saveToStorage(`notifications_${player.email}`, [newNotification, ...notifications]);
-        };
-
-        if (player1User) {
-            createNotification(player1User, newMatch.player2, newMatch.date, newMatch.time);
-        }
-        if (player2User) {
-            createNotification(player2User, newMatch.player1, newMatch.date, newMatch.time);
-        }
-        window.dispatchEvent(new Event('storage'));
-    }, 0);
+    const newMatchData = {
+        player1: players[0]?.name || "Player 1",
+        player2: players[1]?.name || "Player 2",
+        date: new Date().toISOString().split('T')[0],
+        time: "19:00",
+        tournament_id: inProgressTournaments[0]?.id || undefined,
+    };
+    
+    const { data, error } = await supabase.from('upcoming_matches').insert(newMatchData).select().single();
+    if(data) {
+        setUpcomingMatches(prev => [...prev, data as UpcomingMatch]);
+    }
+    if (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not add upcoming match.' });
+    }
   };
 
-  const handleAddLiveMatch = () => {
+  const handleAddLiveMatch = async () => {
     const inProgressTournaments = tournaments.filter(t => t.status === 'In Progress');
-    setLiveMatches(prev => {
-        const newId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
-        const newMatch: LiveMatch = {
-            id: newId,
-            player1: players[0]?.name || "Player 1",
-            player2: players[1]?.name || "Player 2",
-            score1: 0,
-            score2: 0,
-            tournamentId: inProgressTournaments[0]?.id || 1,
-            tournamentName: inProgressTournaments[0]?.name || "Tournament",
-        };
-        return [...prev, newMatch];
-    });
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+    const newMatchData = {
+        player1: players[0]?.name || "Player 1",
+        player2: players[1]?.name || "Player 2",
+        score1: 0,
+        score2: 0,
+        tournament_id: inProgressTournaments[0]?.id || 1,
+        tournament_name: inProgressTournaments[0]?.name || "Tournament",
+    };
+    const { data, error } = await supabase.from('live_matches').insert(newMatchData).select().single();
+    if(data) {
+        setLiveMatches(prev => [...prev, data as LiveMatch]);
+    }
+    if(error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not add live match.' });
+    }
   };
 
 
-  const handleDelete = <T extends {id: any}>(id: any, type: 'players' | 'tournaments' | 'liveMatches' | 'upcomingMatches' | 'notices', stateSetter: React.Dispatch<React.SetStateAction<T[]>>) => {
-      stateSetter(prev => {
-        const updated = prev.filter(item => item.id !== id);
-        saveToStorage(type, updated);
-        return updated;
-      });
-      toast({ title: "Success", description: `Item removed from ${type}.`});
+  const handleDelete = async (id: any, tableName: 'players' | 'tournaments' | 'live_matches' | 'upcoming_matches' | 'notices') => {
+      const { error } = await supabase.from(tableName).delete().eq('id', id);
+      if (error) {
+        toast({ title: 'Error', description: `Failed to remove item from ${tableName}.` });
+      } else {
+        switch(tableName) {
+          case 'players': setPlayers(prev => prev.filter(item => item.id !== id)); break;
+          case 'tournaments': setTournaments(prev => prev.filter(item => item.id !== id)); break;
+          case 'live_matches': setLiveMatches(prev => prev.filter(item => item.id !== id)); break;
+          case 'upcoming_matches': setUpcomingMatches(prev => prev.filter(item => item.id !== id)); break;
+          case 'notices': 
+            const updatedNotices = notices.filter(item => item.id !== id);
+            setNotices(updatedNotices);
+            saveToStorage('notices', updatedNotices);
+            break;
+        }
+        toast({ title: "Success", description: `Item removed from ${tableName}.`});
+      }
   };
 
-  const handleEndLiveMatch = (matchId: number) => {
+  const handleEndLiveMatch = async (matchId: number) => {
     const match = liveMatches.find(m => m.id === matchId);
     if (!match) return;
 
-    // 1. Create new recent result
-    const recentResults = getFromStorage<RecentResult[]>("recentResults", []);
-    const newResult: RecentResult = {
-        id: recentResults.length > 0 ? Math.max(...recentResults.map(r => r.id)) + 1 : 1,
+    // 1. Create new recent result in 'matches' table
+    const newResult = {
         winner: match.score1 > match.score2 ? match.player1 : match.player2,
         loser: match.score1 > match.score2 ? match.player2 : match.player1,
         score: `${match.score1}-${match.score2}`,
         date: new Date().toISOString(),
-        tournamentId: match.tournamentId
+        tournament_id: match.tournament_id,
+        media: [],
+        comments: []
     };
-    const updatedRecentResults = [...recentResults, newResult];
-    saveToStorage("recentResults", updatedRecentResults);
+    const { error: insertError } = await supabase.from('matches').insert([newResult]);
+    if(insertError) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not save match result.' });
+      return;
+    }
 
     // 2. Update player stats
-    const winnerIndex = players.findIndex(p => p.name === newResult.winner);
-    const loserIndex = players.findIndex(p => p.name === newResult.loser);
-    const updatedPlayers = [...players];
+    const winner = players.find(p => p.name === newResult.winner);
+    const loser = players.find(p => p.name === newResult.loser);
 
-    if (winnerIndex > -1) {
-        const winner = updatedPlayers[winnerIndex];
-        winner.wins = (winner.wins || 0) + 1;
-        winner.matchesPlayed = (winner.matchesPlayed || 0) + 1;
-        winner.winRate = ((winner.wins / winner.matchesPlayed) * 100).toFixed(1) + '%';
+    if (winner) {
+        await supabase.from('players').update({ wins: (winner.wins ?? 0) + 1, matches_played: winner.matches_played + 1 }).eq('id', winner.id);
     }
-    if (loserIndex > -1) {
-        const loser = updatedPlayers[loserIndex];
-        loser.losses = (loser.losses || 0) + 1;
-        loser.matchesPlayed = (loser.matchesPlayed || 0) + 1;
-        loser.winRate = ((loser.wins || 0) / loser.matchesPlayed * 100).toFixed(1) + '%';
+    if (loser) {
+        await supabase.from('players').update({ losses: (loser.losses ?? 0) + 1, matches_played: loser.matches_played + 1 }).eq('id', loser.id);
     }
-    setPlayers(updatedPlayers);
-    saveToStorage("players", updatedPlayers);
-
+    
     // 3. Remove from live matches
-    handleDelete(matchId, 'liveMatches', setLiveMatches);
+    await handleDelete(matchId, 'live_matches');
 
     toast({ title: "Match Ended", description: `${newResult.winner} won against ${newResult.loser}. Results saved.`});
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+    // Refresh player data to show updated stats
+    const { data: playersData } = await supabase.from('players').select('*');
+    if (playersData) setPlayers(playersData);
   };
 
   const handleRuleChange = (index: number, value: string) => {
@@ -307,36 +282,27 @@ export default function AdminSettings() {
         date: new Date().toISOString()
     };
     
-    setNotices(prev => [newNotice, ...prev]);
-
-    // Create notifications for all users
-    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-    allUsers.forEach(user => {
-        const userNotifications = getFromStorage<Notification[]>(`notifications_${user.email}`, []);
-        const newNotification: Notification = {
-            id: Date.now().toString() + user.email,
-            title: `New Club Notice: ${newNotice.title}`,
-            description: newNotice.content.substring(0, 100) + (newNotice.content.length > 100 ? '...' : ''),
-            read: false,
-            date: new Date().toISOString()
-        };
-        saveToStorage(`notifications_${user.email}`, [newNotification, ...userNotifications]);
-    });
+    const updatedNotices = [newNotice, ...notices];
+    setNotices(updatedNotices);
+    saveToStorage('notices', updatedNotices);
     
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-
     setNewNoticeTitle("");
     setNewNoticeContent("");
     toast({ title: 'Notice Posted', description: 'All users have been notified.'});
   };
 
-  const handleSaveData = (key: string, data: any, name: string) => {
-    saveToStorage(key, data);
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-    toast({
-      title: "Saved!",
-      description: `Your changes to ${name} have been saved.`,
-    });
+  const handleSaveData = async (key: string, data: any, name: string) => {
+    if (key === 'siteSettings' || key === 'tournamentRules' || key === 'notices') {
+        saveToStorage(key, data);
+    } else {
+        const { error } = await supabase.from(key).upsert(data);
+        if (error) {
+            toast({ variant: 'destructive', title: "Save Failed!", description: error.message });
+            return;
+        }
+    }
+    
+    toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
   };
 
   return (
@@ -382,7 +348,7 @@ export default function AdminSettings() {
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor={`player-break-${player.id}`} className="md:hidden">Highest Break</Label>
-                                <Input id={`player-break-${player.id}`} placeholder="Highest Break" value={player.highestBreak} type="number" onChange={e => handlePlayerChange(player.id, 'highestBreak', parseInt(e.target.value))} />
+                                <Input id={`player-break-${player.id}`} placeholder="Highest Break" value={player.highest_break} type="number" onChange={e => handlePlayerChange(player.id, 'highest_break', parseInt(e.target.value))} />
                             </div>
                             <div className="md:col-span-2 grid grid-cols-3 gap-2 items-center">
                                 <div className="space-y-1">
@@ -393,7 +359,7 @@ export default function AdminSettings() {
                                     <Label htmlFor={`player-losses-${player.id}`} className="md:hidden">Losses</Label>
                                     <Input id={`player-losses-${player.id}`} placeholder="Losses" value={player.losses ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'losses', parseInt(e.target.value))} />
                                 </div>
-                                <Button variant="destructive" size="icon" onClick={() => handleDelete(player.id, 'players', setPlayers)} className="justify-self-end"><Trash2 className="h-4 w-4" /></Button>
+                                <Button variant="destructive" size="icon" onClick={() => handleDelete(player.id, 'players')} className="justify-self-end"><Trash2 className="h-4 w-4" /></Button>
                             </div>
                         </div>
                     ))}
@@ -448,7 +414,7 @@ export default function AdminSettings() {
                                     </Select>
                                 )}
                             </div>
-                            <Button variant="destructive" size="icon" onClick={() => handleDelete(tournament.id, 'tournaments', setTournaments)} className="justify-self-end"><Trash2 className="h-4 w-4" /></Button>
+                            <Button variant="destructive" size="icon" onClick={() => handleDelete(tournament.id, 'tournaments')} className="justify-self-end"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                         </div>
                     ))}
@@ -494,7 +460,7 @@ export default function AdminSettings() {
                                 </div>
                                 <div className="space-y-1">
                                     <Label htmlFor={`live-tourney-${match.id}`} className="md:hidden">Tournament</Label>
-                                    <Select value={match.tournamentId.toString()} onValueChange={value => handleLiveMatchChange(match.id, 'tournamentId', parseInt(value))}>
+                                    <Select value={match.tournament_id.toString()} onValueChange={value => handleLiveMatchChange(match.id, 'tournament_id', parseInt(value))}>
                                         <SelectTrigger id={`live-tourney-${match.id}`}><SelectValue placeholder="Select tournament" /></SelectTrigger>
                                         <SelectContent>
                                             {tournaments.filter(t => t.status === 'In Progress').map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
@@ -516,7 +482,7 @@ export default function AdminSettings() {
                                         <CheckCircle className="mr-2 h-4 w-4"/>
                                         <span className="hidden md:inline">End Match</span>
                                     </Button>
-                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'liveMatches', setLiveMatches)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'live_matches')}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                         ))}
@@ -525,7 +491,7 @@ export default function AdminSettings() {
                         </Button>
                     </CardContent>
                      <CardFooter>
-                       <Button onClick={() => handleSaveData('liveMatches', liveMatches, 'Live Matches')}><Save className="h-4 w-4 mr-2" />Save Live Match Changes</Button>
+                       <Button onClick={() => handleSaveData('live_matches', liveMatches, 'Live Matches')}><Save className="h-4 w-4 mr-2" />Save Live Match Changes</Button>
                     </CardFooter>
                 </Card>
             </TabsContent>
@@ -564,7 +530,7 @@ export default function AdminSettings() {
                                 </div>
                                 <div className="space-y-1">
                                     <Label htmlFor={`upcoming-tourney-${match.id}`} className="md:hidden">Tournament</Label>
-                                    <Select value={match.tournamentId?.toString()} onValueChange={value => handleUpcomingMatchChange(match.id, 'tournamentId', parseInt(value))}>
+                                    <Select value={match.tournament_id?.toString()} onValueChange={value => handleUpcomingMatchChange(match.id, 'tournament_id', parseInt(value))}>
                                         <SelectTrigger id={`upcoming-tourney-${match.id}`}><SelectValue placeholder="Select tournament" /></SelectTrigger>
                                         <SelectContent>
                                             {tournaments.filter(t => t.status === 'In Progress').map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
@@ -579,7 +545,7 @@ export default function AdminSettings() {
                                             <Input type="time" value={match.time} onChange={e => handleUpcomingMatchChange(match.id, 'time', e.target.value)} />
                                         </div>
                                     </div>
-                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'upcomingMatches', setUpcomingMatches)} className="justify-self-end"><Trash2 className="h-4 w-4" /></Button>
+                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(match.id, 'upcoming_matches')} className="justify-self-end"><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                         ))}
@@ -588,7 +554,7 @@ export default function AdminSettings() {
                         </Button>
                     </CardContent>
                     <CardFooter>
-                       <Button onClick={() => handleSaveData('upcomingMatches', upcomingMatches, 'Upcoming Matches')}><Save className="h-4 w-4 mr-2" />Save Upcoming Match Changes</Button>
+                       <Button onClick={() => handleSaveData('upcoming_matches', upcomingMatches, 'Upcoming Matches')}><Save className="h-4 w-4 mr-2" />Save Upcoming Match Changes</Button>
                     </CardFooter>
                 </Card>
             </TabsContent>
@@ -649,7 +615,7 @@ export default function AdminSettings() {
                                         <p className="font-bold">{notice.title}</p>
                                         <p className="text-sm text-muted-foreground">{notice.content}</p>
                                     </div>
-                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(notice.id, 'notices', setNotices)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(notice.id, 'notices')}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             ))
                         ) : (

@@ -16,27 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Swords, Calendar } from "lucide-react";
-import { getFromStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import { cn } from "@/lib/utils";
-
-interface Match {
-  id: number;
-  winner: string;
-  loser: string;
-  score: string;
-  date: string;
-  tournamentId?: number;
-}
-
-interface UpcomingMatch {
-  id: number;
-  player1: string;
-  player2: string;
-  date: string;
-  time: string;
-  tournamentId?: number;
-}
+import { supabase } from "@/lib/supabase";
+import { Match, UpcomingMatch } from "@/types/matches";
 
 export default function AllMatchesPage() {
   const [allMatches, setAllMatches] = useState<Match[]>([]);
@@ -45,19 +28,32 @@ export default function AllMatchesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [matchesToShow, setMatchesToShow] = useState(10);
   const [upcomingToShow, setUpcomingToShow] = useState(5);
+  const [loading, setLoading] = useState(true);
 
 
   useEffect(() => {
-    const storedMatches = getFromStorage<Match[]>('recentResults', []);
-    const sortedMatches = storedMatches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setAllMatches(sortedMatches);
-    
-    const storedUpcoming = getFromStorage<UpcomingMatch[]>('upcomingMatches', []);
-    const sortedUpcoming = storedUpcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    setUpcomingMatches(sortedUpcoming);
+    async function fetchData() {
+      setLoading(true);
 
-    const storedPlayers = getFromStorage<Player[]>('players', []);
-    setPlayers(storedPlayers);
+      const { data: matchesData } = await supabase.from('matches').select('*').order('date', { ascending: false });
+      if (matchesData) {
+        setAllMatches(matchesData as Match[]);
+      }
+
+      const { data: upcomingData } = await supabase.from('upcoming_matches').select('*').order('date', { ascending: true }).order('time', { ascending: true });
+      if (upcomingData) {
+        setUpcomingMatches(upcomingData as UpcomingMatch[]);
+      }
+
+      const { data: playersData } = await supabase.from('players').select('*');
+      if (playersData) {
+        setPlayers(playersData);
+      }
+      
+      setLoading(false);
+    }
+
+    fetchData();
   }, []);
 
   const filteredMatches = allMatches.filter(match =>
@@ -115,7 +111,9 @@ export default function AllMatchesPage() {
             <CardDescription>Scheduled games for the upcoming days.</CardDescription>
           </CardHeader>
           <CardContent>
-            {paginatedUpcoming.length > 0 ? (
+            {loading ? (
+                <p>Loading upcoming matches...</p>
+            ) : paginatedUpcoming.length > 0 ? (
                 <ul className="space-y-4">
                 {paginatedUpcoming.map((match) => {
                     const player1 = getPlayerAvatar(match.player1);
@@ -171,7 +169,9 @@ export default function AllMatchesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {paginatedMatches.length > 0 ? (
+          {loading ? (
+             <p>Loading match results...</p>
+          ) : paginatedMatches.length > 0 ? (
             <ul className="space-y-4">
               {paginatedMatches.map((match) => {
                 const winner = getPlayerAvatar(match.winner);

@@ -23,33 +23,20 @@ import { AddMatchDialog } from "@/components/add-match-dialog";
 import type { Notification } from "@/types/notifications";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-
-interface Match {
-  id: number;
-  winner: string;
-  loser: string;
-  score: string;
-  date: string;
-  media?: string[];
-  pendingScore?: {
-    score1: number;
-    score2: number;
-    proposedBy: string;
-  };
-  tournamentId?: number;
-}
+import { supabase } from "@/lib/supabase";
+import { Match } from "@/types/matches";
 
 const initialStats = {
   name: "John Doe",
   initials: "JD",
   avatar: "",
-  matchesPlayed: 32,
-  wins: 20,
-  losses: 12,
-  winRate: "62.5%",
-  highestBreak: 112,
-  averageBreak: 45,
-  tournamentsWon: 2,
+  matchesPlayed: 0,
+  wins: 0,
+  losses: 0,
+  winRate: "0%",
+  highestBreak: 0,
+  averageBreak: 0,
+  tournamentsWon: 0,
 };
 
 export default function MyStatsPage() {
@@ -70,39 +57,37 @@ export default function MyStatsPage() {
 
   const { toast } = useToast();
 
-  const fetchCurrentUserData = () => {
-    const userData = getFromStorage<{name: string, email: string} | null>('userData', null);
-    if (userData) {
+  const fetchCurrentUserData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    const { data: playersData } = await supabase.from('players').select('*');
+    if (playersData) {
+      setAllPlayers(playersData);
+      const player = playersData.find(p => p.name.toLowerCase() === (user.user_metadata.full_name || "").toLowerCase());
+
+      const currentUserData = { name: user.user_metadata.full_name || user.email!, email: user.email!, avatar: player?.avatar };
+      setCurrentUser(currentUserData);
       
-      const players = getFromStorage<Player[]>('players', []);
-      setAllPlayers(players);
-      const player = players.find(p => p.name.toLowerCase() === userData.name.toLowerCase());
-
-      setCurrentUser({ ...userData, avatar: player?.avatar });
-
       let statsToSet;
       if (player) {
-        const winRateValue = parseFloat(player.winRate) || 0;
-        const wins = player.wins ?? Math.round(player.matchesPlayed * (winRateValue / 100));
-        const losses = player.losses ?? player.matchesPlayed - wins;
-        const averageBreak = player.averageBreak ?? Math.floor(player.highestBreak / 2);
-        
         statsToSet = {
             name: player.name,
             initials: player.initials,
             avatar: player.avatar,
-            matchesPlayed: player.matchesPlayed,
-            wins: wins,
-            losses: losses,
-            winRate: player.winRate,
-            highestBreak: player.highestBreak,
-            averageBreak: averageBreak,
-            tournamentsWon: player.skillLevel === 'Pro' ? 2 : (player.skillLevel === 'Intermediate' ? 1 : 0),
+            matchesPlayed: player.matches_played,
+            wins: player.wins ?? 0,
+            losses: player.losses ?? 0,
+            winRate: player.win_rate,
+            highestBreak: player.highest_break,
+            averageBreak: player.average_break ?? 0,
+            tournamentsWon: player.skill_level === 'Pro' ? 2 : (player.skill_level === 'Intermediate' ? 1 : 0),
         };
-      } else if (userData.name) {
-         statsToSet = {...initialStats, name: userData.name, initials: userData.name.split(' ').map(n => n[0]).join('')};
       } else {
-        statsToSet = initialStats;
+         statsToSet = {...initialStats, name: currentUserData.name, initials: currentUserData.name.split(' ').map(n => n[0]).join('')};
       }
       setUserStats(statsToSet);
       setEditedName(statsToSet.name);
@@ -111,29 +96,34 @@ export default function MyStatsPage() {
       setEditedLosses(statsToSet.losses);
       setEditedAverageBreak(statsToSet.averageBreak);
 
-      const allMatches = getFromStorage<Match[]>('recentResults', []);
-      const matchesForApproval = allMatches.filter(match => 
-        (match.winner === userData.name || match.loser === userData.name) && 
-        match.pendingScore && match.pendingScore.proposedBy !== userData.email
-      );
-      setPendingMatches(matchesForApproval);
+      const { data: allMatches } = await supabase.from('matches').select('*');
+      if (allMatches) {
+        const matchesForApproval = allMatches.filter(match => 
+          (match.winner === currentUserData.name || match.loser === currentUserData.name) && 
+          match.pending_score && match.pending_score.proposed_by !== currentUserData.email
+        );
+        setPendingMatches(matchesForApproval as Match[]);
 
-      const playerMatches = allMatches.filter(
-          (match) => match.winner === userData.name || match.loser === userData.name
-      ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setMatchHistory(playerMatches);
+        const playerMatches = allMatches.filter(
+            (match) => match.winner === currentUserData.name || match.loser === currentUserData.name
+        ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setMatchHistory(playerMatches as Match[]);
+      }
     }
   };
 
   useEffect(() => {
     fetchCurrentUserData();
     
-    const handleStorageChange = () => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
         fetchCurrentUserData();
-    };
+      }
+    });
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,54 +139,44 @@ export default function MyStatsPage() {
     }
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!currentUser) return;
+    
+    const currentPlayer = allPlayers.find(p => p.name.toLowerCase() === currentUser.name.toLowerCase());
+    if (!currentPlayer) return;
 
-    const players = getFromStorage<Player[]>('players', []);
-    const playerIndex = players.findIndex(p => p.name.toLowerCase() === currentUser.name.toLowerCase());
+    const matchesPlayed = editedWins + editedLosses;
+    const winRate = matchesPlayed > 0 ? ((editedWins / matchesPlayed) * 100).toFixed(1) + '%' : "0%";
 
-    if (playerIndex > -1) {
-        const matchesPlayed = editedWins + editedLosses;
-        const winRate = matchesPlayed > 0 ? ((editedWins / matchesPlayed) * 100).toFixed(1) + '%' : "0%";
+    const updatedPlayerData = { 
+      name: editedName,
+      initials: editedName.split(' ').map(n => n[0]).join(''),
+      avatar: editedAvatar || currentPlayer.avatar,
+      wins: editedWins,
+      losses: editedLosses,
+      average_break: editedAverageBreak,
+      matches_played: matchesPlayed,
+      win_rate: winRate,
+    };
+    
+    const { error } = await supabase.from('players').update(updatedPlayerData).eq('id', currentPlayer.id);
 
-        const updatedPlayer = { 
-            ...players[playerIndex], 
-            name: editedName,
-            initials: editedName.split(' ').map(n => n[0]).join(''),
-            avatar: editedAvatar || players[playerIndex].avatar,
-            wins: editedWins,
-            losses: editedLosses,
-            averageBreak: editedAverageBreak,
-            matchesPlayed: matchesPlayed,
-            winRate: winRate,
-        };
-        players[playerIndex] = updatedPlayer;
-        saveToStorage('players', players);
-
-        const newUserData = { ...currentUser, name: editedName };
-        saveToStorage('userData', newUserData);
-        setCurrentUser(newUserData);
-        
-        setUserStats(prev => ({
-            ...prev,
-            name: editedName,
-            initials: editedName.split(' ').map(n => n[0]).join(''),
-            avatar: editedAvatar || prev.avatar,
-            wins: editedWins,
-            losses: editedLosses,
-            averageBreak: editedAverageBreak,
-            matchesPlayed: matchesPlayed,
-            winRate: winRate
-        }));
-        
-        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      return;
+    }
+    
+    // Also update user metadata if name changed
+    if (editedName !== currentUser.name) {
+      await supabase.auth.updateUser({ data: { full_name: editedName } });
     }
 
     toast({ title: "Success", description: "Your profile has been updated."});
     setIsEditing(false);
+    fetchCurrentUserData(); // Refresh all data
   }
   
-  const handleAddMatch = (opponentId: number, myScore: number, opponentScore: number) => {
+  const handleAddMatch = async (opponentId: number, myScore: number, opponentScore: number) => {
     if (!currentUser) return;
 
     const opponent = allPlayers.find(p => p.id === opponentId);
@@ -205,23 +185,27 @@ export default function MyStatsPage() {
         return;
     }
     
-    const allMatches = getFromStorage<any[]>('recentResults', []);
     const newMatch = {
-        id: allMatches.length > 0 ? Math.max(...allMatches.map(m => m.id)) + 1 : 1,
         winner: myScore > opponentScore ? currentUser.name : opponent.name,
         loser: myScore > opponentScore ? opponent.name : currentUser.name,
         score: `${myScore}-${opponentScore}`,
         date: new Date().toISOString(),
         media: [],
-        pendingScore: {
+        comments: [],
+        pending_score: {
             score1: myScore > opponentScore ? myScore : opponentScore,
             score2: myScore > opponentScore ? opponentScore : myScore,
-            proposedBy: currentUser.email,
+            proposed_by: currentUser.email,
         }
     };
-    
-    saveToStorage('recentResults', [...allMatches, newMatch]);
 
+    const { error } = await supabase.from('matches').insert([newMatch]);
+
+    if (error) {
+       toast({ variant: 'destructive', title: 'Error', description: 'Could not report match.' });
+       return;
+    }
+    
     const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
     const opponentUser = allUsers.find(u => u.name === opponent.name);
     
@@ -239,75 +223,58 @@ export default function MyStatsPage() {
     }
 
     toast({ title: "Match Reported", description: "Your new match has been reported and is awaiting approval from your opponent."});
+    fetchCurrentUserData();
   };
 
-  const handleApproval = (matchId: number, approve: boolean) => {
+  const handleApproval = async (matchId: number, approve: boolean) => {
     if (!currentUser) return;
-    const allMatches = getFromStorage<Match[]>('recentResults', []);
-    const matchIndex = allMatches.findIndex(m => m.id === matchId);
-    if (matchIndex === -1) return;
-
-    const match = allMatches[matchIndex];
-    if (!match.pendingScore) return;
+    
+    const match = pendingMatches.find(m => m.id === matchId);
+    if (!match || !match.pending_score) return;
 
     const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-    const proposerUser = allUsers.find(u => u.email === match.pendingScore!.proposedBy);
+    const proposerUser = allUsers.find(u => u.email === match.pending_score!.proposed_by);
 
     if (approve) {
-        const { score1, score2, proposedBy } = match.pendingScore;
+        const { score1, score2 } = match.pending_score;
         
-        let winnerName: string, loserName: string;
-        
-        const proposerIsPlayer1 = proposedBy === match.pendingScore.proposedBy;
-
-        const players = getFromStorage<Player[]>('players', []);
-        const currentUserPlayer = players.find(p => p.name === currentUser.name);
-        const proposerPlayer = players.find(p => p.name === proposerUser?.name);
+        const proposerPlayer = allPlayers.find(p => p.name === proposerUser?.name);
+        const currentUserPlayer = allPlayers.find(p => p.name === currentUser.name);
         
         if (!currentUserPlayer || !proposerPlayer) return;
 
-        // Determine winner based on who proposed what.
-        if (proposerPlayer.name === match.winner) { // Proposer reported themselves as winner initially
-            winnerName = score1 > score2 ? proposerPlayer.name : currentUserPlayer.name;
-            loserName = score1 > score2 ? currentUserPlayer.name : proposerPlayer.name;
-        } else { // Proposer reported themselves as loser initially
-            winnerName = score1 > score2 ? currentUserPlayer.name : proposerPlayer.name;
-            loserName = score1 > score2 ? proposerPlayer.name : currentUserPlayer.name;
-        }
+        const winnerName = score1 > score2 ? proposerPlayer.name : currentUserPlayer.name;
+        const loserName = score1 > score2 ? currentUserPlayer.name : proposerPlayer.name;
 
-        allMatches[matchIndex] = {
-            ...match,
-            score: `${score1}-${score2}`,
-            winner: winnerName,
-            loser: loserName,
-            pendingScore: undefined
-        };
-        toast({ title: "Approved", description: "The match score has been updated." });
+        // Update match to be confirmed
+        const { error: matchUpdateError } = await supabase
+            .from('matches')
+            .update({ 
+                score: `${score1}-${score2}`, 
+                winner: winnerName, 
+                loser: loserName, 
+                pending_score: null 
+            })
+            .eq('id', matchId);
+
+        if(matchUpdateError) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not approve match.' });
+          return;
+        }
 
         // Update player stats
+        const winner = allPlayers.find(p => p.name === winnerName)!;
+        const loser = allPlayers.find(p => p.name === loserName)!;
         
-        const winnerIndex = players.findIndex(p => p.name === winnerName);
-        const loserIndex = players.findIndex(p => p.name === loserName);
-
-        if (winnerIndex > -1) {
-            players[winnerIndex].wins = (players[winnerIndex].wins ?? 0) + 1;
-            players[winnerIndex].matchesPlayed += 1;
-            players[winnerIndex].winRate = ((players[winnerIndex].wins! / players[winnerIndex].matchesPlayed) * 100).toFixed(1) + '%';
-        }
-        if (loserIndex > -1) {
-            players[loserIndex].losses = (players[loserIndex].losses ?? 0) + 1;
-            players[loserIndex].matchesPlayed += 1;
-            players[loserIndex].winRate = ((players[loserIndex].wins! / players[loserIndex].matchesPlayed) * 100).toFixed(1) + '%';
-        }
-        saveToStorage('players', players);
-
+        await supabase.from('players').update({ wins: (winner.wins ?? 0) + 1, matches_played: winner.matches_played + 1 }).eq('id', winner.id);
+        await supabase.from('players').update({ losses: (loser.losses ?? 0) + 1, matches_played: loser.matches_played + 1 }).eq('id', loser.id);
+        
+        toast({ title: "Approved", description: "The match score has been updated." });
     } else {
-        allMatches.splice(matchIndex, 1);
+        // Delete rejected match report
+        await supabase.from('matches').delete().eq('id', matchId);
         toast({ title: "Rejected", description: "The score has been rejected and the match report removed." });
     }
-
-    saveToStorage('recentResults', allMatches);
-    setPendingMatches(prev => prev.filter(m => m.id !== matchId));
 
     if (proposerUser) {
         const proposerNotificationKey = `notifications_${proposerUser.email}`;
@@ -326,6 +293,8 @@ export default function MyStatsPage() {
     fetchCurrentUserData();
     setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   }
+
+  if(!currentUser) return <p>Loading...</p>
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
@@ -359,20 +328,20 @@ export default function MyStatsPage() {
             <CardContent>
                 <ul className="space-y-4">
                     {pendingMatches.map(match => {
-                        const proposerUser = getFromStorage<{name:string, email:string}[]>('users', []).find(u => u.email === match.pendingScore?.proposedBy)
+                        if(!match.pending_score) return null;
+                        const proposerUser = getFromStorage<{name:string, email:string}[]>('users', []).find(u => u.email === match.pending_score?.proposed_by)
                         const opponentName = proposerUser?.name ?? 'Opponent';
 
                         let myProposedScore, opponentProposedScore;
                         
-                        // The proposer's score is always score1 in the pending object when created from their side
                         const proposerIsWinnerInReport = match.winner === opponentName;
                         
                         if(proposerIsWinnerInReport) { 
-                           opponentProposedScore = match.pendingScore?.score1;
-                           myProposedScore = match.pendingScore?.score2;
+                           opponentProposedScore = match.pending_score?.score1;
+                           myProposedScore = match.pending_score?.score2;
                         } else {
-                           opponentProposedScore = match.pendingScore?.score2;
-                           myProposedScore = match.pendingScore?.score1;
+                           opponentProposedScore = match.pending_score?.score2;
+                           myProposedScore = match.pending_score?.score1;
                         }
 
 
@@ -495,7 +464,7 @@ export default function MyStatsPage() {
               {matchHistory.map((match) => {
                 const isWinner = match.winner === currentUser?.name;
                 const opponentName = isWinner ? match.loser : match.winner;
-                const opponent = getFromStorage<Player[]>('players', []).find(p => p.name === opponentName);
+                const opponent = allPlayers.find(p => p.name === opponentName);
 
                 return (
                   <li 
@@ -581,10 +550,3 @@ export default function MyStatsPage() {
   );
 }
     
-
-    
-
-
-
-
-

@@ -25,6 +25,8 @@ import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddTournamentDialog } from "@/components/add-tournament-dialog";
 import type { Player } from "@/app/players/page";
 import type { Round } from "@/components/tournament-bracket";
+import { supabase } from "@/lib/supabase";
+import { LiveMatch } from "@/types/matches";
 
 export interface Tournament {
   id: number;
@@ -41,28 +43,6 @@ export interface Tournament {
   bracket?: Round[];
 }
 
-export interface LiveMatch {
-  id: number;
-  tournamentId: number;
-  tournamentName: string;
-  player1: string;
-  player2: string;
-  score1: number;
-  score2: number;
-}
-
-const initialTournaments: Tournament[] = [
-  { id: 1, name: "Club Championship 2024", format: "Knockout", players: 64, status: "In Progress", rules: ["Standard knockout rules", "Best of 11 frames."], image: "https://placehold.co/600x400.png", pendingPlayers: [], registeredPlayers: [], location: "Main Hall" },
-  { id: 2, name: "Summer League", format: "League", players: 16, status: "In Progress", rules: ["Round-robin league format.", "Each player plays each other once.", "2 points for a win, 1 for a draw."], image: "https://placehold.co/600x400.png", pendingPlayers: [], registeredPlayers: [], location: "Upstairs Lounge" },
-  { id: 3, name: "9-Ball Challenge", format: "Round Robin", players: 8, status: "Finished", rules: ["9-ball rules.", "Race to 7."], image: "https://placehold.co/600x400.png", pendingPlayers: [], registeredPlayers: [], location: "Pool Room", winner: "Judd Trump" },
-  { id: 4, name: "Annual Pro-Am", format: "Knockout", players: 32, status: "Upcoming", rules: ["Pro-Am knockout tournament.", "Amateurs get a handicap."], image: "https://placehold.co/600x400.png", pendingPlayers: [], registeredPlayers: [], location: "Main Hall" },
-];
-
-const initialLiveMatches: LiveMatch[] = [
-    { id: 1, tournamentId: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
-    { id: 2, tournamentId: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
-];
-
 export default function TournamentsPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
@@ -71,37 +51,43 @@ export default function TournamentsPage() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-    setCurrentUser(userData);
+    async function fetchData() {
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+        
+        const { data: tournamentsData } = await supabase.from('tournaments').select('*');
+        if (tournamentsData) setTournaments(tournamentsData);
 
-    const storedTournaments = getFromStorage('tournaments', initialTournaments);
-    setTournaments(storedTournaments);
+        const { data: liveMatchesData } = await supabase.from('live_matches').select('*');
+        if (liveMatchesData) setLiveMatches(liveMatchesData);
 
-    const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
-    setLiveMatches(storedLiveMatches);
-
-    const storedPlayers = getFromStorage('players', []);
-    setPlayers(storedPlayers);
-
-    if (localStorage.getItem('tournaments') === null) {
-      saveToStorage('tournaments', initialTournaments);
+        const { data: playersData } = await supabase.from('players').select('*');
+        if(playersData) setPlayers(playersData);
     }
-    if (localStorage.getItem('liveMatches') === null) {
-        saveToStorage('liveMatches', initialLiveMatches);
+    fetchData();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      fetchData();
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
     }
   }, []);
 
-  const handleAddTournament = (newTournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers'>) => {
-    setTournaments(prevTournaments => {
-      const newTournaments = [...prevTournaments, {
-        ...newTournament,
-        id: prevTournaments.length + 1,
-        pendingPlayers: [],
-        registeredPlayers: [],
-      }];
-      saveToStorage('tournaments', newTournaments);
-      return newTournaments;
-    });
+  const handleAddTournament = async (newTournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers'>) => {
+    const { data, error } = await supabase.from('tournaments').insert([{
+      ...newTournament,
+      pendingPlayers: [],
+      registeredPlayers: [],
+    }]).select();
+
+    if (data) {
+      setTournaments(prev => [...prev, ...data]);
+    }
+    if (error) {
+      console.error('Error adding tournament:', error);
+    }
   };
 
   const PlayerLink = ({name}: {name: string}) => {
@@ -141,7 +127,7 @@ export default function TournamentsPage() {
               {liveMatches.map((match) => (
                 <li key={match.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                   <div className="flex flex-col">
-                    <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
+                    <span className="text-sm text-muted-foreground">{match.tournament_name}</span>
                     <div><PlayerLink name={match.player1} /> vs <PlayerLink name={match.player2} /></div>
                   </div>
                   <div className="text-2xl font-bold">

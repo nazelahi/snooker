@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getFromStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import {
   Card,
@@ -23,14 +22,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeftRight, Swords, BarChart2 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-
-interface Match {
-  id: number;
-  winner: string;
-  loser: string;
-  score: string;
-  date: string;
-}
+import { supabase } from "@/lib/supabase";
+import { Match } from "@/types/matches";
 
 interface Comparison {
   player1Wins: number;
@@ -44,12 +37,23 @@ export default function ComparePlayersPage() {
   const [player2, setPlayer2] = useState<Player | null>(null);
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedPlayers = getFromStorage<Player[]>('players', []);
-    setPlayers(storedPlayers.sort((a, b) => a.name.localeCompare(b.name)));
-    const storedMatches = getFromStorage<Match[]>('recentResults', []);
-    setAllMatches(storedMatches);
+    async function fetchData() {
+      setLoading(true);
+      const { data: playersData } = await supabase.from('players').select('*');
+      if (playersData) {
+        setPlayers(playersData.sort((a, b) => a.name.localeCompare(b.name)));
+      }
+      
+      const { data: matchesData } = await supabase.from('matches').select('*');
+      if (matchesData) {
+        setAllMatches(matchesData as Match[]);
+      }
+      setLoading(false);
+    }
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -107,7 +111,7 @@ export default function ComparePlayersPage() {
         </CardHeader>
         <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                 <Select onValueChange={handleSelectPlayer1}>
+                 <Select onValueChange={handleSelectPlayer1} disabled={loading}>
                     <SelectTrigger>
                         <SelectValue placeholder="Select Player 1" />
                     </SelectTrigger>
@@ -117,7 +121,7 @@ export default function ComparePlayersPage() {
                         ))}
                     </SelectContent>
                 </Select>
-                 <Select onValueChange={handleSelectPlayer2}>
+                 <Select onValueChange={handleSelectPlayer2} disabled={loading}>
                     <SelectTrigger>
                         <SelectValue placeholder="Select Player 2" />
                     </SelectTrigger>
