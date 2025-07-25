@@ -313,8 +313,6 @@ export default function DashboardPage() {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
-                    <CarouselPrevious className="hidden lg:flex" />
-                    <CarouselNext className="hidden lg:flex" />
                     <CarouselDots />
                 </Carousel>
         </div>
@@ -359,8 +357,6 @@ export default function DashboardPage() {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
-                    <CarouselPrevious className="hidden lg:flex" />
-                    <CarouselNext className="hidden lg:flex" />
                     <CarouselDots />
                 </Carousel>
         </div>
@@ -412,8 +408,6 @@ export default function DashboardPage() {
                           );
                         })}
                     </CarouselContent>
-                    <CarouselPrevious className="hidden lg:flex" />
-                    <CarouselNext className="hidden lg:flex" />
                     <CarouselDots />
                 </Carousel>
         </div>
