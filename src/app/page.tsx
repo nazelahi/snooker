@@ -94,6 +94,7 @@ export default function DashboardPage() {
   const [liveMatchApi, setLiveMatchApi] = useState<CarouselApi>();
   const [mediaApi, setMediaApi] = useState<CarouselApi>();
   const [noticeApi, setNoticeApi] = useState<CarouselApi>();
+  const [upcomingTournamentsApi, setUpcomingTournamentsApi] = useState<CarouselApi>();
   const [currentUser, setCurrentUser] = useState<{name: string; email: string; isAdmin?: boolean} | null>(null);
   const { toast } = useToast();
 
@@ -389,8 +390,8 @@ export default function DashboardPage() {
                                         </div>
                                         <Accordion type="single" collapsible className="w-full mt-1">
                                             <AccordionItem value="item-1" className="border-b-0">
-                                                <AccordionTrigger className="py-2">
-                                                    <div className="flex items-center gap-2 text-xs">
+                                                <AccordionTrigger className="py-2 text-xs">
+                                                    <div className="flex items-center gap-2">
                                                         <MessageSquare className="h-3 w-3" />
                                                         <span>Comments ({notice.comments?.length || 0})</span>
                                                     </div>
@@ -473,14 +474,17 @@ export default function DashboardPage() {
                   Upcoming Tournaments
               </CardTitle>
               <Carousel
+                  setApi={setUpcomingTournamentsApi}
                   opts={{
                       align: "start",
+                      loop: true,
                   }}
+                  plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
                   className="w-full"
               >
-                  <CarouselContent className="-ml-2">
+                  <CarouselContent>
                       {upcomingTournaments.map((tournament) => (
-                          <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-1/3 pl-2">
+                          <CarouselItem key={tournament.id}>
                               <Card className="overflow-hidden">
                                   <CardHeader className="p-0">
                                       <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
@@ -500,6 +504,7 @@ export default function DashboardPage() {
                           </CarouselItem>
                       ))}
                   </CarouselContent>
+                  {upcomingTournaments.length > 1 && upcomingTournamentsApi && <CarouselDots api={upcomingTournamentsApi} />}
               </Carousel>
         </div>
       )}
