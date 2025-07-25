@@ -13,8 +13,10 @@ export async function POST(req: Request) {
     password,
     options: {
       data: {
-        full_name: name
-      }
+        full_name: name,
+      },
+      // By setting email_confirm to true, we are skipping the email confirmation step
+      email_confirm: true,
     }
   });
 
@@ -39,7 +41,11 @@ export async function POST(req: Request) {
   if (insertError) {
     // If profile insert fails, we should probably delete the auth user
     // to keep things clean. This is an important step for production apps.
-    await supabase.auth.admin.deleteUser(user.id);
+    const { data: adminUser, error: adminError } = await supabase.auth.admin.deleteUser(user.id);
+    if(adminError) {
+        // If we can't delete the auth user, we should probably log this somewhere
+        console.error("Failed to delete orphaned auth user:", adminError);
+    }
     return NextResponse.json({ error: 'Failed to create user profile.' }, { status: 500 });
   }
   
@@ -61,7 +67,10 @@ export async function POST(req: Request) {
         
     if (playerInsertError) {
         // Handle error, maybe roll back user creation
-        await supabase.auth.admin.deleteUser(user.id);
+        const { data: adminUser, error: adminError } = await supabase.auth.admin.deleteUser(user.id);
+         if(adminError) {
+            console.error("Failed to delete orphaned auth user:", adminError);
+        }
         return NextResponse.json({ error: 'Failed to create player profile.' }, { status: 500 });
     }
 
