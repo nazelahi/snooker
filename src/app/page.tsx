@@ -31,8 +31,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
   CarouselDots,
   type CarouselApi,
 } from "@/components/ui/carousel";
@@ -337,7 +335,7 @@ export default function DashboardPage() {
                 >
                     <CarouselContent className="-ml-4">
                         {inProgressTournaments.map((tournament) => (
-                            <CarouselItem key={tournament.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                            <CarouselItem key={tournament.id} className="pl-4 basis-full">
                                 <Card className="overflow-hidden h-full flex flex-col">
                                     <CardHeader className="p-0">
                                         <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
@@ -383,7 +381,7 @@ export default function DashboardPage() {
                         {finishedTournaments.map((tournament) => {
                           const winner = getPlayerAvatar(tournament.winner || '');
                           return (
-                            <CarouselItem key={tournament.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                            <CarouselItem key={tournament.id} className="pl-4 basis-full">
                                 <Card className="overflow-hidden h-full flex flex-col">
                                     <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/50">
                                         <Trophy className="h-8 w-8 text-amber-400"/>
@@ -624,3 +622,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
