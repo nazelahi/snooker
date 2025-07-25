@@ -535,6 +535,27 @@ export default function MatchDetailsPage() {
                 link: `/match/${match.id}`
              };
              saveToStorage(`notifications_${replyAuthorEmail}`, [newNotification, ...userNotifications]);
+        } else if (!parentId) {
+            // It's a top-level comment, notify match players
+            const winnerUser = allUsers.find(u => u.name === winnerPlayer?.name);
+            const loserUser = allUsers.find(u => u.name === loserPlayer?.name);
+
+            const notifyPlayer = (playerUser: {name: string, email: string} | undefined) => {
+                if (playerUser && playerUser.email !== currentUser.email) {
+                    const userNotifications = getFromStorage<Notification[]>(`notifications_${playerUser.email}`, []);
+                    const newNotification: Notification = {
+                        id: Date.now().toString() + playerUser.email,
+                        title: "New comment on your match",
+                        description: `${currentUser.name} commented on your match against ${playerUser.name === winnerPlayer?.name ? loserPlayer?.name : winnerPlayer?.name}.`,
+                        read: false,
+                        date: new Date().toISOString(),
+                        link: `/match/${match.id}`
+                    };
+                    saveToStorage(`notifications_${playerUser.email}`, [newNotification, ...userNotifications]);
+                }
+            };
+            notifyPlayer(winnerUser);
+            notifyPlayer(loserUser);
         }
     
         mentionedEmails.forEach(email => {
@@ -780,3 +801,4 @@ export default function MatchDetailsPage() {
     
 
     
+
