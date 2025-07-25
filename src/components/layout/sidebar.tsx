@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -22,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "../ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import type { Player } from "@/app/players/page";
+import { supabase } from "@/lib/supabase";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -34,36 +34,46 @@ const bottomNavItems = [
   { href: "/settings", label: "Settings", icon: Settings, auth: true },
 ];
 
+interface CurrentUser {
+    name: string;
+    email: string;
+    isAdmin?: boolean;
+    avatar?: string;
+    initials?: string;
+}
+
 const UserMenu = () => {
-    const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean, avatar?: string, initials?: string} | null>(null);
+    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const router = useRouter();
 
+    const fetchUserData = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const players = getFromStorage<Player[]>('players', []);
+            const fullName = user.user_metadata.full_name || user.email;
+            const player = players.find(p => p.name.toLowerCase() === fullName.toLowerCase());
+            setCurrentUser({
+                name: fullName,
+                email: user.email!,
+                isAdmin: user.email === 'admin@gmail.com', // Placeholder logic
+                avatar: player?.avatar,
+                initials: player?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
+            });
+        } else {
+            setCurrentUser(null);
+        }
+    };
+    
     useEffect(() => {
-        const fetchUserData = () => {
-            const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-            if (userData) {
-                const players = getFromStorage<Player[]>('players', []);
-                const player = players.find(p => p.name.toLowerCase() === userData.name.toLowerCase());
-                setCurrentUser({
-                    ...userData,
-                    avatar: player?.avatar,
-                    initials: player?.initials || userData.name.split(' ').map(n => n[0]).join('')
-                });
-            } else {
-                setCurrentUser(null);
-            }
-        };
-
         fetchUserData();
         window.addEventListener('storage', fetchUserData);
         return () => window.removeEventListener('storage', fetchUserData);
     }, []);
 
 
-    const handleLogout = () => {
-        localStorage.removeItem('userData');
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
         setCurrentUser(null);
-        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
         router.push('/login');
     };
 
@@ -134,16 +144,26 @@ export default function AppSidebar() {
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const [clubName, setClubName] = useState("CueScore");
 
-  useEffect(() => {
-    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-    setCurrentUser(userData);
+  const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if(user) {
+          setCurrentUser({
+              name: user.user_metadata.full_name || user.email!,
+              email: user.email!,
+              isAdmin: user.email === 'admin@gmail.com', // Placeholder
+          });
+      } else {
+          setCurrentUser(null);
+      }
+  }
 
+  useEffect(() => {
+    fetchUser();
     const siteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
     setClubName(siteSettings.name);
 
     const handleStorageChange = () => {
-        const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-        setCurrentUser(user);
+        fetchUser();
         const newSiteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
         setClubName(newSiteSettings.name);
     };

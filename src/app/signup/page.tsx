@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -17,8 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
+import { getFromStorage } from "@/lib/storage";
 import { useRouter } from 'next/navigation';
+import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
   const { toast } = useToast();
@@ -27,48 +27,76 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [clubName, setClubName] = useState("CueScore");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
     setClubName(storedSettings.name);
   }, []);
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = async () => {
+    setLoading(true);
     if (!name || !email || !password) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Please fill in all fields.",
       });
+      setLoading(false);
       return;
     }
 
-    const users = getFromStorage<any[]>('users', []);
-    
-    if (users.find(user => user.email === email)) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An account with this email already exists.",
-      });
-      return;
-    }
-
-    const newUser = {
-      name,
+    const { data, error } = await supabase.auth.signUp({
       email,
-      password, // In a real app, hash and salt this!
-    };
-    
-    saveToStorage('users', [...users, newUser]);
-
-    toast({
-      title: "Success!",
-      description: "Your account has been created. Please log in.",
+      password,
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
     });
-    
-    router.push('/login');
+
+    if (error) {
+       toast({
+        variant: "destructive",
+        title: "Signup Failed",
+        description: error.message,
+      });
+    } else if (data.user) {
+        if (data.user.identities?.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "An account with this email already exists but is unconfirmed.",
+            });
+        } else {
+            toast({
+                title: "Success!",
+                description: "Your account has been created. Please check your email to verify your account.",
+            });
+            router.push('/login');
+        }
+    }
+    setLoading(false);
   };
+  
+  const handleGoogleSignup = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${location.origin}/auth/callback`,
+      },
+    });
+     if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not sign up with Google. ' + error.message,
+      });
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="flex items-center justify-center py-12 px-4">
@@ -90,6 +118,7 @@ export default function SignupPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                disabled={loading}
               />
             </div>
             <div className="grid gap-2">
@@ -101,6 +130,7 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
             </div>
             <div className="grid gap-2">
@@ -111,12 +141,13 @@ export default function SignupPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
             </div>
-            <Button type="button" className="w-full" onClick={handleCreateAccount}>
-              Create account
+            <Button type="button" className="w-full" onClick={handleCreateAccount} disabled={loading}>
+              {loading ? 'Creating account...' : 'Create account'}
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignup} disabled={loading}>
               Sign up with Google
             </Button>
           </div>

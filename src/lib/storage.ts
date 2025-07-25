@@ -1,3 +1,4 @@
+
 // A simple wrapper for localStorage that handles serialization and SSR.
 
 export function getFromStorage<T>(key: string, defaultValue: T): T {

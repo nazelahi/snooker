@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -17,7 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
+import { getFromStorage } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,54 +25,65 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [clubName, setClubName] = useState("CueScore");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
     setClubName(storedSettings.name);
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     if (!email || !password) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Please enter your email and password.",
       });
+      setLoading(false);
       return;
     }
     
-    const adminEmail = "admin@gmail.com";
-    const adminPassword = "123456";
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (email === adminEmail && password === adminPassword) {
-        toast({
-            title: "Success!",
-            description: "Admin logged in successfully.",
-        });
-        saveToStorage('userData', { name: 'Admin', email: adminEmail, isAdmin: true });
-        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-        router.push('/admin');
-        return;
-    }
-
-    const storedUsers = getFromStorage<{name: string, email: string, password: string}[]>('users', []);
-    const user = storedUsers.find(u => u.email === email && u.password === password);
-
-    if (user) {
-      toast({
-        title: "Success!",
-        description: "You have been logged in.",
-      });
-      saveToStorage('userData', { name: user.name, email: user.email, isAdmin: false });
-      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-      router.push('/my-stats');
-    } else {
-      toast({
+    if (error) {
+       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
+        description: error.message,
       });
+    } else if (data.user) {
+        toast({
+            title: "Success!",
+            description: "You have been logged in.",
+        });
+        
+        // This will trigger the auth listener in RootLayout
+        // which will then trigger a storage event for components to update
+        router.push('/');
+    }
+    setLoading(false);
+  };
+  
+   const handleGoogleLogin = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not log in with Google. ' + error.message,
+      });
+      setLoading(false);
     }
   };
 
@@ -98,6 +109,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -116,12 +128,13 @@ export default function LoginPage() {
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
                   />
                 </div>
-                <Button type="submit" className="w-full">
-                  Login
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Logging in...' : 'Login'}
                 </Button>
-                <Button variant="outline" className="w-full" type="button">
+                <Button variant="outline" className="w-full" type="button" onClick={handleGoogleLogin} disabled={loading}>
                   Login with Google
                 </Button>
               </div>

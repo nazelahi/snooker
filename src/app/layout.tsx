@@ -7,6 +7,7 @@ import { AppLayout } from '@/components/layout/app-layout';
 import { ThemeProvider } from '@/components/theme-provider';
 import { useState, useEffect } from 'react';
 import { getFromStorage } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 
 export default function RootLayout({
   children,
@@ -20,6 +21,16 @@ export default function RootLayout({
     const settings = getFromStorage('siteSettings', { name: 'CueScore', description: 'The ultimate snooker club management app.' });
     setSiteName(settings.name);
     setSiteDescription(settings.description);
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      // For now, we just trigger a storage event to make other components update
+      // In the future, this can be handled more elegantly with a global state manager
+      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   return (

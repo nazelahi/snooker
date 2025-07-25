@@ -31,6 +31,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import type { Player } from "@/app/players/page";
 import { Icons } from "../icons";
 import { ThemeSwitcher } from "../theme-switcher";
+import { supabase } from "@/lib/supabase";
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 const initialUserNotifications: Notification[] = [
     { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
@@ -38,27 +40,43 @@ const initialUserNotifications: Notification[] = [
     { id: '3', title: "New High Break!", description: "Congratulations on your new high break of 89!", read: true, date: new Date().toISOString() },
 ];
 
+interface CurrentUser {
+    name: string;
+    email: string;
+    isAdmin?: boolean;
+    avatar?: string;
+    initials?: string;
+}
+
 export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean, avatar?: string, initials?: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [clubName, setClubName] = useState("CueScore");
   const router = useRouter();
 
   const getNotificationKey = (user: {email: string, isAdmin?: boolean} | null) => {
     if (!user) return 'notifications'; // Default for logged-out users
-    return user.isAdmin ? 'adminNotifications' : `notifications_${user.email}`;
+    // This logic might need updating if admin notifications are stored differently in Supabase
+    return `notifications_${user.email}`;
   }
 
-  const fetchUserData = () => {
-    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-     if (userData) {
-      const players = getFromStorage<Player[]>('players', []);
-      const player = players.find(p => p.name.toLowerCase() === userData.name.toLowerCase());
-      setCurrentUser({
-        ...userData,
-        avatar: player?.avatar,
-        initials: player?.initials || userData.name.split(' ').map(n => n[0]).join('')
-      });
+  const fetchUserData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        // Here, you might fetch profile details from a 'profiles' table in Supabase
+        // For now, we'll use the user metadata and local player data
+        const players = getFromStorage<Player[]>('players', []);
+        const fullName = user.user_metadata.full_name || user.email;
+        const player = players.find(p => p.name.toLowerCase() === fullName.toLowerCase());
+        
+        setCurrentUser({
+            name: fullName,
+            email: user.email!,
+            // You'll need a way to determine if a user is an admin, e.g., from a custom claim or a 'profiles' table
+            isAdmin: user.email === 'admin@gmail.com', // Placeholder logic
+            avatar: player?.avatar,
+            initials: player?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
+        });
     } else {
       setCurrentUser(null);
     }
@@ -69,10 +87,9 @@ export default function Header() {
     const siteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
     setClubName(siteSettings.name);
 
-    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-    const notificationKey = getNotificationKey(userData);
-    const initialData = userData?.isAdmin ? [] : initialUserNotifications;
-
+    // Notification logic might need to be migrated to Supabase as well
+    const notificationKey = getNotificationKey(currentUser);
+    const initialData = initialUserNotifications; // Admin notifications would be different
     const storedNotifications = getFromStorage(notificationKey, initialData);
     setNotifications(storedNotifications.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     
@@ -82,10 +99,8 @@ export default function Header() {
 
     const handleStorageChange = () => {
         fetchUserData();
-        const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-        const currentKey = getNotificationKey(user);
-        const currentInitialData = user?.isAdmin ? [] : initialUserNotifications;
-        const stored = getFromStorage(currentKey, currentInitialData);
+        const currentKey = getNotificationKey(currentUser);
+        const stored = getFromStorage(currentKey, initialUserNotifications);
         setNotifications(stored.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
         const newSiteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
@@ -94,12 +109,11 @@ export default function Header() {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [currentUser?.email]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('userData');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
     router.push('/login');
   };
 
