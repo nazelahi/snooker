@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -95,6 +94,7 @@ export default function DashboardPage() {
   const [mediaApi, setMediaApi] = useState<CarouselApi>();
   const [noticeApi, setNoticeApi] = useState<CarouselApi>();
   const [upcomingTournamentsApi, setUpcomingTournamentsApi] = useState<CarouselApi>();
+  const [inProgressTournamentsApi, setInProgressTournamentsApi] = useState<CarouselApi>();
   const [finishedTournamentsApi, setFinishedTournamentsApi] = useState<CarouselApi>();
   const [currentUser, setCurrentUser] = useState<{name: string; email: string; isAdmin?: boolean} | null>(null);
   const { toast } = useToast();
@@ -176,6 +176,7 @@ export default function DashboardPage() {
   }
 
   const upcomingTournaments = tournaments.filter(t => t.status === "Upcoming");
+  const inProgressTournaments = tournaments.filter(t => t.status === "In Progress");
   const finishedTournaments = tournaments.filter(t => t.status === "Finished" && t.winner);
 
   const PlayerLink = ({name, className}: {name: string, className?: string}) => {
@@ -512,6 +513,48 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {inProgressTournaments.length > 0 && (
+        <div className="space-y-4">
+              <CardTitle className="flex items-center gap-2">
+                  <Radio className="text-primary" />
+                  In Progress Tournaments
+              </CardTitle>
+              <Carousel
+                  setApi={setInProgressTournamentsApi}
+                  opts={{
+                      align: "start",
+                      loop: true,
+                  }}
+                  plugins={[Autoplay({ delay: 5500, stopOnInteraction: true })]}
+                  className="w-full"
+              >
+                  <CarouselContent>
+                      {inProgressTournaments.map((tournament) => (
+                          <CarouselItem key={tournament.id}>
+                              <Card className="overflow-hidden">
+                                  <CardHeader className="p-0">
+                                      <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                                  </CardHeader>
+                                  <CardContent className="p-4">
+                                      <h3 className="text-lg font-bold">{tournament.name}</h3>
+                                      <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
+                                  </CardContent>
+                                  <CardFooter className="p-4 bg-muted/50">
+                                      <Button variant="outline" asChild>
+                                         <Link href={`/tournaments/${tournament.id}`}>
+                                           View Details <ArrowRight className="ml-2 h-4 w-4"/>
+                                         </Link>
+                                      </Button>
+                                  </CardFooter>
+                               </Card>
+                          </CarouselItem>
+                      ))}
+                  </CarouselContent>
+                  {inProgressTournaments.length > 1 && inProgressTournamentsApi && <CarouselDots api={inProgressTournamentsApi} />}
+              </Carousel>
+        </div>
+      )}
+      
       {finishedTournaments.length > 0 && (
         <div className="space-y-4">
               <CardTitle className="flex items-center gap-2">
