@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   Card,
@@ -27,6 +27,15 @@ import type { LiveMatch, Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -41,9 +50,9 @@ const initialUpcomingMatches = [
 ];
 
 const initialRecentResults = [
-  { id: 1, winner: "Ronnie O'Sullivan", loser: "John Higgins", score: "6-2", date: "2024-08-10", tournamentId: 1 },
-  { id: 2, winner: "Judd Trump", loser: "Kyren Wilson", score: "6-4", date: "2024-08-09", tournamentId: 1 },
-  { id: 3, winner: "Mark Selby", loser: "Neil Robertson", score: "5-1", date: "2024-08-11", tournamentId: 2 },
+  { id: 1, winner: "Ronnie O'Sullivan", loser: "John Higgins", score: "6-2", date: "2024-08-10", tournamentId: 1, media: ["https://placehold.co/600x400.png"] },
+  { id: 2, winner: "Judd Trump", loser: "Kyren Wilson", score: "6-4", date: "2024-08-09", tournamentId: 1, media: ["https://placehold.co/600x400.png"] },
+  { id: 3, winner: "Mark Selby", loser: "Neil Robertson", score: "5-1", date: "2024-08-11", tournamentId: 2, media: ["https://placehold.co/600x400.png"] },
 ];
 
 const initialLiveMatches: LiveMatch[] = [
@@ -80,7 +89,6 @@ export default function DashboardPage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [currentUser, setCurrentUser] = useState<{name: string; email: string; isAdmin?: boolean} | null>(null);
   const { toast } = useToast();
-
 
   const fetchDashboardData = () => {
     const storedPlayers = getFromStorage('players', initialPlayers);
@@ -154,6 +162,7 @@ export default function DashboardPage() {
   const upcomingTournaments = tournaments.filter(t => t.status === "Upcoming");
   const inProgressTournaments = tournaments.filter(t => t.status === "In Progress");
   const finishedTournaments = tournaments.filter(t => t.status === "Finished" && t.winner);
+  const matchMedia = recentResults.flatMap(match => (match.media || []).map(mediaUrl => ({...match, mediaUrl})));
 
   const PlayerLink = ({name, className}: {name: string, className?: string}) => {
     const player = getPlayerAvatar(name);
@@ -282,129 +291,145 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       {liveMatches.length > 0 && (
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            {liveMatches.map((match) => (
-              <div key={match.id} className="p-4 rounded-lg bg-muted/50">
-                <div className="relative text-center mb-2">
-                    <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
-                    <div className="absolute right-0 top-0 flex items-center gap-2">
-                        <span className="relative flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                        </span>
-                        <span className="text-sm font-medium text-green-400">Live</span>
-                    </div>
-                </div>
-                <div className="grid grid-cols-3 items-center text-center">
-                  <div className="flex items-center justify-end gap-2 md:gap-4">
-                      <div className="font-bold text-lg text-right"><PlayerLink name={match.player1} /></div>
-                      <Avatar>
-                          <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
-                          <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
-                      </Avatar>
-                  </div>
-
-                  <div className="text-2xl md:text-4xl font-bold">
-                      <span className="text-primary">{match.score1}</span>
-                      <span className="mx-2 md:mx-4">-</span>
-                      <span>{match.score2}</span>
-                  </div>
-
-                  <div className="flex items-center justify-start gap-2 md:gap-4">
-                      <Avatar>
-                          <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
-                          <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
-                      </Avatar>
-                      <div className="font-bold text-lg text-left"><PlayerLink name={match.player2} /></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {notices.length > 0 && (
          <Card>
-             <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="flex items-center gap-2"><Megaphone className="text-primary"/>Notice Board</CardTitle>
-                <Button variant="link" asChild><Link href="/notices">View All</Link></Button>
-            </CardHeader>
-            <CardContent className="space-y-4 p-4">
-              {notices.slice(0, 2).map((notice) => (
-                <div key={notice.id} className="p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-start gap-3">
-                        <div>
-                            <h3 className="font-semibold text-base">{notice.title}</h3>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{notice.content}</p>
-                            <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
-                        </div>
-                    </div>
-                    <Accordion type="single" collapsible className="w-full mt-1">
-                        <AccordionItem value="item-1" className="border-b-0">
-                            <AccordionTrigger className="py-2 text-xs">
-                                <div className="flex items-center gap-2">
-                                    <MessageSquare className="h-3 w-3" />
-                                    <span>Comments ({notice.comments?.length || 0})</span>
+            <CardContent className="p-0">
+                 <Carousel
+                    opts={{
+                        align: "start",
+                        loop: true,
+                    }}
+                    plugins={[
+                        Autoplay({
+                        delay: 5000,
+                        }),
+                    ]}
+                    className="w-full"
+                    >
+                    <CarouselContent>
+                        {liveMatches.map((match) => (
+                            <CarouselItem key={match.id}>
+                                <div className="p-4 rounded-lg">
+                                    <div className="relative text-center mb-2">
+                                        <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
+                                        <div className="absolute right-0 top-0 flex items-center gap-2">
+                                            <span className="relative flex h-3 w-3">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                            </span>
+                                            <span className="text-sm font-medium text-green-400">Live</span>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 items-center text-center">
+                                    <div className="flex items-center justify-end gap-2 md:gap-4">
+                                        <div className="font-bold text-lg text-right"><PlayerLink name={match.player1} /></div>
+                                        <Avatar>
+                                            <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                                            <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
+                                        </Avatar>
+                                    </div>
+
+                                    <div className="text-2xl md:text-4xl font-bold">
+                                        <span className="text-primary">{match.score1}</span>
+                                        <span className="mx-2 md:mx-4">-</span>
+                                        <span>{match.score2}</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-start gap-2 md:gap-4">
+                                        <Avatar>
+                                            <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                                            <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="font-bold text-lg text-left"><PlayerLink name={match.player2} /></div>
+                                    </div>
+                                    </div>
                                 </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                <div className="space-y-4 pt-4">
-                                    {currentUser && (
-                                        <CommentInput
-                                            onSubmit={(content, image) => handlePostNoticeComment(notice.id, content, image, null)}
-                                            players={players}
-                                            currentUser={currentUser}
-                                        />
-                                    )}
-                                    {(notice.comments || []).length > 0 ? (
-                                      <CommentThread
-                                          comments={(notice.comments || []).slice(0, 10)}
-                                          onPostComment={(content, image, parentId) => handlePostNoticeComment(notice.id, content, image, parentId)}
-                                          onReaction={(commentId, reaction) => handleNoticeCommentReaction(notice.id, commentId, reaction)}
-                                          allPlayers={players}
-                                          currentUser={currentUser}
-                                      />
-                                    ) : (
-                                      <p className="text-muted-foreground text-center py-4">No comments yet.</p>
-                                    )}
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
-                </div>
-              ))}
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                </Carousel>
             </CardContent>
          </Card>
       )}
-      
+
+      {matchMedia.length > 0 && (
+        <div className="space-y-4">
+            <CardTitle className="flex items-center gap-2">
+                <Camera className="text-primary" />
+                Match Media
+            </CardTitle>
+            <Carousel
+                 opts={{
+                    align: "start",
+                    loop: true,
+                }}
+                plugins={[
+                    Autoplay({
+                    delay: 4000,
+                    }),
+                ]}
+                className="w-full"
+            >
+                <CarouselContent>
+                    {matchMedia.map((media, index) => (
+                        <CarouselItem key={index}>
+                             <Card className="overflow-hidden">
+                                <CardHeader className="p-0">
+                                    <Image src={media.mediaUrl} width={600} height={400} alt={`Media from match ${media.id}`} className="w-full h-48 md:h-64 object-cover" />
+                                </CardHeader>
+                                <CardFooter className="p-4 bg-muted/50">
+                                    <Button variant="outline" asChild>
+                                        <Link href={`/match/${media.id}`}>
+                                            View Match <ArrowRight className="ml-2 h-4 w-4"/>
+                                        </Link>
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+            </Carousel>
+        </div>
+      )}
+
       {upcomingTournaments.length > 0 && (
         <div className="space-y-4">
               <CardTitle className="flex items-center gap-2">
                   <CalendarIcon className="text-primary" />
                   Upcoming Tournaments
               </CardTitle>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {upcomingTournaments.slice(0,3).map((tournament) => (
-                    <Card key={tournament.id} className="overflow-hidden">
-                        <CardHeader className="p-0">
-                            <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                            <h3 className="text-lg font-bold">{tournament.name}</h3>
-                            <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
-                        </CardContent>
-                        <CardFooter className="p-4 bg-muted/50">
-                            <Button variant="outline" asChild>
-                               <Link href={`/tournaments/${tournament.id}`}>
-                                 View Details <ArrowRight className="ml-2 h-4 w-4"/>
-                               </Link>
-                            </Button>
-                        </CardFooter>
-                     </Card>
-                ))}
-              </div>
+               <Carousel
+                    opts={{
+                        align: "start",
+                    }}
+                    className="w-full"
+                >
+                    <CarouselContent className="-ml-4">
+                        {upcomingTournaments.map((tournament) => (
+                            <CarouselItem key={tournament.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                                 <Card className="overflow-hidden h-full flex flex-col">
+                                    <CardHeader className="p-0">
+                                        <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                                    </CardHeader>
+                                    <CardContent className="p-4 flex-grow">
+                                        <h3 className="text-lg font-bold">{tournament.name}</h3>
+                                        <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
+                                    </CardContent>
+                                    <CardFooter className="p-4 bg-muted/50">
+                                        <Button variant="outline" asChild>
+                                        <Link href={`/tournaments/${tournament.id}`}>
+                                            View Details <ArrowRight className="ml-2 h-4 w-4"/>
+                                        </Link>
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="hidden lg:flex" />
+                    <CarouselNext className="hidden lg:flex" />
+                </Carousel>
         </div>
       )}
 
