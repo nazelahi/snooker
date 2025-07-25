@@ -560,7 +560,7 @@ export default function TournamentDetailsPage() {
        {enrolledPlayers.length > 0 && (
          <Card>
             <CardHeader>
-                <CardTitle>Enrolled Players ({enrolledPlayers.length})</CardTitle>
+                <CardTitle>Player Draw / Enrolled Players ({enrolledPlayers.length})</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
