@@ -72,9 +72,9 @@ export function AdminSettingsTabsMobile() {
                 <Tabs defaultValue="players" className="h-full">
                     <TabsList className="h-full justify-start px-2 gap-0 w-max">
                     {adminTabs.map(tab => (
-                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-col h-full items-center justify-center gap-1 w-20 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground">
-                            <tab.icon className="h-5 w-5" />
-                            <span className="text-xs">{tab.label}</span>
+                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-col h-full items-center justify-center gap-0 w-16 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground">
+                            <tab.icon className="h-6 w-6" />
+                            <span className="sr-only">{tab.label}</span>
                         </TabsTrigger>
                     ))}
                     </TabsList>
