@@ -362,6 +362,10 @@ export default function DashboardPage() {
 
       {notices.length > 0 && (
          <Card className="relative">
+             <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="flex items-center gap-2"><Megaphone className="text-primary"/>Notice Board</CardTitle>
+                <Button variant="link" asChild><Link href="/notices">View All</Link></Button>
+            </CardHeader>
             <CardContent className="p-0">
                  <Carousel
                     setApi={setNoticeApi}
@@ -377,7 +381,9 @@ export default function DashboardPage() {
                                 <div className="p-1">
                                     <div className="p-4 rounded-lg bg-muted/50">
                                         <div className="flex items-start gap-3">
-                                            <Megaphone className="h-5 w-5 text-primary mt-0.5 shrink-0"/>
+                                            <div className="hidden">
+                                                <Megaphone className="h-5 w-5 text-primary mt-0.5 shrink-0"/>
+                                            </div>
                                             <div>
                                                 <h3 className="font-semibold text-lg">{notice.title}</h3>
                                                 <p className="text-sm text-muted-foreground mt-1">{notice.content}</p>
