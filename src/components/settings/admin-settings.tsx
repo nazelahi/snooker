@@ -142,7 +142,16 @@ export default function AdminSettings() {
   };
   
   const handleLiveMatchChange = (id: number, field: keyof LiveMatch, value: any) => {
-    const updatedMatches = liveMatches.map(m => m.id === id ? { ...m, [field]: value } : m);
+    const updatedMatches = liveMatches.map(m => {
+        if (m.id === id) {
+            if (field === 'tournamentId') {
+                const tournament = tournaments.find(t => t.id === value);
+                return { ...m, tournamentId: value, tournamentName: tournament?.name || m.tournamentName };
+            }
+            return { ...m, [field]: value };
+        }
+        return m;
+    });
     setLiveMatches(updatedMatches);
   };
 
@@ -454,14 +463,15 @@ export default function AdminSettings() {
                     <CardDescription>Edit live match details below. Changes are saved when you click the "Save Changes" button for this section.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="hidden md:grid grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                        <div className="hidden md:grid md:grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                             <span>Player 1</span>
                             <span>Player 2</span>
+                            <span>Tournament</span>
                             <span>Score (P1 - P2)</span>
                             <span className="text-right">Actions</span>
                         </div>
                         {liveMatches.map(match => (
-                            <div key={match.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                            <div key={match.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
                                 <div className="space-y-1">
                                     <Label htmlFor={`live-p1-${match.id}`} className="md:hidden">Player 1</Label>
                                     <Select value={match.player1} onValueChange={value => handleLiveMatchChange(match.id, 'player1', value)}>
@@ -477,6 +487,15 @@ export default function AdminSettings() {
                                         <SelectTrigger id={`live-p2-${match.id}`}><SelectValue placeholder="Select player" /></SelectTrigger>
                                         <SelectContent>
                                             {players.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor={`live-tourney-${match.id}`} className="md:hidden">Tournament</Label>
+                                    <Select value={match.tournamentId.toString()} onValueChange={value => handleLiveMatchChange(match.id, 'tournamentId', parseInt(value))}>
+                                        <SelectTrigger id={`live-tourney-${match.id}`}><SelectValue placeholder="Select tournament" /></SelectTrigger>
+                                        <SelectContent>
+                                            {tournaments.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
