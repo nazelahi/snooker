@@ -87,8 +87,13 @@ export default function DashboardPage() {
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [recentToShow, setRecentToShow] = useState(5);
   const [notices, setNotices] = useState<Notice[]>([]);
-  const autoplay = useRef(Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true }));
-
+  
+  const liveMatchesPlugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true }));
+  const noticesPlugin = useRef(Autoplay({ delay: 5500, stopOnInteraction: true, stopOnMouseEnter: true }));
+  const mediaPlugin = useRef(Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true }));
+  const upcomingTournamentsPlugin = useRef(Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true }));
+  const inProgressTournamentsPlugin = useRef(Autoplay({ delay: 4500, stopOnInteraction: true, stopOnMouseEnter: true }));
+  const finishedTournamentsPlugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true }));
 
   const fetchDashboardData = () => {
     const storedPlayers = getFromStorage('players', initialPlayers);
@@ -181,7 +186,7 @@ export default function DashboardPage() {
                         align: "start",
                         loop: true,
                     }}
-                    plugins={[autoplay.current]}
+                    plugins={[liveMatchesPlugin.current]}
                     className="w-full relative"
                     >
                     <CarouselContent>
@@ -234,7 +239,7 @@ export default function DashboardPage() {
       {notices.length > 0 && (
         <Carousel
             opts={{ align: "start", loop: true, }}
-            plugins={[ Autoplay({ delay: 5500, stopOnInteraction: true, stopOnMouseEnter: true }) ]}
+            plugins={[ noticesPlugin.current ]}
             className="w-full relative"
         >
             <CarouselContent>
@@ -267,13 +272,7 @@ export default function DashboardPage() {
                 align: "start",
                 loop: true,
             }}
-            plugins={[
-                Autoplay({
-                delay: 4000,
-                stopOnInteraction: true,
-                stopOnMouseEnter: true
-                }),
-            ]}
+            plugins={[ mediaPlugin.current ]}
             className="w-full relative"
         >
             <CarouselContent>
@@ -306,13 +305,7 @@ export default function DashboardPage() {
                     opts={{
                         align: "start",
                     }}
-                    plugins={[
-                        Autoplay({
-                        delay: 4000,
-                        stopOnInteraction: true,
-                        stopOnMouseEnter: true
-                        }),
-                    ]}
+                    plugins={[ upcomingTournamentsPlugin.current ]}
                     className="w-full relative"
                 >
                     <CarouselContent>
@@ -352,13 +345,7 @@ export default function DashboardPage() {
                     opts={{
                         align: "start",
                     }}
-                    plugins={[
-                        Autoplay({
-                        delay: 4500,
-                        stopOnInteraction: true,
-                        stopOnMouseEnter: true
-                        }),
-                    ]}
+                    plugins={[ inProgressTournamentsPlugin.current ]}
                     className="w-full relative"
                 >
                     <CarouselContent>
@@ -396,13 +383,7 @@ export default function DashboardPage() {
                     opts={{
                         align: "start",
                     }}
-                    plugins={[
-                        Autoplay({
-                        delay: 5000,
-                        stopOnInteraction: true,
-                        stopOnMouseEnter: true
-                        }),
-                    ]}
+                    plugins={[ finishedTournamentsPlugin.current ]}
                     className="w-full relative"
                 >
                     <CarouselContent>
