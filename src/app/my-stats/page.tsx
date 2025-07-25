@@ -503,8 +503,8 @@ export default function MyStatsPage() {
                             <Badge variant={isWinner ? "default" : "destructive"}>
                             {isWinner ? "WIN" : "LOSS"}
                             </Badge>
-                            <Link href={`/match/${match.id}`} className="block">
-                                <div>
+                            <Link href={`/match/${match.id}`} passHref>
+                                <div className="cursor-pointer">
                                     <span>vs <span className="hover:underline">{opponentName}</span></span>
                                     <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
                                 </div>
@@ -580,3 +580,4 @@ export default function MyStatsPage() {
     
 
     
+
