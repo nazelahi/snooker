@@ -498,22 +498,22 @@ export default function MyStatsPage() {
 
                 return (
                   <li key={match.id} className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Badge variant={isWinner ? "default" : "destructive"}>
-                            {isWinner ? "WIN" : "LOSS"}
-                            </Badge>
-                            <Link href={`/match/${match.id}`} passHref>
-                                <div className="cursor-pointer">
+                    <Link href={`/match/${match.id}`} passHref>
+                        <div className="flex items-center justify-between cursor-pointer">
+                            <div className="flex items-center gap-4">
+                                <Badge variant={isWinner ? "default" : "destructive"}>
+                                {isWinner ? "WIN" : "LOSS"}
+                                </Badge>
+                                <div>
                                     <span>vs <span className="hover:underline">{opponentName}</span></span>
                                     <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
                                 </div>
-                            </Link>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <span className="font-bold text-lg">{match.score}</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <span className="font-bold text-lg">{match.score}</span>
-                        </div>
-                    </div>
+                    </Link>
                   </li>
                 );
               })}
@@ -580,4 +580,5 @@ export default function MyStatsPage() {
     
 
     
+
 
