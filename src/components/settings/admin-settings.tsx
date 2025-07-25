@@ -25,10 +25,13 @@ import type { Notification } from "@/types/notifications";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
+import Image from 'next/image';
+import { SiteLogo } from '../site-logo';
 
 interface SiteSettings {
   name: string;
   description: string;
+  logo?: string;
 }
 
 interface Notice {
@@ -73,7 +76,8 @@ export default function AdminSettings() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
-  const [siteSettings, setSiteSettings] = useState<SiteSettings>({ name: "", description: ""});
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>({ name: "", description: "", logo: ""});
+  const [logoPreview, setLogoPreview] = useState<string | undefined>("");
   const [rules, setRules] = useState<string[]>([]);
   const [newRule, setNewRule] = useState("");
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -102,7 +106,9 @@ export default function AdminSettings() {
   useEffect(() => {
     fetchAdminData();
 
-    setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
+    const storedSettings = getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."});
+    setSiteSettings(storedSettings);
+    setLogoPreview(storedSettings.logo);
     
     const storedRules = getFromStorage<string[]>("tournamentRules", []);
     setRules(storedRules);
@@ -301,6 +307,7 @@ export default function AdminSettings() {
     if (key === 'siteSettings' || key === 'tournamentRules') {
         saveToStorage(key, data);
         toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
+        setTimeout(() => window.dispatchEvent(new Event('storage')), 0); // Trigger storage event
     } else {
         const { error } = await supabase.from(key).upsert(data, { onConflict: 'id' });
         if (error) {
@@ -308,6 +315,19 @@ export default function AdminSettings() {
             return;
         }
         toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
+    }
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setSiteSettings({ ...siteSettings, logo: result });
+        setLogoPreview(result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -648,13 +668,26 @@ export default function AdminSettings() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="siteDescription">Site Description (Metadata)</Label>
+                        <Label htmlFor="siteDescription">Site Description</Label>
                         <Textarea 
                         id="siteDescription" 
                         value={siteSettings.description} 
                         onChange={e => setSiteSettings({...siteSettings, description: e.target.value})}
                         placeholder="A short description for your site."
                         />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="logo">Logo</Label>
+                        <div className="flex items-center gap-4">
+                          {logoPreview ? (
+                            <Image src={logoPreview} alt="Logo preview" width={40} height={40} className="rounded-md object-contain bg-muted p-1" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                                <SiteLogo className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                           <Input id="logo" type="file" accept="image/*" onChange={handleLogoChange} />
+                        </div>
                     </div>
                     </CardContent>
                     <CardFooter>

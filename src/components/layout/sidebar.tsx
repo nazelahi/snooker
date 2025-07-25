@@ -13,7 +13,6 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
 import { getFromStorage } from "@/lib/storage";
@@ -22,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useRouter } from "next/navigation";
 import type { Player } from "@/app/players/page";
 import { supabase } from "@/lib/supabase";
+import { SiteLogo } from '../site-logo';
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -184,7 +184,7 @@ export default function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <Link href="/" className="flex items-center gap-2">
-          <Icons.logo className="h-8 w-8 text-primary" />
+          <SiteLogo className="h-8 w-8 text-primary" />
           <h1 className="text-xl font-semibold text-sidebar-foreground">{clubName}</h1>
         </Link>
       </SidebarHeader>

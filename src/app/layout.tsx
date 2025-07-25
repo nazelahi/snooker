@@ -18,9 +18,13 @@ export default function RootLayout({
   const [siteDescription, setSiteDescription] = useState("The ultimate snooker club management app.");
 
   useEffect(() => {
-    const settings = getFromStorage('siteSettings', { name: 'CueScore', description: 'The ultimate snooker club management app.' });
-    setSiteName(settings.name);
-    setSiteDescription(settings.description);
+    const handleStorageChange = () => {
+      const settings = getFromStorage('siteSettings', { name: 'CueScore', description: 'The ultimate snooker club management app.' });
+      setSiteName(settings.name);
+      setSiteDescription(settings.description);
+    };
+
+    handleStorageChange(); // Initial call
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       // For now, we just trigger a storage event to make other components update
@@ -28,8 +32,11 @@ export default function RootLayout({
       setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
     });
 
+    window.addEventListener('storage', handleStorageChange);
+    
     return () => {
       authListener.subscription.unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 

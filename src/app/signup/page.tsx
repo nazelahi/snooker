@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { getFromStorage } from "@/lib/storage";
 import { useRouter } from 'next/navigation';
 import { supabase } from "@/lib/supabase";
+import { SiteLogo } from '@/components/site-logo';
 
 export default function SignupPage() {
   const { toast } = useToast();
@@ -30,8 +30,13 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
-    setClubName(storedSettings.name);
+    const handleStorageChange = () => {
+        const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
+        setClubName(storedSettings.name);
+    }
+    handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleCreateAccount = async () => {
@@ -102,7 +107,7 @@ export default function SignupPage() {
     <div className="flex items-center justify-center py-12 px-4">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader className="text-center">
-          <Icons.logo className="h-12 w-12 mx-auto text-primary" />
+          <SiteLogo className="h-12 w-12 mx-auto text-primary" />
           <CardTitle className="text-2xl mt-4">Create an account</CardTitle>
           <CardDescription>
             Enter your details below to create an account

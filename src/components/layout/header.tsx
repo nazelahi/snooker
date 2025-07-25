@@ -29,10 +29,10 @@ import type { Notification } from "@/types/notifications";
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import type { Player } from "@/app/players/page";
-import { Icons } from "../icons";
 import { ThemeSwitcher } from "../theme-switcher";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { SiteLogo } from "../site-logo";
 
 const initialUserNotifications: Notification[] = [
     { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
@@ -83,20 +83,6 @@ export default function Header() {
   }
 
   useEffect(() => {
-    fetchUserData();
-    const siteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
-    setClubName(siteSettings.name);
-
-    // Notification logic might need to be migrated to Supabase as well
-    const notificationKey = getNotificationKey(currentUser);
-    const initialData = initialUserNotifications; // Admin notifications would be different
-    const storedNotifications = getFromStorage(notificationKey, initialData);
-    setNotifications(storedNotifications.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    
-    if (localStorage.getItem(notificationKey) === null) {
-      saveToStorage(notificationKey, initialData);
-    }
-
     const handleStorageChange = () => {
         fetchUserData();
         const currentKey = getNotificationKey(currentUser);
@@ -107,6 +93,7 @@ export default function Header() {
         setClubName(newSiteSettings.name);
     };
 
+    handleStorageChange(); // Initial call
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [currentUser?.email]);
@@ -150,7 +137,7 @@ export default function Header() {
       
       <div className="flex-1 text-center md:text-left">
         <Link href="/" className="flex items-center justify-center md:justify-start gap-2 text-xl font-semibold md:hidden">
-          <Icons.logo className="h-7 w-7 text-primary" />
+          <SiteLogo className="h-7 w-7 text-primary" />
           <span>{clubName}</span>
         </Link>
       </div>

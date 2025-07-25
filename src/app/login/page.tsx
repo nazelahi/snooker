@@ -14,10 +14,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { getFromStorage } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
+import { SiteLogo } from '@/components/site-logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,8 +28,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
-    setClubName(storedSettings.name);
+    const handleStorageChange = () => {
+        const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
+        setClubName(storedSettings.name);
+    }
+    handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -91,7 +96,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 px-4">
         <Card className="mx-auto max-w-sm w-full">
           <CardHeader className="text-center">
-            <Icons.logo className="h-12 w-12 mx-auto text-primary" />
+            <SiteLogo className="h-12 w-12 mx-auto text-primary" />
             <CardTitle className="text-2xl mt-4">Welcome to {clubName}</CardTitle>
             <CardDescription>
               Enter your email below to login to your account
