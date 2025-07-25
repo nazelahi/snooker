@@ -16,7 +16,7 @@ import Link from "next/link";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament, LiveMatch } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
-import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList, Trophy, Radio } from "lucide-react";
+import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList, Trophy, Radio, Shuffle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TournamentBracket, type Matchup, type Round } from "@/components/tournament-bracket";
 
 interface EnrolledPlayer {
   id: number;
@@ -287,6 +288,66 @@ export default function TournamentDetailsPage() {
     }
     setEditedTournament({ ...editedTournament, rules: updatedRules });
   };
+  
+  const handleGenerateBracket = () => {
+     if (!tournament || tournament.format !== 'Knockout' || !tournament.registeredPlayers) {
+        toast({ variant: 'destructive', title: "Error", description: "Cannot generate bracket for this tournament."});
+        return;
+    }
+
+    const allUsers = getFromStorage<{name:string, email:string}[]>("users", []);
+    const shuffledPlayers = [...(tournament.registeredPlayers || [])].sort(() => 0.5 - Math.random());
+    
+    const firstRoundMatchups: Matchup[] = [];
+    for (let i = 0; i < shuffledPlayers.length; i += 2) {
+        const player1Email = shuffledPlayers[i];
+        const player2Email = shuffledPlayers[i+1]; // Might be undefined for odd number of players
+
+        const player1Name = allUsers.find(u => u.email === player1Email)?.name;
+        const player2Name = player2Email ? allUsers.find(u => u.email === player2Email)?.name : undefined;
+
+        firstRoundMatchups.push({
+            id: i / 2,
+            player1: player1Name,
+            player2: player2Name,
+        });
+    }
+
+    const bracket: Round[] = [{ name: "Round 1", matchups: firstRoundMatchups }];
+    
+    let numMatchups = firstRoundMatchups.length / 2;
+    let roundNum = 2;
+    while(numMatchups >= 1) {
+        const matchups: Matchup[] = [];
+        for(let i=0; i<numMatchups; i++){
+            matchups.push({id: i});
+        }
+        let roundName = `Round ${roundNum}`;
+        if (numMatchups === 1) roundName = "Final";
+        else if (numMatchups < 2) roundName = "Semi-Finals";
+        else if (numMatchups < 4) roundName = "Quarter-Finals";
+
+        bracket.push({name: roundName, matchups});
+        numMatchups /= 2;
+        roundNum++;
+    }
+
+    const updatedTournament: Tournament = {
+        ...tournament,
+        bracket: bracket,
+        status: "In Progress"
+    };
+    
+    const tournaments = getFromStorage<Tournament[]>('tournaments', []);
+    const tournamentIndex = tournaments.findIndex(t => t.id === tournament.id);
+    if(tournamentIndex > -1){
+        tournaments[tournamentIndex] = updatedTournament;
+        saveToStorage('tournaments', tournaments);
+        setTournament(updatedTournament);
+        setEditedTournament(updatedTournament);
+        toast({title: "Bracket Generated!", description: "The tournament is now In Progress."});
+    }
+  };
 
 
   if (!tournament || !editedTournament) {
@@ -305,7 +366,7 @@ export default function TournamentDetailsPage() {
                             tournament.pendingPlayers?.includes(currentUser?.email || '') ? 'Pending' : 'Not Applied';
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col gap-8">
+    <div className="max-w-7xl mx-auto flex flex-col gap-8">
       <div className="flex justify-between items-start">
         <Button variant="outline" onClick={() => router.back()} className="w-fit">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -418,7 +479,7 @@ export default function TournamentDetailsPage() {
              )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between items-center flex-wrap gap-4">
             <div>
               {tournament.status === 'Upcoming' && !isAdmin && (
                    <Button onClick={handleApply} disabled={hasApplied}>
@@ -428,6 +489,12 @@ export default function TournamentDetailsPage() {
               {tournament.status === 'In Progress' && <Badge>In Progress</Badge>}
               {tournament.status === 'Finished' && <Badge variant="secondary">Finished</Badge>}
             </div>
+             {isAdmin && tournament.status === 'Upcoming' && tournament.format === 'Knockout' && (enrolledPlayers.length > 1) && (
+                <Button onClick={handleGenerateBracket} variant="outline">
+                    <Shuffle className="mr-2 h-4 w-4" />
+                    Generate Bracket & Start
+                </Button>
+             )}
         </CardFooter>
       </Card>
       
@@ -447,6 +514,17 @@ export default function TournamentDetailsPage() {
                 </Link>
             </CardContent>
         </Card>
+      )}
+      
+      {tournament.format === 'Knockout' && tournament.bracket && (
+          <Card>
+              <CardHeader>
+                  <CardTitle>Tournament Bracket</CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <TournamentBracket bracket={tournament.bracket} players={allPlayers} />
+              </CardContent>
+          </Card>
       )}
 
       {tournamentLive.length > 0 && (
@@ -625,5 +703,3 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
-
-    

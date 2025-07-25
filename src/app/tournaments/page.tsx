@@ -24,6 +24,7 @@ import { PlusCircle, Radio, Pencil, Eye } from "lucide-react";
 import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddTournamentDialog } from "@/components/add-tournament-dialog";
 import type { Player } from "@/app/players/page";
+import type { Round } from "@/components/tournament-bracket";
 
 export interface Tournament {
   id: number;
@@ -37,6 +38,7 @@ export interface Tournament {
   registeredPlayers?: string[]; // Array of approved user emails
   location?: string;
   winner?: string;
+  bracket?: Round[];
 }
 
 export interface LiveMatch {
