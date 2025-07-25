@@ -28,6 +28,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Sign up failed, please try again.' }, { status: 500 });
   }
 
+  // Determine user role
+  const userRole = email === 'imnazelahi@gmail.com' ? 'admin' : 'user';
+
   // Next, insert the user profile into the public.users table
   const { error: insertError } = await supabase
     .from('users')
@@ -35,17 +38,13 @@ export async function POST(req: Request) {
       id: user.id,
       email: user.email,
       name: name,
-      role: 'user' // default role
+      role: userRole
     });
 
   if (insertError) {
     // If profile insert fails, we should probably delete the auth user
     // to keep things clean. This is an important step for production apps.
-    const { data: adminUser, error: adminError } = await supabase.auth.admin.deleteUser(user.id);
-    if(adminError) {
-        // If we can't delete the auth user, we should probably log this somewhere
-        console.error("Failed to delete orphaned auth user:", adminError);
-    }
+    await supabase.auth.admin.deleteUser(user.id);
     return NextResponse.json({ error: 'Failed to create user profile.' }, { status: 500 });
   }
   
@@ -67,10 +66,7 @@ export async function POST(req: Request) {
         
     if (playerInsertError) {
         // Handle error, maybe roll back user creation
-        const { data: adminUser, error: adminError } = await supabase.auth.admin.deleteUser(user.id);
-         if(adminError) {
-            console.error("Failed to delete orphaned auth user:", adminError);
-        }
+        await supabase.auth.admin.deleteUser(user.id);
         return NextResponse.json({ error: 'Failed to create player profile.' }, { status: 500 });
     }
 
