@@ -22,25 +22,21 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, List, LayoutGrid, Search, ArrowLeftRight } from "lucide-react";
-import { AddPlayerDialog } from "@/components/add-player-dialog";
-import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
-import type { Achievement } from "@/types/achievements";
 import { supabase } from "@/lib/supabase/client";
 import type { Player as PlayerType } from '@/types/players';
 
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<PlayerType[]>([]);
-  const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
-  const [playersToShow, setPlayersToShow] = useState(10);
+  const [playersToShow, setPlayersToShow] = useState(12);
   const [loading, setLoading] = useState(true);
 
   const fetchPlayers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('players').select('*');
+    const { data, error } = await supabase.from('players').select('*').order('wins', { ascending: false });
     if (data) {
         setPlayers(data);
     }
@@ -50,46 +46,6 @@ export default function PlayersPage() {
   useEffect(() => {
     fetchPlayers();
   }, []);
-
-  const handleAddPlayer = async (newPlayerData: Omit<PlayerType, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at' | 'user_id'>) => {
-    
-    // Check for new high score
-    const highestBreak = newPlayerData.highest_break;
-    const prevHighestBreakPlayer = players.length > 0
-        ? players.reduce((prev, curr) => prev.highest_break > curr.highest_break ? prev : curr)
-        : { highest_break: 0 };
-    
-    if (highestBreak > prevHighestBreakPlayer.highest_break) {
-        const { data: allUsers } = await supabase.from('users').select('id');
-        if (allUsers) {
-            const notifications = allUsers.map(u => ({
-                user_id: u.id,
-                title: "New Club Record!",
-                description: `${newPlayerData.name} has set a new high break of ${highestBreak}!`,
-                read: false,
-                date: new Date().toISOString()
-            }));
-            await supabase.from('notifications').insert(notifications);
-        }
-    }
-    
-    const { data, error } = await supabase
-        .from('players')
-        .insert([{ 
-            ...newPlayerData,
-            initials: newPlayerData.name.split(' ').map(n => n[0]).join(''),
-            matches_played: 0,
-            win_rate: "0%",
-            wins: 0,
-            losses: 0,
-            average_break: 0,
-        }])
-        .select();
-
-    if (data) {
-        setPlayers(prev => [...prev, ...data]);
-    }
-  };
 
   const filteredPlayers = players.filter(player =>
     player.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -111,7 +67,7 @@ export default function PlayersPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="hidden md:block">
             <h1 className="text-3xl font-bold">Players</h1>
-            <p className="text-muted-foreground">Manage player profiles and view statistics.</p>
+            <p className="text-muted-foreground">Browse player profiles and view statistics.</p>
         </div>
         <div className="flex items-center gap-2 w-full">
              <div className="relative flex-1">
@@ -135,10 +91,6 @@ export default function PlayersPage() {
                     <ArrowLeftRight className="mr-2 h-4 w-4"/>
                     Compare
                 </Link>
-            </Button>
-            <Button onClick={() => setIsAddPlayerOpen(true)} className="hidden md:flex shrink-0">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Player
             </Button>
         </div>
       </div>
@@ -230,14 +182,6 @@ export default function PlayersPage() {
         )}
 
       <div className="md:hidden fixed bottom-20 right-4 flex flex-col gap-2">
-         <Button
-            onClick={() => setIsAddPlayerOpen(true)}
-            className="h-14 w-14 rounded-full shadow-lg"
-            size="icon"
-          >
-            <PlusCircle className="h-6 w-6" />
-            <span className="sr-only">Add Player</span>
-          </Button>
           <Button
             asChild
             className="h-14 w-14 rounded-full shadow-lg"
@@ -251,7 +195,6 @@ export default function PlayersPage() {
           </Button>
       </div>
 
-      <AddPlayerDialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen} onAddPlayer={handleAddPlayer} />
     </div>
   );
 }

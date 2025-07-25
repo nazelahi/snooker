@@ -23,7 +23,7 @@ interface AddMatchDialogProps {
   onOpenChange: (open: boolean) => void;
   onAddMatch: (opponentId: number, myScore: number, opponentScore: number) => void;
   players: Player[];
-  currentUser: { name: string; email: string, avatar?: string };
+  currentUser: Player;
 }
 
 export function AddMatchDialog({ open, onOpenChange, onAddMatch, players, currentUser }: AddMatchDialogProps) {

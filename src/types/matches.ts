@@ -10,9 +10,9 @@ export interface Match {
   media?: string[];
   comments?: Comment[];
   pending_score?: {
-    score1: number;
-    score2: number;
-    proposed_by: string;
+    winnerScore: number;
+    loserScore: number;
+    proposed_by: string; // The name of the player who proposed the score
   };
   tournament_id?: number;
 }

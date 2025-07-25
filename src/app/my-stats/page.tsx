@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -24,10 +24,11 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
+import type { User } from "@supabase/supabase-js";
 
 const initialStats = {
-  name: "John Doe",
-  initials: "JD",
+  name: "New Player",
+  initials: "NP",
   avatar: "",
   matchesPlayed: 0,
   wins: 0,
@@ -39,77 +40,84 @@ const initialStats = {
 };
 
 export default function MyStatsPage() {
-  const [userStats, setUserStats] = useState(initialStats);
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string, avatar?: string} | null>(null);
+  const [player, setPlayer] = useState<Player | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddMatchOpen, setIsAddMatchOpen] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedAvatar, setEditedAvatar] = useState("");
   const [avatarPreview, setAvatarPreview] = useState("");
-  const [editedWins, setEditedWins] = useState(0);
-  const [editedLosses, setEditedLosses] = useState(0);
-  const [editedAverageBreak, setEditedAverageBreak] = useState(0);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
   const router = useRouter();
-
   const { toast } = useToast();
 
-  const fetchCurrentUserData = async () => {
+  const fetchCurrentUserData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push('/login');
       return;
     }
+    setCurrentUser(user);
 
-    const { data: playersData } = await supabase.from('players').select('*');
-    if (playersData) {
-      setAllPlayers(playersData);
-      const player = playersData.find(p => p.name.toLowerCase() === (user.user_metadata.full_name || "").toLowerCase());
-
-      const currentUserData = { name: user.user_metadata.full_name || user.email!, email: user.email!, avatar: player?.avatar };
-      setCurrentUser(currentUserData);
-      
-      let statsToSet;
-      if (player) {
-        statsToSet = {
-            name: player.name,
-            initials: player.initials,
-            avatar: player.avatar,
-            matchesPlayed: player.matches_played,
-            wins: player.wins ?? 0,
-            losses: player.losses ?? 0,
-            winRate: player.win_rate,
-            highestBreak: player.highest_break,
-            averageBreak: player.average_break ?? 0,
-            tournamentsWon: player.skill_level === 'Pro' ? 2 : (player.skill_level === 'Intermediate' ? 1 : 0),
+    let { data: playerData, error: playerError } = await supabase
+        .from('players')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
+    if (playerError || !playerData) {
+        // Player does not exist, create one.
+        const newUserPlayer = {
+            user_id: user.id,
+            name: user.user_metadata.full_name || user.email,
+            email: user.email,
+            initials: (user.user_metadata.full_name || user.email!).split(' ').map(n => n[0]).join(''),
+            avatar: user.user_metadata.avatar_url,
+            skill_level: "Beginner",
+            matches_played: 0,
+            win_rate: "0%",
+            highest_break: 0,
+            wins: 0,
+            losses: 0,
+            average_break: 0,
         };
-      } else {
-         statsToSet = {...initialStats, name: currentUserData.name, initials: currentUserData.name.split(' ').map(n => n[0]).join('')};
-      }
-      setUserStats(statsToSet);
-      setEditedName(statsToSet.name);
-      setAvatarPreview(statsToSet.avatar);
-      setEditedWins(statsToSet.wins);
-      setEditedLosses(statsToSet.losses);
-      setEditedAverageBreak(statsToSet.averageBreak);
+        
+        const { data: newPlayerData, error: newPlayerError } = await supabase
+            .from('players')
+            .insert(newUserPlayer)
+            .select()
+            .single();
 
-      const { data: allMatches } = await supabase.from('matches').select('*');
-      if (allMatches) {
+        if (newPlayerError) {
+            toast({ variant: 'destructive', title: "Error", description: "Could not create your player profile."});
+            return;
+        }
+        playerData = newPlayerData;
+    }
+
+    setPlayer(playerData);
+    setEditedName(playerData.name);
+    setAvatarPreview(playerData.avatar);
+
+    const { data: allPlayersData } = await supabase.from('players').select('*');
+    if (allPlayersData) setAllPlayers(allPlayersData);
+
+    const { data: allMatches } = await supabase.from('matches').select('*');
+    if (allMatches) {
         const matchesForApproval = allMatches.filter(match => 
-          (match.winner === currentUserData.name || match.loser === currentUserData.name) && 
-          match.pending_score && match.pending_score.proposed_by !== currentUserData.email
+            (match.loser === playerData?.name) && 
+            match.pending_score
         );
         setPendingMatches(matchesForApproval as Match[]);
 
         const playerMatches = allMatches.filter(
-            (match) => match.winner === currentUserData.name || match.loser === currentUserData.name
+            (match) => match.winner === playerData?.name || match.loser === playerData?.name
         ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setMatchHistory(playerMatches as Match[]);
-      }
     }
-  };
+  }, [router, toast]);
 
   useEffect(() => {
     fetchCurrentUserData();
@@ -123,7 +131,7 @@ export default function MyStatsPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchCurrentUserData]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -139,44 +147,32 @@ export default function MyStatsPage() {
   };
 
   const handleSaveChanges = async () => {
-    if (!currentUser) return;
-    
-    const currentPlayer = allPlayers.find(p => p.name.toLowerCase() === currentUser.name.toLowerCase());
-    if (!currentPlayer) return;
-
-    const matchesPlayed = editedWins + editedLosses;
-    const winRate = matchesPlayed > 0 ? ((editedWins / matchesPlayed) * 100).toFixed(1) + '%' : "0%";
+    if (!currentUser || !player) return;
 
     const updatedPlayerData = { 
       name: editedName,
       initials: editedName.split(' ').map(n => n[0]).join(''),
-      avatar: editedAvatar || currentPlayer.avatar,
-      wins: editedWins,
-      losses: editedLosses,
-      average_break: editedAverageBreak,
-      matches_played: matchesPlayed,
-      win_rate: winRate,
+      avatar: editedAvatar || player.avatar,
     };
     
-    const { error } = await supabase.from('players').update(updatedPlayerData).eq('id', currentPlayer.id);
+    const { error } = await supabase.from('players').update(updatedPlayerData).eq('id', player.id);
 
     if (error) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
       return;
     }
     
-    // Also update user metadata if name changed
-    if (editedName !== currentUser.name) {
+    if (editedName !== player.name) {
       await supabase.auth.updateUser({ data: { full_name: editedName } });
     }
 
     toast({ title: "Success", description: "Your profile has been updated."});
     setIsEditing(false);
-    fetchCurrentUserData(); // Refresh all data
+    fetchCurrentUserData();
   }
   
   const handleAddMatch = async (opponentId: number, myScore: number, opponentScore: number) => {
-    if (!currentUser) return;
+    if (!currentUser || !player) return;
 
     const opponent = allPlayers.find(p => p.id === opponentId);
     if (!opponent || !opponent.user_id) {
@@ -185,16 +181,16 @@ export default function MyStatsPage() {
     }
     
     const newMatch = {
-        winner: myScore > opponentScore ? currentUser.name : opponent.name,
-        loser: myScore > opponentScore ? opponent.name : currentUser.name,
+        winner: myScore > opponentScore ? player.name : opponent.name,
+        loser: myScore > opponentScore ? opponent.name : player.name,
         score: `${myScore}-${opponentScore}`,
         date: new Date().toISOString(),
         media: [],
         comments: [],
         pending_score: {
-            score1: myScore > opponentScore ? myScore : opponentScore,
-            score2: myScore > opponentScore ? opponentScore : myScore,
-            proposed_by: currentUser.email,
+            winnerScore: myScore > opponentScore ? myScore : opponentScore,
+            loserScore: myScore > opponentScore ? opponentScore : myScore,
+            proposed_by: player.name,
         }
     };
 
@@ -208,9 +204,10 @@ export default function MyStatsPage() {
     await supabase.from('notifications').insert([{
         user_id: opponent.user_id,
         title: "New Match Reported",
-        description: `${currentUser.name} has reported a new match with you. Please review and approve the score on your profile page.`,
+        description: `${player.name} has reported a new match with you. Please review and approve the score on your profile page.`,
         read: false,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        link: '/my-stats'
     }]);
 
     toast({ title: "Match Reported", description: "Your new match has been reported and is awaiting approval from your opponent."});
@@ -218,27 +215,24 @@ export default function MyStatsPage() {
   };
 
   const handleApproval = async (matchId: number, approve: boolean) => {
-    if (!currentUser) return;
+    if (!currentUser || !player) return;
     
     const match = pendingMatches.find(m => m.id === matchId);
     if (!match || !match.pending_score) return;
-
-    const proposerIsWinner = match.winner.toLowerCase() === match.pending_score.proposed_by.toLowerCase();
-    const opponentName = proposerIsWinner ? match.loser : match.winner;
     
-    if (approve) {
-        const { score1, score2 } = match.pending_score;
-        
-        const winnerName = score1 > score2 ? currentUser.name : opponentName;
-        const loserName = score1 > score2 ? opponentName : currentUser.name;
+    const opponentName = match.pending_score.proposed_by;
+    const opponent = allPlayers.find(p => p.name === opponentName);
 
+    if (approve) {
+        const { winnerScore, loserScore } = match.pending_score;
+        
         // Update match to be confirmed
         const { error: matchUpdateError } = await supabase
             .from('matches')
             .update({ 
-                score: `${score1}-${score2}`, 
-                winner: winnerName, 
-                loser: loserName, 
+                score: `${winnerScore}-${loserScore}`, 
+                winner: opponentName,
+                loser: player.name,
                 pending_score: null 
             })
             .eq('id', matchId);
@@ -249,11 +243,10 @@ export default function MyStatsPage() {
         }
 
         // Update player stats
-        const winner = allPlayers.find(p => p.name === winnerName)!;
-        const loser = allPlayers.find(p => p.name === loserName)!;
-        
-        await supabase.from('players').update({ wins: (winner.wins ?? 0) + 1, matches_played: winner.matches_played + 1 }).eq('id', winner.id);
-        await supabase.from('players').update({ losses: (loser.losses ?? 0) + 1, matches_played: loser.matches_played + 1 }).eq('id', loser.id);
+        if(opponent) {
+            await supabase.from('players').update({ wins: (opponent.wins ?? 0) + 1, matches_played: opponent.matches_played + 1 }).eq('id', opponent.id);
+        }
+        await supabase.from('players').update({ losses: (player.losses ?? 0) + 1, matches_played: player.matches_played + 1 }).eq('id', player.id);
         
         toast({ title: "Approved", description: "The match score has been updated." });
     } else {
@@ -262,33 +255,32 @@ export default function MyStatsPage() {
         toast({ title: "Rejected", description: "The score has been rejected and the match report removed." });
     }
     
-    const { data: opponent } = await supabase.from('players').select('user_id').eq('name', opponentName).single();
     if(opponent?.user_id) {
         await supabase.from('notifications').insert([{
             user_id: opponent.user_id,
             title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
-            description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
+            description: `${player.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
             read: false,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            link: `/match/${match.id}`
         }]);
     }
     
-    // Refresh all data
     fetchCurrentUserData();
   }
 
-  if(!currentUser) return <p>Loading...</p>
+  if(!player) return <div className="text-center p-8">Loading your stats...</div>
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16 md:h-20 md:w-20">
-            <AvatarImage src={userStats.avatar || `https://placehold.co/80x80.png`} data-ai-hint="player portrait" alt={userStats.name} />
-            <AvatarFallback>{userStats.initials}</AvatarFallback>
+            <AvatarImage src={player.avatar || `https://placehold.co/80x80.png`} data-ai-hint="player portrait" alt={player.name} />
+            <AvatarFallback>{player.initials}</AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl md:text-4xl font-bold">{userStats.name}</h1>
+              <h1 className="text-2xl md:text-4xl font-bold">{player.name}</h1>
               <p className="text-muted-foreground hidden md:block">Your personal snooker statistics.</p>
             </div>
         </div>
@@ -313,25 +305,15 @@ export default function MyStatsPage() {
                     {pendingMatches.map(match => {
                         if(!match.pending_score) return null;
                         
-                        const proposerIsWinner = match.winner.toLowerCase() === match.pending_score.proposed_by.toLowerCase();
-                        const opponentName = proposerIsWinner ? match.loser : match.winner;
-
-                        let myProposedScore, opponentProposedScore;
-                        
-                        if(proposerIsWinner) {
-                           myProposedScore = match.pending_score.score2;
-                           opponentProposedScore = match.pending_score.score1;
-                        } else {
-                           myProposedScore = match.pending_score.score1;
-                           opponentProposedScore = match.pending_score.score2;
-                        }
+                        const opponentName = match.pending_score.proposed_by;
+                        const proposedScore = `${match.pending_score.winnerScore}-${match.pending_score.loserScore}`
 
                         return (
                             <li key={match.id} className="p-4 rounded-lg bg-muted/50">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p>vs <strong>{opponentName}</strong></p>
-                                        <p className="text-sm text-muted-foreground">Proposed Score: <span className="font-bold">{myProposedScore}-{opponentProposedScore}</span></p>
+                                        <p className="text-sm text-muted-foreground">Proposed Score: <span className="font-bold">{proposedScore}</span></p>
                                     </div>
                                     <div className="flex gap-2">
                                         <Button size="sm" variant="outline" onClick={() => handleApproval(match.id, true)}><Check className="h-4 w-4 mr-2"/>Approve</Button>
@@ -350,7 +332,7 @@ export default function MyStatsPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Edit Your Profile</CardTitle>
-                <CardDescription>Update your name, avatar, and performance details here.</CardDescription>
+                <CardDescription>Update your name and avatar. Other stats are calculated automatically.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -365,20 +347,6 @@ export default function MyStatsPage() {
                             <AvatarFallback>{editedName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarChange} />
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="wins">Wins</Label>
-                        <Input id="wins" type="number" value={editedWins} onChange={(e) => setEditedWins(parseInt(e.target.value, 10) || 0)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="losses">Losses</Label>
-                        <Input id="losses" type="number" value={editedLosses} onChange={(e) => setEditedLosses(parseInt(e.target.value, 10) || 0)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="averageBreak">Average Break</Label>
-                        <Input id="averageBreak" type="number" value={editedAverageBreak} onChange={(e) => setEditedAverageBreak(parseInt(e.target.value, 10) || 0)} />
                     </div>
                 </div>
                 <Button onClick={handleSaveChanges}>
@@ -396,8 +364,8 @@ export default function MyStatsPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userStats.matchesPlayed}</div>
-            <p className="text-xs text-muted-foreground">{userStats.wins} Wins, {userStats.losses} Losses</p>
+            <div className="text-2xl font-bold">{player.matches_played}</div>
+            <p className="text-xs text-muted-foreground">{player.wins} Wins, {player.losses} Losses</p>
           </CardContent>
         </Card>
         <Card>
@@ -406,7 +374,7 @@ export default function MyStatsPage() {
             <Percent className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userStats.winRate}</div>
+            <div className="text-2xl font-bold">{player.win_rate}</div>
             <p className="text-xs text-muted-foreground">Overall performance</p>
           </CardContent>
         </Card>
@@ -416,7 +384,7 @@ export default function MyStatsPage() {
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userStats.highestBreak}</div>
+            <div className="text-2xl font-bold">{player.highest_break}</div>
             <p className="text-xs text-muted-foreground">Your personal best</p>
           </CardContent>
         </Card>
@@ -426,7 +394,7 @@ export default function MyStatsPage() {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userStats.tournamentsWon}</div>
+            <div className="text-2xl font-bold">{player.tournamentsWon || 0}</div>
             <p className="text-xs text-muted-foreground">Major victories</p>
           </CardContent>
         </Card>
@@ -435,7 +403,6 @@ export default function MyStatsPage() {
        <Card>
         <CardHeader>
           <CardTitle>
-            <Swords />
             My Match History
           </CardTitle>
         </CardHeader>
@@ -443,7 +410,7 @@ export default function MyStatsPage() {
           {matchHistory.length > 0 ? (
             <ul className="space-y-4">
               {matchHistory.map((match) => {
-                const isWinner = match.winner === currentUser?.name;
+                const isWinner = match.winner === player.name;
                 const opponentName = isWinner ? match.loser : match.winner;
                 const opponent = allPlayers.find(p => p.name === opponentName);
 
@@ -459,7 +426,7 @@ export default function MyStatsPage() {
                               {isWinner ? "WIN" : "LOSS"}
                               </Badge>
                               <div>
-                                  <span>vs <span className="hover:underline">{opponentName}</span></span>
+                                  <span>vs <Link href={`/players/${opponent?.id}`} className="hover:underline">{opponentName}</Link></span>
                                   <p className="text-sm text-muted-foreground">{new Date(match.date).toLocaleDateString()}</p>
                               </div>
                           </div>
@@ -474,26 +441,6 @@ export default function MyStatsPage() {
           ) : (
             <p className="text-muted-foreground text-center py-4">No match history found.</p>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-           <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                <span className="font-medium">Wins</span>
-                <span className="text-2xl font-bold text-green-400">{userStats.wins}</span>
-           </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                <span className="font-medium">Losses</span>
-                <span className="text-2xl font-bold text-red-400">{userStats.losses}</span>
-           </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                <span className="font-medium">Average Break</span>
-                <span className="text-2xl font-bold">{userStats.averageBreak}</span>
-           </div>
         </CardContent>
       </Card>
 
@@ -517,17 +464,13 @@ export default function MyStatsPage() {
           </Button>
       </div>
 
-
-      {currentUser && (
-        <AddMatchDialog 
-            open={isAddMatchOpen} 
-            onOpenChange={setIsAddMatchOpen} 
-            onAddMatch={handleAddMatch}
-            players={allPlayers.filter(p => p.name !== currentUser?.name)}
-            currentUser={currentUser}
-        />
-      )}
+      <AddMatchDialog 
+          open={isAddMatchOpen} 
+          onOpenChange={setIsAddMatchOpen} 
+          onAddMatch={handleAddMatch}
+          players={allPlayers.filter(p => p.id !== player?.id)}
+          currentUser={player}
+      />
     </div>
   );
 }
-    
