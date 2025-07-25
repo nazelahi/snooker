@@ -129,7 +129,6 @@ export default function MatchDetailsPage() {
   const handlePostComment = async (content: string, image: string | null, parentId: string | null) => {
     if ((!content.trim() && !image) || !currentUser || !match) return;
 
-    // This part remains mostly the same as it deals with local state/notifications, which we haven't migrated yet
     const mentionRegex = /@(\w+\s\w+)/g;
     let matchResult;
     const mentionedNames: string[] = [];
@@ -137,9 +136,8 @@ export default function MatchDetailsPage() {
         mentionedNames.push(matchResult[1]);
     }
 
-    const allUsers = getFromStorage<{name:string, email:string}[]>('users', []);
     const mentionedEmails = mentionedNames
-        .map(name => allUsers.find(u => u.name.toLowerCase() === name.toLowerCase())?.email)
+        .map(name => allPlayers.find(p => p.name.toLowerCase() === name.toLowerCase())?.name) // using name as a proxy for email until we have a proper user/player link
         .filter((email): email is string => !!email);
 
     const newCommentObject: Comment = {
@@ -155,16 +153,14 @@ export default function MatchDetailsPage() {
         replies: []
     };
     
-    // --- Update Match State and Storage ---
     let updatedComments = [...(match.comments || [])];
-    let replyAuthorEmail: string | null = null;
+    let replyAuthorName: string | null = null;
     
     if (parentId) {
-        // It's a reply
         const findAndAddReply = (comments: Comment[]): Comment[] => {
             return comments.map(comment => {
                 if (comment.id === parentId) {
-                    replyAuthorEmail = comment.authorEmail;
+                    replyAuthorName = comment.authorName;
                     return { ...comment, replies: [...(comment.replies || []), newCommentObject] };
                 }
                 if (comment.replies) {
@@ -175,7 +171,6 @@ export default function MatchDetailsPage() {
         };
         updatedComments = findAndAddReply(updatedComments);
     } else {
-        // It's a top-level comment
         updatedComments.push(newCommentObject);
     }
 
@@ -194,50 +189,50 @@ export default function MatchDetailsPage() {
     if (data) {
         setMatch(data as Match);
         // --- Send Notifications (Local Storage part) ---
-        if (parentId && replyAuthorEmail && replyAuthorEmail !== currentUser.email) {
-             const userNotifications = getFromStorage<Notification[]>(`notifications_${replyAuthorEmail}`, []);
+        if (parentId && replyAuthorName && replyAuthorName !== currentUser.name) {
+             const replyAuthor = allPlayers.find(p => p.name === replyAuthorName);
+             if (!replyAuthor) return;
+             // This part still relies on local storage notifications. A full migration needs a DB table.
+             const userNotifications = getFromStorage<Notification[]>(`notifications_${replyAuthor.name}`, []); // using name as key
              const newNotification: Notification = {
-                id: Date.now().toString() + replyAuthorEmail,
+                id: Date.now().toString() + replyAuthor.name,
                 title: "Someone replied to your comment",
                 description: `${currentUser.name} replied to you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
                 read: false,
                 date: new Date().toISOString(),
                 link: `/match/${match.id}`
              };
-             saveToStorage(`notifications_${replyAuthorEmail}`, [newNotification, ...userNotifications]);
+             saveToStorage(`notifications_${replyAuthor.name}`, [newNotification, ...userNotifications]);
         } else if (!parentId) {
-            const winnerUser = allUsers.find(u => u.name === winnerPlayer?.name);
-            const loserUser = allUsers.find(u => u.name === loserPlayer?.name);
-
-            const notifyPlayer = (playerUser: {name: string, email: string} | undefined) => {
-                if (playerUser && playerUser.email !== currentUser.email) {
-                    const userNotifications = getFromStorage<Notification[]>(`notifications_${playerUser.email}`, []);
+            const notifyPlayer = (player: Player | null) => {
+                if (player && player.name !== currentUser.name) {
+                    const userNotifications = getFromStorage<Notification[]>(`notifications_${player.name}`, []);
                     const newNotification: Notification = {
-                        id: Date.now().toString() + playerUser.email,
+                        id: Date.now().toString() + player.name,
                         title: "New comment on your match",
-                        description: `${currentUser.name} commented on your match against ${playerUser.name === winnerPlayer?.name ? loserPlayer?.name : winnerPlayer?.name}.`,
+                        description: `${currentUser.name} commented on your match against ${player.name === winnerPlayer?.name ? loserPlayer?.name : winnerPlayer?.name}.`,
                         read: false,
                         date: new Date().toISOString(),
                         link: `/match/${match.id}`
                     };
-                    saveToStorage(`notifications_${playerUser.email}`, [newNotification, ...userNotifications]);
+                    saveToStorage(`notifications_${player.name}`, [newNotification, ...userNotifications]);
                 }
             };
-            notifyPlayer(winnerUser);
-            notifyPlayer(loserUser);
+            notifyPlayer(winnerPlayer);
+            notifyPlayer(loserPlayer);
         }
-        mentionedEmails.forEach(email => {
-            if(email === currentUser.email) return;
-            const userNotifications = getFromStorage<Notification[]>(`notifications_${email}`, []);
+        mentionedEmails.forEach(name => {
+            if(name === currentUser.name) return;
+            const userNotifications = getFromStorage<Notification[]>(`notifications_${name}`, []);
             const newNotification: Notification = {
-                id: Date.now().toString() + email,
+                id: Date.now().toString() + name,
                 title: "You were mentioned in a comment",
                 description: `${currentUser.name} mentioned you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
                 read: false,
                 date: new Date().toISOString(),
                 link: `/match/${match.id}`
             };
-            saveToStorage(`notifications_${email}`, [newNotification, ...userNotifications]);
+            saveToStorage(`notifications_${name}`, [newNotification, ...userNotifications]);
         });
         setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
         toast({ title: parentId ? "Reply Posted" : "Comment Posted" });
@@ -247,15 +242,15 @@ export default function MatchDetailsPage() {
   const handleCommentReaction = async (commentId: string, reaction: 'like' | 'dislike') => {
     if (!currentUser || !match) return;
 
-    let commentAuthorEmail: string | null = null;
+    let commentAuthorName: string | null = null;
     
     const updateReactionsRecursive = (comments: Comment[]): Comment[] => {
         return comments.map(comment => {
             if (comment.id === commentId) {
-                commentAuthorEmail = comment.authorEmail;
+                commentAuthorName = comment.authorName;
                 const likes = comment.likes || [];
                 const dislikes = comment.dislikes || [];
-                const userEmail = currentUser.email;
+                const userEmail = currentUser.email; // still using email for reaction uniqueness
 
                 const hasLiked = likes.includes(userEmail);
                 const hasDisliked = dislikes.includes(userEmail);
@@ -304,17 +299,19 @@ export default function MatchDetailsPage() {
     
     if(data) {
         setMatch(data as Match);
-        if (commentAuthorEmail && commentAuthorEmail !== currentUser.email) {
-          const userNotifications = getFromStorage<Notification[]>(`notifications_${commentAuthorEmail}`, []);
+        if (commentAuthorName && commentAuthorName !== currentUser.name) {
+          const author = allPlayers.find(p => p.name === commentAuthorName);
+          if (!author) return;
+          const userNotifications = getFromStorage<Notification[]>(`notifications_${author.name}`, []);
           const newNotification: Notification = {
-            id: Date.now().toString() + commentAuthorEmail,
+            id: Date.now().toString() + author.name,
             title: `Someone reacted to your comment`,
             description: `${currentUser.name} ${reaction}d your comment on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
             read: false,
             date: new Date().toISOString(),
             link: `/match/${match.id}`
           };
-          saveToStorage(`notifications_${commentAuthorEmail}`, [newNotification, ...userNotifications]);
+          saveToStorage(`notifications_${author.name}`, [newNotification, ...userNotifications]);
           setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
         }
     }

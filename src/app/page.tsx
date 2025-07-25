@@ -22,7 +22,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BarChart, Users, Trophy, ClipboardList, Radio, Calendar as CalendarIcon, ArrowRight, Camera, Megaphone } from "lucide-react";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
@@ -46,12 +45,6 @@ interface Notice {
   content: string;
   date: string;
 }
-
-const initialNotices: Notice[] = [
-  { id: "1", title: "Club Maintenance", content: "The club will be closed for maintenance this weekend. We apologize for any inconvenience.", date: "2024-08-12T10:00:00Z" },
-  { id: "2", title: "New Tournament Added", content: "The Annual Pro-Am tournament is now open for registration! Check the tournaments page for more details.", date: "2024-08-11T14:30:00Z" },
-];
-
 
 export default function DashboardPage() {
   const [playerStandings, setPlayerStandings] = useState<Player[]>([]);
@@ -91,27 +84,12 @@ export default function DashboardPage() {
     const { data: tournamentsData } = await supabase.from('tournaments').select('*');
     if (tournamentsData) setTournaments(tournamentsData);
     
-    // Remaining data from localStorage (to be migrated)
-    const storedNotices = getFromStorage('notices', initialNotices);
-    
-    setNotices(storedNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const { data: noticesData } = await supabase.from('notices').select('*').order('date', { ascending: false }).limit(5);
+    if (noticesData) setNotices(noticesData as Notice[]);
   }
 
   useEffect(() => {
     fetchDashboardData();
-
-    // Set initial values if they don't exist
-    if (localStorage.getItem('notices') === null) {
-        saveToStorage('notices', initialNotices);
-    }
-
-    const handleStorageChange = (event: StorageEvent) => {
-        // This can be simplified once all data is in Supabase
-        fetchDashboardData();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const getPlayerAvatar = (name: string) => {

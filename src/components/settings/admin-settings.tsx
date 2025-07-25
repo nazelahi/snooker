@@ -32,10 +32,11 @@ interface SiteSettings {
 }
 
 interface Notice {
-  id: string;
+  id: number;
   title: string;
   content: string;
   date: string;
+  created_at: string;
 }
 
 const adminTabs = [
@@ -93,13 +94,15 @@ export default function AdminSettings() {
 
     const { data: upcomingMatchesData } = await supabase.from('upcoming_matches').select('*');
     if (upcomingMatchesData) setUpcomingMatches(upcomingMatchesData as UpcomingMatch[]);
+    
+    const { data: noticesData } = await supabase.from('notices').select('*').order('date', { ascending: false });
+    if (noticesData) setNotices(noticesData as Notice[]);
   }
 
   useEffect(() => {
     fetchAdminData();
 
     setSiteSettings(getFromStorage<SiteSettings>("siteSettings", { name: "CueScore", description: "The ultimate snooker club management app."}));
-    setNotices(getFromStorage<Notice[]>("notices", []));
     
     const storedRules = getFromStorage<string[]>("tournamentRules", []);
     setRules(storedRules);
@@ -202,11 +205,7 @@ export default function AdminSettings() {
           case 'tournaments': setTournaments(prev => prev.filter(item => item.id !== id)); break;
           case 'live_matches': setLiveMatches(prev => prev.filter(item => item.id !== id)); break;
           case 'upcoming_matches': setUpcomingMatches(prev => prev.filter(item => item.id !== id)); break;
-          case 'notices': 
-            const updatedNotices = notices.filter(item => item.id !== id);
-            setNotices(updatedNotices);
-            saveToStorage('notices', updatedNotices);
-            break;
+          case 'notices': setNotices(prev => prev.filter(item => item.id !== id)); break;
         }
         toast({ title: "Success", description: `Item removed from ${tableName}.`});
       }
@@ -270,40 +269,46 @@ export default function AdminSettings() {
     setRules(updatedRules);
   };
 
-  const handleAddNotice = () => {
+  const handleAddNotice = async () => {
     if (!newNoticeTitle.trim() || !newNoticeContent.trim()) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please fill out both title and content for the notice.' });
         return;
     }
 
-    const newNotice: Notice = {
-        id: Date.now().toString(),
+    const newNotice = {
         title: newNoticeTitle,
         content: newNoticeContent,
         date: new Date().toISOString()
     };
     
-    const updatedNotices = [newNotice, ...notices];
-    setNotices(updatedNotices);
-    saveToStorage('notices', updatedNotices);
+    const { data, error } = await supabase.from('notices').insert(newNotice).select().single();
+
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error posting notice', description: error.message });
+      return;
+    }
     
+    if (data) {
+      setNotices([data as Notice, ...notices]);
+    }
+
     setNewNoticeTitle("");
     setNewNoticeContent("");
     toast({ title: 'Notice Posted', description: 'All users have been notified.'});
   };
 
   const handleSaveData = async (key: string, data: any, name: string) => {
-    if (key === 'siteSettings' || key === 'tournamentRules' || key === 'notices') {
+    if (key === 'siteSettings' || key === 'tournamentRules') {
         saveToStorage(key, data);
+        toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
     } else {
         const { error } = await supabase.from(key).upsert(data, { onConflict: 'id' });
         if (error) {
             toast({ variant: 'destructive', title: "Save Failed!", description: error.message });
             return;
         }
+        toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
     }
-    
-    toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
   };
 
   return (
@@ -624,9 +629,6 @@ export default function AdminSettings() {
                         )}
                     </div>
                     </CardContent>
-                     <CardFooter>
-                       <Button onClick={() => handleSaveData('notices', notices, 'Notices')}><Save className="h-4 w-4 mr-2" />Save Notice Changes</Button>
-                    </CardFooter>
                 </Card>
             </TabsContent>
             <TabsContent value="siteSettings">
