@@ -498,8 +498,8 @@ export default function MyStatsPage() {
 
                 return (
                   <li key={match.id} className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                    <Link href={`/match/${match.id}`} passHref>
-                        <div className="flex items-center justify-between cursor-pointer">
+                    <Link href={`/match/${match.id}`} className="block">
+                        <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <Badge variant={isWinner ? "default" : "destructive"}>
                                 {isWinner ? "WIN" : "LOSS"}
@@ -580,5 +580,6 @@ export default function MyStatsPage() {
     
 
     
+
 
 
