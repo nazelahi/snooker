@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Trophy, User as UserIcon, Swords, Bell } from "lucide-react";
+import { Home, Users, Trophy, User as UserIcon, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFromStorage } from "@/lib/storage";
 import { useEffect, useState } from "react";
@@ -14,7 +14,6 @@ const navItems = [
   { href: "/players", label: "Players", icon: Users },
   { href: "/tournaments", label: "Tournaments", icon: Trophy },
   { href: "/my-stats", label: "My Stats", icon: UserIcon, auth: true },
-  { href: "/notifications", label: "Alerts", icon: Bell, auth: true },
 ];
 
 export default function BottomNav() {
