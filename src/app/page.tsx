@@ -304,6 +304,7 @@ export default function DashboardPage() {
                <Carousel
                     opts={{
                         align: "start",
+                        loop: true,
                     }}
                     plugins={[ upcomingTournamentsPlugin.current ]}
                     className="w-full relative"
@@ -344,6 +345,7 @@ export default function DashboardPage() {
                <Carousel
                     opts={{
                         align: "start",
+                        loop: true,
                     }}
                     plugins={[ inProgressTournamentsPlugin.current ]}
                     className="w-full relative"
@@ -382,6 +384,7 @@ export default function DashboardPage() {
               <Carousel
                     opts={{
                         align: "start",
+                        loop: true,
                     }}
                     plugins={[ finishedTournamentsPlugin.current ]}
                     className="w-full relative"
@@ -596,3 +599,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
