@@ -578,22 +578,26 @@ export default function PlayerProfilePage() {
         open={isScoreDialogOpen} 
         onOpenChange={setIsScoreDialogOpen}
         title="Request Score Change"
-        description={`Propose a new score for your match against ${selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}. The other player will need to approve this change.`}
+        description={selectedMatch ? `Propose a new score for your match against ${selectedMatch.winner === player.name ? selectedMatch.loser : selectedMatch.winner}. The other player will need to approve this change.` : ''}
       >
-        <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="space-y-2">
-                <Label htmlFor="score1">{currentUser?.name.toLowerCase() === selectedMatch?.winner.toLowerCase() || currentUser?.name.toLowerCase() === selectedMatch?.loser.toLowerCase() ? (player?.name === selectedMatch.winner ? selectedMatch.winner : selectedMatch.loser) : player?.name}</Label>
-                <Input id="score1" type="number" value={newScore1} onChange={e => setNewScore1(parseInt(e.target.value, 10) || 0)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="score2">{selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}</Label>
-                <Input id="score2" type="number" value={newScore2} onChange={e => setNewScore2(parseInt(e.target.value, 10) || 0)} />
-            </div>
-        </div>
-        <DialogFooter>
-            <Button variant="outline" onClick={() => setIsScoreDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleScoreChangeRequest}>Send Request</Button>
-        </DialogFooter>
+        {selectedMatch && (
+            <>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="score1">{currentUser?.name?.toLowerCase() === selectedMatch.winner.toLowerCase() || currentUser?.name?.toLowerCase() === selectedMatch.loser.toLowerCase() ? (player.name === selectedMatch.winner ? selectedMatch.winner : selectedMatch.loser) : player.name}</Label>
+                        <Input id="score1" type="number" value={newScore1} onChange={e => setNewScore1(parseInt(e.target.value, 10) || 0)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="score2">{selectedMatch.winner === player.name ? selectedMatch.loser : selectedMatch.winner}</Label>
+                        <Input id="score2" type="number" value={newScore2} onChange={e => setNewScore2(parseInt(e.target.value, 10) || 0)} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsScoreDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleScoreChangeRequest}>Send Request</Button>
+                </DialogFooter>
+            </>
+        )}
       </ResponsiveDialog>
     </div>
   );
