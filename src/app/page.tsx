@@ -383,24 +383,22 @@ export default function DashboardPage() {
                           return (
                             <CarouselItem key={tournament.id} className="pl-4 basis-full">
                                 <Card className="overflow-hidden h-full flex flex-col">
-                                    <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/50">
+                                    <CardHeader className="relative flex flex-row items-center gap-4 p-4 bg-muted/50">
                                         <Trophy className="h-8 w-8 text-amber-400"/>
                                         <div>
                                             <p className="text-sm text-muted-foreground">Winner</p>
                                             <h3 className="text-lg font-bold"><PlayerLink name={tournament.winner!} /></h3>
                                         </div>
+                                        <Button variant="outline" asChild className="absolute top-4 right-4">
+                                            <Link href={`/tournaments/${tournament.id}`}>
+                                                View Results
+                                            </Link>
+                                        </Button>
                                     </CardHeader>
                                     <CardContent className="p-4 flex-grow">
                                         <h3 className="text-md font-semibold">{tournament.name}</h3>
                                         <p className="text-sm text-muted-foreground">{tournament.format}</p>
                                     </CardContent>
-                                    <CardFooter className="p-4">
-                                        <Button variant="outline" asChild>
-                                        <Link href={`/tournaments/${tournament.id}`}>
-                                            View Results <ArrowRight className="ml-2 h-4 w-4"/>
-                                        </Link>
-                                        </Button>
-                                    </CardFooter>
                                 </Card>
                             </CarouselItem>
                           );
