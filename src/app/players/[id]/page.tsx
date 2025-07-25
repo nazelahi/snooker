@@ -85,13 +85,18 @@ export default function PlayerProfilePage() {
     if (matchesData) {
       setMatchHistory(matchesData as Match[]);
     }
-  }, []);
+  }, [supabase, id]);
 
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user;
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
+      if (user) {
+        const { data: userProfile } = await supabase.from('users').select('role, name').eq('id', user.id).single();
+        setCurrentUser({ name: userProfile?.name || user.email!, email: user.email!, isAdmin: userProfile?.role === 'admin' });
+      } else {
+        setCurrentUser(null);
+      }
       if (id) {
         await fetchPlayerData(id);
       }
@@ -99,7 +104,12 @@ export default function PlayerProfilePage() {
 
     async function initialize() {
         const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
+         if (user) {
+            const { data: userProfile } = await supabase.from('users').select('role, name').eq('id', user.id).single();
+            setCurrentUser({ name: userProfile?.name || user.email!, email: user.email!, isAdmin: userProfile?.role === 'admin' });
+        } else {
+            setCurrentUser(null);
+        }
         if (id) {
           await fetchPlayerData(id);
         }
@@ -109,7 +119,7 @@ export default function PlayerProfilePage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [id, fetchPlayerData]);
+  }, [id, fetchPlayerData, supabase]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -130,7 +140,7 @@ export default function PlayerProfilePage() {
     const matchesPlayed = editedWins + editedLosses;
     const winRate = matchesPlayed > 0 ? ((editedWins / matchesPlayed) * 100).toFixed(1) + '%' : "0%";
     
-    const updatedPlayer: Omit<Player, 'id' | 'created_at'> = { 
+    const updatedPlayer: Omit<Player, 'id' | 'created_at' | 'user_id'> = { 
       name: editedName,
       initials: editedName.split(' ').map(n => n[0]).join(''),
       avatar: editedAvatar || player.avatar,
@@ -188,13 +198,16 @@ export default function PlayerProfilePage() {
       
     const opponentName = selectedMatch.winner === player?.name ? selectedMatch.loser : selectedMatch.winner;
     
-    await supabase.from('notifications').insert([{
-        user_name: opponentName,
-        title: "Score Change Request",
-        description: `${currentUser.name} has proposed a new score for your match. Please review on your profile.`,
-        read: false,
-        date: new Date().toISOString()
-    }]);
+    const {data: opponent} = await supabase.from('players').select('user_id').eq('name', opponentName).single();
+    if (opponent?.user_id) {
+        await supabase.from('notifications').insert([{
+            user_id: opponent.user_id,
+            title: "Score Change Request",
+            description: `${currentUser.name} has proposed a new score for your match. Please review on your profile.`,
+            read: false,
+            date: new Date().toISOString()
+        }]);
+    }
     
     toast({ title: "Request Sent", description: "Your score change request has been sent for approval." });
     setIsScoreDialogOpen(false);
@@ -251,13 +264,16 @@ export default function PlayerProfilePage() {
         toast({ title: "Rejected", description: "The score change request has been rejected." });
     }
     
-    await supabase.from('notifications').insert([{
-      user_name: opponentName,
-      title: `Score Change ${approve ? 'Approved' : 'Rejected'}`,
-      description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
-      read: false,
-      date: new Date().toISOString()
-    }]);
+    const {data: opponent} = await supabase.from('players').select('user_id').eq('name', opponentName).single();
+    if (opponent?.user_id) {
+        await supabase.from('notifications').insert([{
+        user_id: opponent.user_id,
+        title: `Score Change ${approve ? 'Approved' : 'Rejected'}`,
+        description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
+        read: false,
+        date: new Date().toISOString()
+        }]);
+    }
     
     fetchPlayerData(id);
   }

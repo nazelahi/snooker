@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -62,10 +63,14 @@ export default function TournamentDetailsPage() {
   const fetchTournamentData = async () => {
     if (!id) return;
     
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
-    const currentUserName = user?.user_metadata.full_name || user?.email;
-    setCurrentUser(user ? { name: currentUserName, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+        const { data: userProfile } = await supabase.from('users').select('role, name').eq('id', user.id).single();
+        setCurrentUser({ name: userProfile?.name || user.email!, email: user.email!, isAdmin: userProfile?.role === 'admin' });
+    } else {
+        setCurrentUser(null);
+    }
 
     const { data: playersData } = await supabase.from('players').select('*');
     if (playersData) setAllPlayers(playersData);
@@ -80,7 +85,8 @@ export default function TournamentDetailsPage() {
 
     setTournament(tournamentData as Tournament);
     setEditedTournament({ ...tournamentData } as Tournament);
-
+    
+    const currentUserName = (await supabase.auth.getUser()).data.user?.user_metadata.full_name;
     if (currentUserName && ((tournamentData as Tournament).registeredPlayers?.includes(currentUserName) || (tournamentData as Tournament).pendingPlayers?.includes(currentUserName))) {
       setHasApplied(true);
     }
@@ -133,7 +139,7 @@ export default function TournamentDetailsPage() {
       supabase.removeChannel(tournamentsSubscription);
     };
 
-  }, [id, toast]);
+  }, [id, toast, supabase]);
 
   const getPlayerAvatar = (name: string) => {
     const player = allPlayers.find(p => p.name === name);
@@ -194,13 +200,17 @@ export default function TournamentDetailsPage() {
         setTournament(data as Tournament);
         setEditedTournament(data as Tournament);
         
-        await supabase.from('notifications').insert([{
-            user_name: playerName,
-            title: `Application ${isApproved ? 'Approved' : 'Rejected'}`,
-            description: `Your application for the "${tournament.name}" tournament has been ${isApproved ? 'approved' : 'rejected'}.`,
-            read: false,
-            date: new Date().toISOString(),
-        }]);
+        const {data: playerToNotify} = await supabase.from('players').select('user_id').eq('name', playerName).single();
+
+        if (playerToNotify?.user_id) {
+            await supabase.from('notifications').insert([{
+                user_id: playerToNotify.user_id,
+                title: `Application ${isApproved ? 'Approved' : 'Rejected'}`,
+                description: `Your application for the "${tournament.name}" tournament has been ${isApproved ? 'approved' : 'rejected'}.`,
+                read: false,
+                date: new Date().toISOString(),
+            }]);
+        }
         
         toast({
             title: isApproved ? "Player Approved" : "Player Rejected",

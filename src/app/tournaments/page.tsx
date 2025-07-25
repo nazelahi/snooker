@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -53,7 +54,12 @@ export default function TournamentsPage() {
   useEffect(() => {
     async function fetchData() {
         const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'imnazelahi@gmail.com' } : null);
+        if (user) {
+            const { data: userProfile } = await supabase.from('users').select('role, name').eq('id', user.id).single();
+            setCurrentUser({ name: userProfile?.name || user.email!, email: user.email!, isAdmin: userProfile?.role === 'admin' });
+        } else {
+            setCurrentUser(null);
+        }
         
         const { data: tournamentsData } = await supabase.from('tournaments').select('*');
         if (tournamentsData) setTournaments(tournamentsData);
@@ -82,7 +88,7 @@ export default function TournamentsPage() {
       authListener.subscription.unsubscribe();
       supabase.removeChannel(tournamentsSubscription);
     }
-  }, []);
+  }, [supabase]);
 
   const handleAddTournament = async (newTournament: Omit<Tournament, 'id' | 'pendingPlayers' | 'registeredPlayers' | 'bracket' >) => {
     const { data, error } = await supabase.from('tournaments').insert([{
