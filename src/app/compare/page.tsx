@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeftRight, Swords, BarChart2 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Match } from "@/types/matches";
 
 interface Comparison {
@@ -38,6 +38,7 @@ export default function ComparePlayersPage() {
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     async function fetchData() {

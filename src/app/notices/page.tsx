@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Megaphone } from "lucide-react";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 
 interface Notice {
   id: string;
@@ -27,6 +27,7 @@ export default function NoticesPage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchNotices = async () => {

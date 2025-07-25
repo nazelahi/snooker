@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { SiteLogo } from '@/components/site-logo';
 
 export default function LoginPage() {
@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [clubName, setClubName] = useState("CueScore");
   const [loading, setLoading] = useState(false);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchSiteName = async () => {

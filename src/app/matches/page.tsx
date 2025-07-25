@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Swords, Calendar } from "lucide-react";
 import type { Player } from "@/app/players/page";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Match, UpcomingMatch } from "@/types/matches";
 
 export default function AllMatchesPage() {
@@ -29,6 +29,7 @@ export default function AllMatchesPage() {
   const [matchesToShow, setMatchesToShow] = useState(10);
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [loading, setLoading] = useState(true);
+  const supabase = createSupabaseBrowserClient();
 
 
   useEffect(() => {

@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TournamentBracket, type Matchup, type Round } from "@/components/tournament-bracket";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 
 
@@ -51,6 +51,7 @@ export default function TournamentDetailsPage() {
   const [tournamentLive, setTournamentLive] = useState<LiveMatch[]>([]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [winnerPlayer, setWinnerPlayer] = useState<Player | null>(null);
+  const supabase = createSupabaseBrowserClient();
 
 
   const params = useParams();

@@ -22,7 +22,7 @@ import { AddMatchDialog } from "@/components/add-match-dialog";
 import type { Notification } from "@/types/notifications";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Match } from "@/types/matches";
 
 const initialStats = {
@@ -53,6 +53,7 @@ export default function MyStatsPage() {
   const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   const { toast } = useToast();
 

@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import type { Tournament } from "@/app/tournaments/page";
 import { Trash2, PlusCircle, CheckCircle, Megaphone, Users, Trophy, Radio, Calendar, Settings2, ListChecks, ShieldCheck, Save } from "lucide-react";
@@ -23,7 +22,7 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import type { Notification } from "@/types/notifications";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 import Image from 'next/image';
 import { SiteLogo } from '../site-logo';
@@ -85,6 +84,7 @@ export default function AdminSettings() {
   const [newNoticeContent, setNewNoticeContent] = useState("");
   const [activeTab, setActiveTab] = useState("players");
   const { toast } = useToast();
+  const supabase = createSupabaseBrowserClient();
   
   const fetchAdminData = async () => {
     const { data: playersData } = await supabase.from('players').select('*');
