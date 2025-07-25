@@ -73,6 +73,12 @@ interface Notice {
   date: string;
 }
 
+const initialNotices: Notice[] = [
+  { id: "1", title: "Club Maintenance", content: "The club will be closed for maintenance this weekend. We apologize for any inconvenience.", date: "2024-08-12T10:00:00Z" },
+  { id: "2", title: "New Tournament Added", content: "The Annual Pro-Am tournament is now open for registration! Check the tournaments page for more details.", date: "2024-08-11T14:30:00Z" },
+];
+
+
 export default function DashboardPage() {
   const [playerStandings, setPlayerStandings] = useState<Player[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState(initialUpcomingMatches);
@@ -90,7 +96,7 @@ export default function DashboardPage() {
     const storedResults = getFromStorage('recentResults', initialRecentResults);
     const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
     const storedTournaments = getFromStorage('tournaments', []);
-    const storedNotices = getFromStorage('notices', []);
+    const storedNotices = getFromStorage('notices', initialNotices);
     
     setPlayers(storedPlayers);
     setNotices(storedNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -132,7 +138,7 @@ export default function DashboardPage() {
         saveToStorage('liveMatches', initialLiveMatches);
     }
     if (localStorage.getItem('notices') === null) {
-        saveToStorage('notices', []);
+        saveToStorage('notices', initialNotices);
     }
     if (localStorage.getItem('tournaments') === null) {
         saveToStorage('tournaments', []);
