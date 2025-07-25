@@ -162,6 +162,7 @@ export default function AdminSettings() {
 
   const handleAddUpcomingMatch = () => {
     let newMatch: UpcomingMatch;
+    const inProgressTournaments = tournaments.filter(t => t.status === 'In Progress');
     setUpcomingMatches(prev => {
         const newId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
         newMatch = {
@@ -170,7 +171,7 @@ export default function AdminSettings() {
             player2: players[1]?.name || "Player 2",
             date: new Date().toISOString().split('T')[0],
             time: "19:00",
-            tournamentId: tournaments[0]?.id || undefined,
+            tournamentId: inProgressTournaments[0]?.id || undefined,
         };
         return [...prev, newMatch];
     });
@@ -204,6 +205,7 @@ export default function AdminSettings() {
   };
 
   const handleAddLiveMatch = () => {
+    const inProgressTournaments = tournaments.filter(t => t.status === 'In Progress');
     setLiveMatches(prev => {
         const newId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
         const newMatch: LiveMatch = {
@@ -212,8 +214,8 @@ export default function AdminSettings() {
             player2: players[1]?.name || "Player 2",
             score1: 0,
             score2: 0,
-            tournamentId: tournaments[0]?.id || 1,
-            tournamentName: tournaments[0]?.name || "Tournament",
+            tournamentId: inProgressTournaments[0]?.id || 1,
+            tournamentName: inProgressTournaments[0]?.name || "Tournament",
         };
         return [...prev, newMatch];
     });
@@ -495,7 +497,7 @@ export default function AdminSettings() {
                                     <Select value={match.tournamentId.toString()} onValueChange={value => handleLiveMatchChange(match.id, 'tournamentId', parseInt(value))}>
                                         <SelectTrigger id={`live-tourney-${match.id}`}><SelectValue placeholder="Select tournament" /></SelectTrigger>
                                         <SelectContent>
-                                            {tournaments.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
+                                            {tournaments.filter(t => t.status === 'In Progress').map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -565,7 +567,7 @@ export default function AdminSettings() {
                                     <Select value={match.tournamentId?.toString()} onValueChange={value => handleUpcomingMatchChange(match.id, 'tournamentId', parseInt(value))}>
                                         <SelectTrigger id={`upcoming-tourney-${match.id}`}><SelectValue placeholder="Select tournament" /></SelectTrigger>
                                         <SelectContent>
-                                            {tournaments.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
+                                            {tournaments.filter(t => t.status === 'In Progress').map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
