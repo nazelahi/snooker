@@ -70,9 +70,9 @@ export function AdminSettingsTabsMobile() {
         <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t z-20 overflow-x-auto">
             <nav className="h-full">
                 <Tabs defaultValue="players" className="h-full">
-                    <TabsList className="h-full justify-around px-2 gap-0 w-full">
+                    <TabsList className="h-full justify-around px-0 gap-0 w-full">
                     {adminTabs.map(tab => (
-                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-1 flex-col h-full items-center justify-center gap-0 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground">
+                        <TabsTrigger key={tab.value} value={tab.value} className="flex flex-1 flex-col h-full items-center justify-center gap-0 rounded-none data-[state=active]:border-t-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground p-0">
                             <tab.icon className="h-6 w-6" />
                             <span className="sr-only">{tab.label}</span>
                         </TabsTrigger>
@@ -336,8 +336,8 @@ export default function AdminSettings() {
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8">
       <div className="flex items-center gap-4">
-        <ShieldCheck className="h-10 w-10 text-primary" />
-        <div className="hidden md:block">
+        <ShieldCheck className="h-10 w-10 text-primary hidden md:block" />
+        <div className="md:block">
           <h1 className="text-3xl font-bold">Admin Settings</h1>
           <p className="text-muted-foreground">Manage all application data from a centralized dashboard.</p>
         </div>
