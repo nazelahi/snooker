@@ -8,6 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import type { Tournament } from "@/app/tournaments/page";
 import type { LiveMatch } from "@/app/tournaments/page";
-import { Trash2, PlusCircle, CheckCircle, Megaphone, Users, Trophy, Radio, Calendar, Settings2, ListChecks, ShieldCheck } from "lucide-react";
+import { Trash2, PlusCircle, CheckCircle, Megaphone, Users, Trophy, Radio, Calendar, Settings2, ListChecks, ShieldCheck, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -318,18 +319,12 @@ export default function AdminSettings() {
     toast({ title: 'Notice Posted', description: 'All users have been notified.'});
   };
 
-  const handleSaveChanges = () => {
-    saveToStorage("players", players);
-    saveToStorage("tournaments", tournaments);
-    saveToStorage("liveMatches", liveMatches);
-    saveToStorage("upcomingMatches", upcomingMatches);
-    saveToStorage("siteSettings", siteSettings);
-    saveToStorage("tournamentRules", rules);
-    saveToStorage("notices", notices);
+  const handleSaveData = (key: string, data: any, name: string) => {
+    saveToStorage(key, data);
     setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
     toast({
       title: "Saved!",
-      description: "All changes have been saved to local storage.",
+      description: `Your changes to ${name} have been saved.`,
     });
   };
 
@@ -356,7 +351,7 @@ export default function AdminSettings() {
             <Card>
                     <CardHeader>
                     <CardTitle>Player Data</CardTitle>
-                    <CardDescription>Edit player details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
+                    <CardDescription>Edit player details below. Changes are saved when you click the "Save Changes" button for this section.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                     <div className="hidden md:grid grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
@@ -392,13 +387,16 @@ export default function AdminSettings() {
                         </div>
                     ))}
                     </CardContent>
+                    <CardFooter>
+                       <Button onClick={() => handleSaveData('players', players, 'Players')}><Save className="h-4 w-4 mr-2" />Save Player Changes</Button>
+                    </CardFooter>
                 </Card>
             </TabsContent>
             <TabsContent value="tournaments">
                 <Card>
                     <CardHeader>
                     <CardTitle>Tournament Data</CardTitle>
-                    <CardDescription>Edit tournament details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
+                    <CardDescription>Edit tournament details below. Changes are saved when you click the "Save Changes" button for this section.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                     <div className="hidden md:grid grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
@@ -444,13 +442,16 @@ export default function AdminSettings() {
                         </div>
                     ))}
                     </CardContent>
+                    <CardFooter>
+                       <Button onClick={() => handleSaveData('tournaments', tournaments, 'Tournaments')}><Save className="h-4 w-4 mr-2" />Save Tournament Changes</Button>
+                    </CardFooter>
                 </Card>
             </TabsContent>
             <TabsContent value="liveMatches">
             <Card>
                     <CardHeader>
                     <CardTitle>Live Match Data</CardTitle>
-                    <CardDescription>Edit live match details below. Changes are saved when you click the "Save All Changes" button.</CardDescription>
+                    <CardDescription>Edit live match details below. Changes are saved when you click the "Save Changes" button for this section.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="hidden md:grid grid-cols-4 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
@@ -502,6 +503,9 @@ export default function AdminSettings() {
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Live Match
                         </Button>
                     </CardContent>
+                     <CardFooter>
+                       <Button onClick={() => handleSaveData('liveMatches', liveMatches, 'Live Matches')}><Save className="h-4 w-4 mr-2" />Save Live Match Changes</Button>
+                    </CardFooter>
                 </Card>
             </TabsContent>
             <TabsContent value="upcomingMatches">
@@ -562,6 +566,9 @@ export default function AdminSettings() {
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Upcoming Match
                         </Button>
                     </CardContent>
+                    <CardFooter>
+                       <Button onClick={() => handleSaveData('upcomingMatches', upcomingMatches, 'Upcoming Matches')}><Save className="h-4 w-4 mr-2" />Save Upcoming Match Changes</Button>
+                    </CardFooter>
                 </Card>
             </TabsContent>
             <TabsContent value="rules">
@@ -587,6 +594,9 @@ export default function AdminSettings() {
                             <Button onClick={handleAddRule}><PlusCircle className="h-4 w-4 mr-2"/> Add Rule</Button>
                         </div>
                     </CardContent>
+                    <CardFooter>
+                       <Button onClick={() => handleSaveData('tournamentRules', rules, 'Rules')}><Save className="h-4 w-4 mr-2" />Save Rule Changes</Button>
+                    </CardFooter>
                 </Card>
             </TabsContent>
             <TabsContent value="notices">
@@ -626,13 +636,16 @@ export default function AdminSettings() {
                         )}
                     </div>
                     </CardContent>
+                     <CardFooter>
+                       <Button onClick={() => handleSaveData('notices', notices, 'Notices')}><Save className="h-4 w-4 mr-2" />Save Notice Changes</Button>
+                    </CardFooter>
                 </Card>
             </TabsContent>
             <TabsContent value="siteSettings">
             <Card>
                     <CardHeader>
                     <CardTitle>Site Settings</CardTitle>
-                    <CardDescription>Manage general site information. Click "Save All Changes" when you're done.</CardDescription>
+                    <CardDescription>Manage general site information. Click "Save Changes" when you're done.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -654,12 +667,15 @@ export default function AdminSettings() {
                         />
                     </div>
                     </CardContent>
+                    <CardFooter>
+                        <Button onClick={() => handleSaveData('siteSettings', siteSettings, 'Site Settings')}><Save className="h-4 w-4 mr-2" />Save Site Settings</Button>
+                    </CardFooter>
                 </Card>
             </TabsContent>
         </div>
       </Tabs>
-      
-      <Button onClick={handleSaveChanges} className="w-full md:w-auto md:col-start-2">Save All Changes</Button>
     </div>
   );
 }
+
+    
