@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   Card,
@@ -27,16 +27,6 @@ import type { LiveMatch, Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  CarouselDots,
-  CarouselApi,
-} from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -87,15 +77,7 @@ export default function DashboardPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [recentToShow, setRecentToShow] = useState(5);
-  const [matchMedia, setMatchMedia] = useState<string[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
-  const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
-  const [liveMatchApi, setLiveMatchApi] = useState<CarouselApi>();
-  const [mediaApi, setMediaApi] = useState<CarouselApi>();
-  const [noticeApi, setNoticeApi] = useState<CarouselApi>();
-  const [upcomingTournamentsApi, setUpcomingTournamentsApi] = useState<CarouselApi>();
-  const [inProgressTournamentsApi, setInProgressTournamentsApi] = useState<CarouselApi>();
-  const [finishedTournamentsApi, setFinishedTournamentsApi] = useState<CarouselApi>();
   const [currentUser, setCurrentUser] = useState<{name: string; email: string; isAdmin?: boolean} | null>(null);
   const { toast } = useToast();
 
@@ -130,12 +112,6 @@ export default function DashboardPage() {
 
     setLiveMatches(storedLiveMatches);
     setTournaments(storedTournaments);
-
-    const allMedia = storedResults
-        .map(match => match.media || [])
-        .flat()
-        .reverse();
-    setMatchMedia(allMedia);
   }
 
   useEffect(() => {
@@ -306,210 +282,129 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       {liveMatches.length > 0 && (
-        <Card className="relative">
-          <CardContent className="p-0">
-            <Carousel
-              setApi={setLiveMatchApi}
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent>
-                {liveMatches.map((match) => (
-                  <CarouselItem key={match.id} className="w-full">
-                    <div className="p-1">
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <div className="relative text-center mb-2">
-                            <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
-                            <div className="absolute right-0 top-0 flex items-center gap-2">
-                                <span className="relative flex h-3 w-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                                </span>
-                                <span className="text-sm font-medium text-green-400">Live</span>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 items-center text-center">
-                          <div className="flex items-center justify-end gap-2 md:gap-4">
-                              <div className="font-bold text-lg text-right"><PlayerLink name={match.player1} /></div>
-                              <Avatar>
-                                  <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
-                                  <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
-                              </Avatar>
-                          </div>
-
-                          <div className="text-2xl md:text-4xl font-bold">
-                              <span className="text-primary">{match.score1}</span>
-                              <span className="mx-2 md:mx-4">-</span>
-                              <span>{match.score2}</span>
-                          </div>
-
-                          <div className="flex items-center justify-start gap-2 md:gap-4">
-                              <Avatar>
-                                  <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
-                                  <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
-                              </Avatar>
-                              <div className="font-bold text-lg text-left"><PlayerLink name={match.player2} /></div>
-                          </div>
-                        </div>
-                      </div>
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {liveMatches.map((match) => (
+              <div key={match.id} className="p-4 rounded-lg bg-muted/50">
+                <div className="relative text-center mb-2">
+                    <span className="text-sm text-muted-foreground">{match.tournamentName}</span>
+                    <div className="absolute right-0 top-0 flex items-center gap-2">
+                        <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                        <span className="text-sm font-medium text-green-400">Live</span>
                     </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              {liveMatches.length > 1 && liveMatchApi && <CarouselDots api={liveMatchApi} />}
-            </Carousel>
+                </div>
+                <div className="grid grid-cols-3 items-center text-center">
+                  <div className="flex items-center justify-end gap-2 md:gap-4">
+                      <div className="font-bold text-lg text-right"><PlayerLink name={match.player1} /></div>
+                      <Avatar>
+                          <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
+                          <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
+                      </Avatar>
+                  </div>
+
+                  <div className="text-2xl md:text-4xl font-bold">
+                      <span className="text-primary">{match.score1}</span>
+                      <span className="mx-2 md:mx-4">-</span>
+                      <span>{match.score2}</span>
+                  </div>
+
+                  <div className="flex items-center justify-start gap-2 md:gap-4">
+                      <Avatar>
+                          <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
+                          <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="font-bold text-lg text-left"><PlayerLink name={match.player2} /></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}
 
       {notices.length > 0 && (
-         <Card className="relative">
+         <Card>
              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="flex items-center gap-2"><Megaphone className="text-primary"/>Notice Board</CardTitle>
                 <Button variant="link" asChild><Link href="/notices">View All</Link></Button>
             </CardHeader>
-            <CardContent className="p-0">
-                 <Carousel
-                    setApi={setNoticeApi}
-                    opts={{
-                        align: "start",
-                        loop: true,
-                    }}
-                    className="w-full"
-                >
-                    <CarouselContent>
-                        {notices.map((notice) => (
-                             <CarouselItem key={notice.id} className="w-full">
-                                <div className="p-1">
-                                    <div className="p-3 rounded-lg bg-muted/50">
-                                        <div className="flex items-start gap-3">
-                                            <div>
-                                                <h3 className="font-semibold text-base">{notice.title}</h3>
-                                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{notice.content}</p>
-                                                <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
-                                            </div>
-                                        </div>
-                                        <Accordion type="single" collapsible className="w-full mt-1">
-                                            <AccordionItem value="item-1" className="border-b-0">
-                                                <AccordionTrigger className="py-2 text-xs">
-                                                    <div className="flex items-center gap-2">
-                                                        <MessageSquare className="h-3 w-3" />
-                                                        <span>Comments ({notice.comments?.length || 0})</span>
-                                                    </div>
-                                                </AccordionTrigger>
-                                                <AccordionContent>
-                                                    <div className="space-y-4 pt-4">
-                                                        {currentUser && (
-                                                            <CommentInput
-                                                                onSubmit={(content, image) => handlePostNoticeComment(notice.id, content, image, null)}
-                                                                players={players}
-                                                                currentUser={currentUser}
-                                                            />
-                                                        )}
-                                                        {(notice.comments || []).length > 0 ? (
-                                                          <CommentThread
-                                                              comments={(notice.comments || []).slice(0, 10)}
-                                                              onPostComment={(content, image, parentId) => handlePostNoticeComment(notice.id, content, image, parentId)}
-                                                              onReaction={(commentId, reaction) => handleNoticeCommentReaction(notice.id, commentId, reaction)}
-                                                              allPlayers={players}
-                                                              currentUser={currentUser}
-                                                          />
-                                                        ) : (
-                                                          <p className="text-muted-foreground text-center py-4">No comments yet.</p>
-                                                        )}
-                                                    </div>
-                                                </AccordionContent>
-                                            </AccordionItem>
-                                        </Accordion>
-                                    </div>
+            <CardContent className="space-y-4 p-4">
+              {notices.slice(0, 2).map((notice) => (
+                <div key={notice.id} className="p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-start gap-3">
+                        <div>
+                            <h3 className="font-semibold text-base">{notice.title}</h3>
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{notice.content}</p>
+                            <p className="text-xs text-muted-foreground/80 mt-2">{format(new Date(notice.date), "PPP")}</p>
+                        </div>
+                    </div>
+                    <Accordion type="single" collapsible className="w-full mt-1">
+                        <AccordionItem value="item-1" className="border-b-0">
+                            <AccordionTrigger className="py-2 text-xs">
+                                <div className="flex items-center gap-2">
+                                    <MessageSquare className="h-3 w-3" />
+                                    <span>Comments ({notice.comments?.length || 0})</span>
                                 </div>
-                            </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                     {notices.length > 1 && noticeApi && <CarouselDots api={noticeApi} />}
-                </Carousel>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <div className="space-y-4 pt-4">
+                                    {currentUser && (
+                                        <CommentInput
+                                            onSubmit={(content, image) => handlePostNoticeComment(notice.id, content, image, null)}
+                                            players={players}
+                                            currentUser={currentUser}
+                                        />
+                                    )}
+                                    {(notice.comments || []).length > 0 ? (
+                                      <CommentThread
+                                          comments={(notice.comments || []).slice(0, 10)}
+                                          onPostComment={(content, image, parentId) => handlePostNoticeComment(notice.id, content, image, parentId)}
+                                          onReaction={(commentId, reaction) => handleNoticeCommentReaction(notice.id, commentId, reaction)}
+                                          allPlayers={players}
+                                          currentUser={currentUser}
+                                      />
+                                    ) : (
+                                      <p className="text-muted-foreground text-center py-4">No comments yet.</p>
+                                    )}
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+                </div>
+              ))}
             </CardContent>
          </Card>
       )}
       
-       <Card className="relative">
-            <CardContent className="p-0">
-                {matchMedia.length > 0 ? (
-                     <Carousel
-                        setApi={setMediaApi}
-                        opts={{
-                            align: "start",
-                            loop: true,
-                        }}
-                        plugins={[autoplayPlugin.current]}
-                        className="w-full"
-                    >
-                        <CarouselContent>
-                            {matchMedia.map((mediaUrl, index) => (
-                                <CarouselItem key={index} className="w-full">
-                                    <div className="p-1">
-                                      <div className="relative aspect-[3/1] rounded-lg overflow-hidden bg-muted">
-                                          {mediaUrl.startsWith('data:image') && (
-                                              <Image src={mediaUrl} alt={`Match media ${index + 1}`} layout="fill" objectFit="cover" />
-                                          )}
-                                          {mediaUrl.startsWith('data:video') && (
-                                              <video src={mediaUrl} controls className="w-full h-full object-cover" />
-                                          )}
-                                      </div>
-                                    </div>
-                                </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                        {matchMedia.length > 1 && mediaApi && <CarouselDots api={mediaApi} />}
-                    </Carousel>
-                ) : (
-                    <p className="text-muted-foreground text-center py-4">No match media has been uploaded yet.</p>
-                )}
-            </CardContent>
-        </Card>
-
       {upcomingTournaments.length > 0 && (
         <div className="space-y-4">
               <CardTitle className="flex items-center gap-2">
                   <CalendarIcon className="text-primary" />
                   Upcoming Tournaments
               </CardTitle>
-              <Carousel
-                  setApi={setUpcomingTournamentsApi}
-                  opts={{
-                      align: "start",
-                      loop: true,
-                  }}
-                  plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
-                  className="w-full"
-              >
-                  <CarouselContent>
-                      {upcomingTournaments.map((tournament) => (
-                          <CarouselItem key={tournament.id}>
-                              <Card className="overflow-hidden">
-                                  <CardHeader className="p-0">
-                                      <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
-                                  </CardHeader>
-                                  <CardContent className="p-4">
-                                      <h3 className="text-lg font-bold">{tournament.name}</h3>
-                                      <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
-                                  </CardContent>
-                                  <CardFooter className="p-4 bg-muted/50">
-                                      <Button variant="outline" asChild>
-                                         <Link href={`/tournaments/${tournament.id}`}>
-                                           View Details <ArrowRight className="ml-2 h-4 w-4"/>
-                                         </Link>
-                                      </Button>
-                                  </CardFooter>
-                               </Card>
-                          </CarouselItem>
-                      ))}
-                  </CarouselContent>
-                  {upcomingTournaments.length > 1 && upcomingTournamentsApi && <CarouselDots api={upcomingTournamentsApi} />}
-              </Carousel>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {upcomingTournaments.slice(0,3).map((tournament) => (
+                    <Card key={tournament.id} className="overflow-hidden">
+                        <CardHeader className="p-0">
+                            <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <h3 className="text-lg font-bold">{tournament.name}</h3>
+                            <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
+                        </CardContent>
+                        <CardFooter className="p-4 bg-muted/50">
+                            <Button variant="outline" asChild>
+                               <Link href={`/tournaments/${tournament.id}`}>
+                                 View Details <ArrowRight className="ml-2 h-4 w-4"/>
+                               </Link>
+                            </Button>
+                        </CardFooter>
+                     </Card>
+                ))}
+              </div>
         </div>
       )}
 
@@ -519,39 +414,26 @@ export default function DashboardPage() {
                   <Radio className="text-primary" />
                   In Progress Tournaments
               </CardTitle>
-              <Carousel
-                  setApi={setInProgressTournamentsApi}
-                  opts={{
-                      align: "start",
-                      loop: true,
-                  }}
-                  plugins={[Autoplay({ delay: 5500, stopOnInteraction: true })]}
-                  className="w-full"
-              >
-                  <CarouselContent>
-                      {inProgressTournaments.map((tournament) => (
-                          <CarouselItem key={tournament.id}>
-                              <Card className="overflow-hidden">
-                                  <CardHeader className="p-0">
-                                      <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
-                                  </CardHeader>
-                                  <CardContent className="p-4">
-                                      <h3 className="text-lg font-bold">{tournament.name}</h3>
-                                      <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
-                                  </CardContent>
-                                  <CardFooter className="p-4 bg-muted/50">
-                                      <Button variant="outline" asChild>
-                                         <Link href={`/tournaments/${tournament.id}`}>
-                                           View Details <ArrowRight className="ml-2 h-4 w-4"/>
-                                         </Link>
-                                      </Button>
-                                  </CardFooter>
-                               </Card>
-                          </CarouselItem>
-                      ))}
-                  </CarouselContent>
-                  {inProgressTournaments.length > 1 && inProgressTournamentsApi && <CarouselDots api={inProgressTournamentsApi} />}
-              </Carousel>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {inProgressTournaments.slice(0,3).map((tournament) => (
+                    <Card key={tournament.id} className="overflow-hidden">
+                        <CardHeader className="p-0">
+                            <Image src={tournament.image || `https://placehold.co/600x400.png`} data-ai-hint="snooker tournament" width={600} height={400} alt={tournament.name} className="w-full h-48 object-cover"/>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <h3 className="text-lg font-bold">{tournament.name}</h3>
+                            <p className="text-sm text-muted-foreground">{tournament.format} | {tournament.players} Players</p>
+                        </CardContent>
+                        <CardFooter className="p-4 bg-muted/50">
+                            <Button variant="outline" asChild>
+                               <Link href={`/tournaments/${tournament.id}`}>
+                                 View Details <ArrowRight className="ml-2 h-4 w-4"/>
+                               </Link>
+                            </Button>
+                        </CardFooter>
+                     </Card>
+                ))}
+              </div>
         </div>
       )}
       
@@ -561,46 +443,33 @@ export default function DashboardPage() {
                   <Trophy className="text-primary" />
                   Finished Tournaments
               </CardTitle>
-              <Carousel
-                  setApi={setFinishedTournamentsApi}
-                  opts={{
-                      align: "start",
-                      loop: true,
-                  }}
-                  plugins={[Autoplay({ delay: 6000, stopOnInteraction: true })]}
-                  className="w-full"
-              >
-                  <CarouselContent>
-                      {finishedTournaments.map((tournament) => {
-                        const winner = getPlayerAvatar(tournament.winner || '');
-                        return (
-                          <CarouselItem key={tournament.id}>
-                              <Card className="overflow-hidden">
-                                <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/50">
-                                    <Trophy className="h-8 w-8 text-amber-400"/>
-                                    <div>
-                                      <p className="text-sm text-muted-foreground">Winner</p>
-                                      <h3 className="text-lg font-bold"><PlayerLink name={tournament.winner!} /></h3>
-                                    </div>
-                                  </CardHeader>
-                                  <CardContent className="p-4">
-                                      <h3 className="text-md font-semibold">{tournament.name}</h3>
-                                      <p className="text-sm text-muted-foreground">{tournament.format}</p>
-                                  </CardContent>
-                                  <CardFooter className="p-4">
-                                      <Button variant="outline" asChild>
-                                         <Link href={`/tournaments/${tournament.id}`}>
-                                           View Results <ArrowRight className="ml-2 h-4 w-4"/>
-                                         </Link>
-                                      </Button>
-                                  </CardFooter>
-                               </Card>
-                          </CarouselItem>
-                        );
-                      })}
-                  </CarouselContent>
-                  {finishedTournaments.length > 1 && finishedTournamentsApi && <CarouselDots api={finishedTournamentsApi} />}
-              </Carousel>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {finishedTournaments.slice(0,3).map((tournament) => {
+                  const winner = getPlayerAvatar(tournament.winner || '');
+                  return (
+                    <Card key={tournament.id} className="overflow-hidden">
+                      <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/50">
+                          <Trophy className="h-8 w-8 text-amber-400"/>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Winner</p>
+                            <h3 className="text-lg font-bold"><PlayerLink name={tournament.winner!} /></h3>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <h3 className="text-md font-semibold">{tournament.name}</h3>
+                            <p className="text-sm text-muted-foreground">{tournament.format}</p>
+                        </CardContent>
+                        <CardFooter className="p-4">
+                            <Button variant="outline" asChild>
+                               <Link href={`/tournaments/${tournament.id}`}>
+                                 View Results <ArrowRight className="ml-2 h-4 w-4"/>
+                               </Link>
+                            </Button>
+                        </CardFooter>
+                     </Card>
+                  );
+                })}
+              </div>
         </div>
       )}
       
