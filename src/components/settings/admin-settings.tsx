@@ -15,10 +15,9 @@ import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import type { Tournament } from "@/app/tournaments/page";
 import type { LiveMatch } from "@/app/tournaments/page";
-import { Trash2, PlusCircle, CheckCircle, Megaphone } from "lucide-react";
+import { Trash2, PlusCircle, CheckCircle, Megaphone, Users, Trophy, Radio, Calendar, Settings2, ListChecks, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, Settings, ListChecks } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
@@ -316,13 +315,13 @@ export default function AdminSettings() {
 
       <Tabs defaultValue="players" className="w-full md:grid md:grid-cols-[200px_1fr] md:gap-6" orientation="vertical">
         <TabsList className="grid w-full grid-cols-2 md:flex md:flex-col md:items-stretch md:h-fit">
-          <TabsTrigger value="players">Players</TabsTrigger>
-          <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
-          <TabsTrigger value="liveMatches">Live Matches</TabsTrigger>
-          <TabsTrigger value="upcomingMatches">Upcoming</TabsTrigger>
-          <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="notices">Notices</TabsTrigger>
-          <TabsTrigger value="siteSettings">Site</TabsTrigger>
+          <TabsTrigger value="players"><Users className="w-4 h-4 mr-2" />Players</TabsTrigger>
+          <TabsTrigger value="tournaments"><Trophy className="w-4 h-4 mr-2" />Tournaments</TabsTrigger>
+          <TabsTrigger value="liveMatches"><Radio className="w-4 h-4 mr-2" />Live Matches</TabsTrigger>
+          <TabsTrigger value="upcomingMatches"><Calendar className="w-4 h-4 mr-2" />Upcoming</TabsTrigger>
+          <TabsTrigger value="rules"><ListChecks className="w-4 h-4 mr-2" />Rules</TabsTrigger>
+          <TabsTrigger value="notices"><Megaphone className="w-4 h-4 mr-2" />Notices</TabsTrigger>
+          <TabsTrigger value="siteSettings"><Settings2 className="w-4 h-4 mr-2" />Site</TabsTrigger>
         </TabsList>
         <div className="mt-4 md:mt-0">
             <TabsContent value="players">
@@ -636,5 +635,3 @@ export default function AdminSettings() {
     </div>
   );
 }
-
-    
