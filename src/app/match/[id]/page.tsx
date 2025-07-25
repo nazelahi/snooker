@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { ArrowLeft, Swords, Calendar, Upload, MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react";
+import { ArrowLeft, Swords, Calendar, Upload, MessageSquare, ThumbsUp, ThumbsDown, Paperclip, X } from "lucide-react";
 import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 import type { Notification } from "@/types/notifications";
@@ -36,6 +36,7 @@ interface Comment {
     mentions: string[]; // array of emails
     likes?: string[]; // array of user emails
     dislikes?: string[]; // array of user emails
+    image?: string;
 }
 
 interface Match {
@@ -61,6 +62,7 @@ export default function MatchDetailsPage() {
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; isAdmin?: boolean } | null>(null);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [newCommentImage, setNewCommentImage] = useState<string | null>(null);
   const [mentionSuggestions, setMentionSuggestions] = useState<Player[]>([]);
   const [isMentionPopoverOpen, setIsMentionPopoverOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -132,6 +134,17 @@ export default function MatchDetailsPage() {
       });
     }
   };
+  
+  const handleCommentImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewCommentImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -158,7 +171,7 @@ export default function MatchDetailsPage() {
 
 
   const handlePostComment = () => {
-    if (!newComment.trim() || !currentUser || !match) return;
+    if ((!newComment.trim() && !newCommentImage) || !currentUser || !match) return;
 
     const mentionRegex = /@(\w+\s\w+)/g;
     let matchResult;
@@ -181,6 +194,7 @@ export default function MatchDetailsPage() {
         mentions: mentionedEmails,
         likes: [],
         dislikes: [],
+        image: newCommentImage || undefined,
     };
 
     setMatch(prevMatch => {
@@ -218,6 +232,7 @@ export default function MatchDetailsPage() {
 
 
     setNewComment("");
+    setNewCommentImage(null);
     toast({ title: "Comment Posted", description: "Your comment has been added to the match." });
   };
   
@@ -418,7 +433,28 @@ export default function MatchDetailsPage() {
                                         placeholder="Add a comment... Type @ to mention a player."
                                         className="w-full"
                                     />
-                                    <Button onClick={handlePostComment} disabled={!newComment.trim()}>Post Comment</Button>
+                                    {newCommentImage && (
+                                        <div className="relative w-32 h-32">
+                                            <Image src={newCommentImage} alt="Comment image preview" layout="fill" objectFit="cover" className="rounded-md" />
+                                            <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/75" onClick={() => setNewCommentImage(null)}>
+                                                <X className="h-4 w-4 text-white" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <Input id="comment-image-upload" type="file" accept="image/*" onChange={handleCommentImageUpload} className="hidden" />
+                                          <Label htmlFor="comment-image-upload">
+                                            <Button variant="ghost" asChild>
+                                                <div className="cursor-pointer flex items-center gap-2">
+                                                  <Paperclip className="h-4 w-4" />
+                                                  <span className="hidden sm:inline">Attach Image</span>
+                                                </div>
+                                            </Button>
+                                          </Label>
+                                          <Button onClick={handlePostComment} disabled={!newComment.trim() && !newCommentImage}>Post Comment</Button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </PopoverTrigger>
@@ -455,7 +491,12 @@ export default function MatchDetailsPage() {
                                         <span className="font-semibold">{comment.authorName}</span>
                                         <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.date), { addSuffix: true })}</span>
                                     </div>
-                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">{comment.content}</p>
+                                    {comment.content && <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">{comment.content}</p>}
+                                    {comment.image && (
+                                        <div className="mt-2 relative aspect-video max-w-sm rounded-lg overflow-hidden">
+                                            <Image src={comment.image} alt="Comment image" layout="fill" objectFit="cover" />
+                                        </div>
+                                    )}
                                     {currentUser && (
                                         <div className="flex items-center gap-4 mt-2">
                                             <Button
@@ -492,3 +533,4 @@ export default function MatchDetailsPage() {
     </div>
   );
 }
+
