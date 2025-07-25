@@ -374,6 +374,7 @@ export default function MatchDetailsPage() {
   const [loserPlayer, setLoserPlayer] = useState<Player | null>(null);
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; isAdmin?: boolean } | null>(null);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [commentsToShow, setCommentsToShow] = useState(10);
   
   const params = useParams();
   const id = params.id as string;
@@ -629,6 +630,8 @@ export default function MatchDetailsPage() {
       </div>
     );
   }
+
+  const sortedComments = (match.comments || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
@@ -734,7 +737,7 @@ export default function MatchDetailsPage() {
                     <p className="text-muted-foreground text-center py-8">No comments yet. Be the first to start the conversation!</p>
                 ) : (
                     <CommentThread
-                        comments={match.comments}
+                        comments={sortedComments.slice(0, commentsToShow)}
                         onPostComment={handlePostComment}
                         onReaction={handleCommentReaction}
                         allPlayers={allPlayers}
@@ -742,8 +745,21 @@ export default function MatchDetailsPage() {
                     />
                 )}
             </CardContent>
+             {sortedComments.length > commentsToShow && (
+                <CardFooter>
+                    <Button
+                        onClick={() => setCommentsToShow(commentsToShow + 10)}
+                        variant="secondary"
+                        className="w-full"
+                    >
+                        View More Comments
+                    </Button>
+                </CardFooter>
+            )}
         </Card>
 
     </div>
   );
 }
+
+    
