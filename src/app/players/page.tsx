@@ -23,7 +23,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, List, LayoutGrid, Search, ArrowLeftRight } from "lucide-react";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
@@ -75,19 +74,17 @@ export default function PlayersPage() {
         ? players.reduce((prev, curr) => prev.highest_break > curr.highest_break ? prev : curr)
         : { highest_break: 0 };
     if (highestBreak > prevHighestBreakPlayer.highest_break) {
-        const allUsers = getFromStorage<{name:string, email:string}[]>('users', []);
-         allUsers.forEach(user => {
-            const notifications = getFromStorage<Notification[]>(`notifications_${user.email}`, []);
-            const newNotification: Notification = {
-                id: Date.now().toString() + user.email,
+        const { data: allPlayers } = await supabase.from('players').select('name');
+        if (allPlayers) {
+            const notifications = allPlayers.map(p => ({
+                user_name: p.name,
                 title: "New Club Record!",
                 description: `${newPlayerData.name} has set a new high break of ${highestBreak}!`,
                 read: false,
                 date: new Date().toISOString()
-            };
-            saveToStorage(`notifications_${user.email}`, [newNotification, ...notifications]);
-         });
-         setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+            }));
+            await supabase.from('notifications').insert(notifications);
+        }
     }
     
     const { data, error } = await supabase

@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords, Check, X, Trash2 } from "lucide-react";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -187,21 +186,14 @@ export default function PlayerProfilePage() {
     }
       
     const opponentName = selectedMatch.winner === player?.name ? selectedMatch.loser : selectedMatch.winner;
-    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-    const opponent = allUsers.find(u => u.name === opponentName);
     
-    if (opponent) {
-      const notifications = getFromStorage<Notification[]>(`notifications_${opponent.email}`, []);
-      const newNotification: Notification = {
-          id: Date.now().toString(),
-          title: "Score Change Request",
-          description: `${currentUser.name} has proposed a new score for your match. Please review on your profile.`,
-          read: false,
-          date: new Date().toISOString()
-      };
-      saveToStorage(`notifications_${opponent.email}`, [newNotification, ...notifications]);
-      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-    }
+    await supabase.from('notifications').insert([{
+        user_name: opponentName,
+        title: "Score Change Request",
+        description: `${currentUser.name} has proposed a new score for your match. Please review on your profile.`,
+        read: false,
+        date: new Date().toISOString()
+    }]);
     
     toast({ title: "Request Sent", description: "Your score change request has been sent for approval." });
     setIsScoreDialogOpen(false);
@@ -213,29 +205,30 @@ export default function PlayerProfilePage() {
 
     const match = matchHistory.find(m => m.id === matchId);
     if (!match || !match.pending_score) return;
-
-    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-    const proposerUser = allUsers.find(u => u.email === match.pending_score!.proposed_by);
-
-    if (!proposerUser) return;
     
+    const proposerIsWinner = match.winner.toLowerCase() === match.pending_score.proposed_by.toLowerCase();
+    const opponentName = proposerIsWinner ? match.loser : match.winner;
+
     if (approve) {
         const { score1, score2 } = match.pending_score;
-        const proposerPlayer = (await supabase.from('players').select().eq('name', proposerUser.name).single()).data;
+        const {data: allPlayers} = await supabase.from('players').select('*');
+        if (!allPlayers) return;
+
+        const proposerPlayer = allPlayers.find(p => p.name === opponentName);
         const approverPlayer = player;
         
         if (!proposerPlayer || !approverPlayer) return;
 
         // Decrement old stats
-        const oldWinner = (await supabase.from('players').select().eq('name', match.winner).single()).data;
-        const oldLoser = (await supabase.from('players').select().eq('name', match.loser).single()).data;
+        const oldWinner = allPlayers.find(p => p.name === match.winner);
+        const oldLoser = allPlayers.find(p => p.name === match.loser);
         if(oldWinner) await supabase.from('players').update({ wins: (oldWinner.wins ?? 1) - 1 }).eq('id', oldWinner.id);
         if(oldLoser) await supabase.from('players').update({ losses: (oldLoser.losses ?? 1) - 1 }).eq('id', oldLoser.id);
 
         // Determine new winner/loser
         const newWinnerIsProposer = score1 > score2;
-        const winnerName = newWinnerIsProposer ? proposerUser.name : player.name;
-        const loserName = newWinnerIsProposer ? player.name : proposerUser.name;
+        const winnerName = newWinnerIsProposer ? opponentName : player.name;
+        const loserName = newWinnerIsProposer ? player.name : opponentName;
 
         // Increment new stats
         const newWinner = newWinnerIsProposer ? proposerPlayer : approverPlayer;
@@ -257,19 +250,15 @@ export default function PlayerProfilePage() {
         toast({ title: "Rejected", description: "The score change request has been rejected." });
     }
     
-    const proposerNotificationKey = `notifications_${proposerUser.email}`;
-    const proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
-    const newNotification: Notification = {
-        id: Date.now().toString(),
-        title: `Score Change ${approve ? 'Approved' : 'Rejected'}`,
-        description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
-        read: false,
-        date: new Date().toISOString()
-    };
-    saveToStorage(proposerNotificationKey, [newNotification, ...proposerNotifications]);
+    await supabase.from('notifications').insert([{
+      user_name: opponentName,
+      title: `Score Change ${approve ? 'Approved' : 'Rejected'}`,
+      description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
+      read: false,
+      date: new Date().toISOString()
+    }]);
     
     fetchPlayerData(id);
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   }
 
   const handleAdminDeleteMatch = async (matchId: number) => {
@@ -468,9 +457,6 @@ export default function PlayerProfilePage() {
                 const isMyMatch = isOwnProfile;
                 const pendingChange = match.pending_score;
                 const iAmProposer = pendingChange?.proposed_by === currentUser?.email;
-                
-                const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-                const proposerUser = allUsers.find(u => u.email === pendingChange?.proposed_by);
 
                 const iAmApprover = isMyMatch && pendingChange && !iAmProposer;
 
@@ -525,7 +511,7 @@ export default function PlayerProfilePage() {
                                 <CardTitle className="text-base">Pending Score Change</CardTitle>
 
                                 <CardDescription className="text-xs">
-                                    {iAmProposer ? `Waiting for ${opponentName} to approve.` : `${proposerUser?.name || 'Another player'} proposed a new score.`}
+                                    {iAmProposer ? `Waiting for ${opponentName} to approve.` : `A new score was proposed.`}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

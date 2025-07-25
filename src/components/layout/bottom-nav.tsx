@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Users, Trophy, User as UserIcon, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getFromStorage } from "@/lib/storage";
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -21,16 +21,19 @@ export default function BottomNav() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const checkLoginStatus = () => {
-      const userData = getFromStorage('userData', null);
-      setIsLoggedIn(!!userData);
+    const checkLoginStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoggedIn(!!user);
     };
 
     checkLoginStatus();
-    window.addEventListener('storage', checkLoginStatus);
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      checkLoginStatus();
+    });
 
     return () => {
-      window.removeEventListener('storage', checkLoginStatus);
+      authListener.subscription.unsubscribe();
     };
   }, []);
   

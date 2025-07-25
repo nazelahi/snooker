@@ -19,8 +19,8 @@ import type { Tournament } from "@/app/tournaments/page";
 import Image from "next/image";
 import { Checkbox } from "./ui/checkbox";
 import { ScrollArea } from "./ui/scroll-area";
-import { getFromStorage } from "@/lib/storage";
 import { ResponsiveDialog } from "@/components/ui/dialog";
+import { supabase } from "@/lib/supabase";
 
 interface AddTournamentDialogProps {
   open: boolean;
@@ -40,8 +40,20 @@ export function AddTournamentDialog({ open, onOpenChange, onAddTournament }: Add
   const [predefinedRules, setPredefinedRules] = useState<string[]>([]);
 
   useEffect(() => {
-    const storedRules = getFromStorage<string[]>('tournamentRules', []);
-    setPredefinedRules(storedRules);
+    const fetchRules = async () => {
+      const { data } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'tournamentRules')
+        .single();
+      if (data?.value) {
+        setPredefinedRules(data.value);
+      }
+    };
+
+    if (open) {
+      fetchRules();
+    }
   }, [open]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {

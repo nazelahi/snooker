@@ -3,18 +3,22 @@
 
 import { useEffect } from "react";
 import { useRouter } from 'next/navigation';
-import { getFromStorage } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-    if (!userData?.isAdmin) {
-      router.push('/login');
-    } else {
-      router.replace('/settings');
-    }
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const isAdmin = user?.email === 'admin@gmail.com';
+      if (!isAdmin) {
+        router.push('/login');
+      } else {
+        router.replace('/settings');
+      }
+    };
+    checkAdmin();
   }, [router]);
  
   return null;

@@ -15,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getFromStorage } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 import { SiteLogo } from '@/components/site-logo';
 
@@ -28,13 +27,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const handleStorageChange = () => {
-        const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
-        setClubName(storedSettings.name);
-    }
-    handleStorageChange();
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    const fetchSiteName = async () => {
+        const { data } = await supabase.from('settings').select('value').eq('key', 'siteSettings').single();
+        if (data?.value.name) {
+            setClubName(data.value.name);
+        }
+    };
+    fetchSiteName();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -68,7 +67,6 @@ export default function LoginPage() {
         });
         
         // This will trigger the auth listener in RootLayout
-        // which will then trigger a storage event for components to update
         router.push('/');
     }
     setLoading(false);

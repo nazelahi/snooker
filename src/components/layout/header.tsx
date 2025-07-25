@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Notification } from "@/types/notifications";
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -34,12 +33,6 @@ import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { SiteLogo } from "../site-logo";
 import { useSiteLogo } from '../site-logo-provider';
-
-const initialUserNotifications: Notification[] = [
-    { id: '1', title: "Match Reminder", description: "Your match against J. Trump starts in 1 hour.", read: false, date: new Date().toISOString() },
-    { id: '2', title: "Tournament Update", description: "Round 2 bracket has been generated.", read: false, date: new Date().toISOString() },
-    { id: '3', title: "New High Break!", description: "Congratulations on your new high break of 89!", read: true, date: new Date().toISOString() },
-];
 
 interface CurrentUser {
     name: string;
@@ -55,18 +48,11 @@ export default function Header() {
   const router = useRouter();
   const [siteName, setSiteName] = useState("CueScore");
 
-  const getNotificationKey = (user: {email: string, isAdmin?: boolean} | null) => {
-    if (!user) return 'notifications'; // Default for logged-out users
-    // This logic might need updating if admin notifications are stored differently in Supabase
-    return `notifications_${user.email}`;
-  }
-
   const fetchUserData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-        const players = getFromStorage<Player[]>('players', []);
-        const fullName = user.user_metadata.full_name || user.email;
-        const player = players.find(p => p.name.toLowerCase() === fullName.toLowerCase());
+        const { data: player } = await supabase.from('players').select('avatar,initials').eq('name', user.user_metadata.full_name).single();
+        const fullName = user.user_metadata.full_name || user.email!;
         
         setCurrentUser({
             name: fullName,
@@ -75,8 +61,20 @@ export default function Header() {
             avatar: player?.avatar,
             initials: player?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
         });
+
+        const { data: notificationsData } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_name', fullName)
+            .order('date', { ascending: false });
+
+        if (notificationsData) {
+            setNotifications(notificationsData as Notification[]);
+        }
+
     } else {
       setCurrentUser(null);
+      setNotifications([]);
     }
   }
 
@@ -95,20 +93,23 @@ export default function Header() {
       )
       .subscribe();
       
-    const handleStorageChange = () => {
-        const currentKey = getNotificationKey(currentUser);
-        const stored = getFromStorage(currentKey, initialUserNotifications);
-        setNotifications(stored.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    };
-    handleStorageChange();
+    const notificationsSubscription = supabase
+        .channel('public:notifications')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
+            fetchUserData();
+        })
+        .subscribe();
     
-    window.addEventListener('storage', handleStorageChange);
-    
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      fetchUserData();
+    });
+
     return () => {
-        window.removeEventListener('storage', handleStorageChange);
         supabase.removeChannel(settingsChannel);
+        supabase.removeChannel(notificationsSubscription);
+        authListener.subscription.unsubscribe();
     }
-  }, [currentUser?.email]);
+  }, []);
 
   useEffect(() => {
     const fetchInitialSettings = async () => {
@@ -126,25 +127,23 @@ export default function Header() {
     router.push('/login');
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    const notificationKey = getNotificationKey(currentUser);
-    const updatedNotifications = notifications.map(n => 
-        n.id === notification.id ? { ...n, read: true } : n
-    );
-    setNotifications(updatedNotifications);
-    saveToStorage(notificationKey, updatedNotifications);
-
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.read) {
+        await supabase.from('notifications').update({ read: true }).eq('id', notification.id);
+        setNotifications(notifications.map(n => n.id === notification.id ? { ...n, read: true } : n));
+    }
     if (notification.link) {
         router.push(notification.link);
     }
   };
   
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     if (!currentUser) return;
-    const notificationKey = getNotificationKey(currentUser);
-    const updatedNotifications = notifications.map(n => ({ ...n, read: true }));
-    setNotifications(updatedNotifications);
-    saveToStorage(notificationKey, updatedNotifications);
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (unreadIds.length > 0) {
+        await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
+        setNotifications(notifications.map(n => ({ ...n, read: true })));
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;

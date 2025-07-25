@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Notification } from "@/types/notifications";
 import {
   Card,
@@ -18,52 +17,53 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const router = useRouter();
 
-  const getNotificationKey = (user: {email: string, isAdmin?: boolean} | null) => {
-    if (!user) return 'notifications';
-    return user.isAdmin ? 'adminNotifications' : `notifications_${user.email}`;
-  }
-
   useEffect(() => {
-    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-    setCurrentUser(userData);
-
-    if (userData) {
-      const notificationKey = getNotificationKey(userData);
-      const userNotifications = getFromStorage<Notification[]>(notificationKey, []);
-      setNotifications(userNotifications.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    } else {
-      router.push('/login');
-    }
-    
-    const handleStorageChange = () => {
-      const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-       if (user) {
-        const notificationKey = getNotificationKey(user);
-        const storedNotifications = getFromStorage<Notification[]>(notificationKey, []);
-        setNotifications(storedNotifications.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const fetchUserAndNotifications = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const userName = user.user_metadata.full_name || user.email!;
+        setCurrentUser({ name: userName, email: user.email!, isAdmin: user.email === 'admin@gmail.com' });
+        
+        const { data: notificationsData } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_name', userName)
+          .order('date', { ascending: false });
+        
+        if (notificationsData) {
+          setNotifications(notificationsData as Notification[]);
+        }
+      } else {
+        router.push('/login');
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    fetchUserAndNotifications();
 
+    const notificationsSubscription = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
+        fetchUserAndNotifications();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationsSubscription);
+    };
   }, [router]);
 
-  const handleMarkAsRead = (id: string) => {
-    if (!currentUser) return;
-    const notificationKey = getNotificationKey(currentUser);
-    const updatedNotifications = notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    setNotifications(updatedNotifications);
-    saveToStorage(notificationKey, updatedNotifications);
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+  const handleMarkAsRead = async (id: number) => {
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
+    if (!error) {
+      setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+    }
   };
   
   const handleNotificationClick = (notification: Notification) => {
@@ -75,14 +75,24 @@ export default function NotificationsPage() {
       }
   };
 
-  const handleClearAllNotifications = () => {
+  const handleMarkAllAsRead = async () => {
     if (!currentUser) return;
-    const notificationKey = getNotificationKey(currentUser);
-    const updatedNotifications = notifications.map(n => ({...n, read: true}));
-    setNotifications(updatedNotifications);
-    saveToStorage(notificationKey, updatedNotifications);
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (unreadIds.length > 0) {
+      const { error } = await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
+      if (!error) {
+        setNotifications(notifications.map(n => ({...n, read: true})));
+      }
+    }
   };
+  
+   const handleDeleteAllNotifications = async () => {
+    if (!currentUser) return;
+    const { error } = await supabase.from('notifications').delete().eq('user_name', currentUser.name);
+    if (!error) {
+        setNotifications([]);
+    }
+   };
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
@@ -133,11 +143,15 @@ export default function NotificationsPage() {
              <p className="text-center py-8 text-muted-foreground">You have no notifications.</p>
           )}
         </CardContent>
-        {notifications.filter(n => !n.read).length > 0 && (
-            <CardFooter>
-                <Button variant="outline" onClick={handleClearAllNotifications}>
-                    <Trash2 className="mr-2 h-4 w-4" />
+        {notifications.length > 0 && (
+            <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={handleMarkAllAsRead} disabled={notifications.every(n => n.read)}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
                     Mark All as Read
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteAllNotifications}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear All
                 </Button>
             </CardFooter>
         )}

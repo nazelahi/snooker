@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy, BarChart, Percent, Activity, Edit, Save, PlusCircle, Swords, Check, X } from "lucide-react";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -206,21 +205,13 @@ export default function MyStatsPage() {
        return;
     }
     
-    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-    const opponentUser = allUsers.find(u => u.name === opponent.name);
-    
-    if (opponentUser) {
-        const notifications = getFromStorage<Notification[]>(`notifications_${opponentUser.email}`, []);
-        const newNotification: Notification = {
-            id: Date.now().toString(),
-            title: "New Match Reported",
-            description: `${currentUser.name} has reported a new match with you. Please review and approve the score on your profile page.`,
-            read: false,
-            date: new Date().toISOString()
-        };
-        saveToStorage(`notifications_${opponentUser.email}`, [newNotification, ...notifications]);
-        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-    }
+    await supabase.from('notifications').insert([{
+        user_name: opponent.name,
+        title: "New Match Reported",
+        description: `${currentUser.name} has reported a new match with you. Please review and approve the score on your profile page.`,
+        read: false,
+        date: new Date().toISOString()
+    }]);
 
     toast({ title: "Match Reported", description: "Your new match has been reported and is awaiting approval from your opponent."});
     fetchCurrentUserData();
@@ -232,19 +223,14 @@ export default function MyStatsPage() {
     const match = pendingMatches.find(m => m.id === matchId);
     if (!match || !match.pending_score) return;
 
-    const allUsers = getFromStorage<{name: string, email: string}[]>('users', []);
-    const proposerUser = allUsers.find(u => u.email === match.pending_score!.proposed_by);
-
+    const proposerIsWinner = match.winner.toLowerCase() === match.pending_score.proposed_by.toLowerCase();
+    const opponentName = proposerIsWinner ? match.loser : match.winner;
+    
     if (approve) {
         const { score1, score2 } = match.pending_score;
         
-        const proposerPlayer = allPlayers.find(p => p.name === proposerUser?.name);
-        const currentUserPlayer = allPlayers.find(p => p.name === currentUser.name);
-        
-        if (!currentUserPlayer || !proposerPlayer) return;
-
-        const winnerName = score1 > score2 ? proposerPlayer.name : currentUserPlayer.name;
-        const loserName = score1 > score2 ? currentUserPlayer.name : proposerPlayer.name;
+        const winnerName = score1 > score2 ? currentUser.name : opponentName;
+        const loserName = score1 > score2 ? opponentName : currentUser.name;
 
         // Update match to be confirmed
         const { error: matchUpdateError } = await supabase
@@ -276,22 +262,16 @@ export default function MyStatsPage() {
         toast({ title: "Rejected", description: "The score has been rejected and the match report removed." });
     }
 
-    if (proposerUser) {
-        const proposerNotificationKey = `notifications_${proposerUser.email}`;
-        const proposerNotifications = getFromStorage<Notification[]>(proposerNotificationKey, []);
-        const newNotification: Notification = {
-            id: Date.now().toString(),
-            title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
-            description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
-            read: false,
-            date: new Date().toISOString()
-        };
-        saveToStorage(proposerNotificationKey, [newNotification, ...proposerNotifications]);
-    }
+    await supabase.from('notifications').insert([{
+        user_name: opponentName,
+        title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
+        description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
+        read: false,
+        date: new Date().toISOString()
+    }]);
     
     // Refresh all data
     fetchCurrentUserData();
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   }
 
   if(!currentUser) return <p>Loading...</p>
@@ -329,21 +309,19 @@ export default function MyStatsPage() {
                 <ul className="space-y-4">
                     {pendingMatches.map(match => {
                         if(!match.pending_score) return null;
-                        const proposerUser = getFromStorage<{name:string, email:string}[]>('users', []).find(u => u.email === match.pending_score?.proposed_by)
-                        const opponentName = proposerUser?.name ?? 'Opponent';
+                        
+                        const proposerIsWinner = match.winner.toLowerCase() === match.pending_score.proposed_by.toLowerCase();
+                        const opponentName = proposerIsWinner ? match.loser : match.winner;
 
                         let myProposedScore, opponentProposedScore;
                         
-                        const proposerIsWinnerInReport = match.winner === opponentName;
-                        
-                        if(proposerIsWinnerInReport) { 
-                           opponentProposedScore = match.pending_score?.score1;
-                           myProposedScore = match.pending_score?.score2;
+                        if(proposerIsWinner) {
+                           myProposedScore = match.pending_score.score2;
+                           opponentProposedScore = match.pending_score.score1;
                         } else {
-                           opponentProposedScore = match.pending_score?.score2;
-                           myProposedScore = match.pending_score?.score1;
+                           myProposedScore = match.pending_score.score1;
+                           opponentProposedScore = match.pending_score.score2;
                         }
-
 
                         return (
                             <li key={match.id} className="p-4 rounded-lg bg-muted/50">

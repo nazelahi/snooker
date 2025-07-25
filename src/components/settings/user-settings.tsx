@@ -4,7 +4,6 @@
 
 import { useState, useEffect } from "react";
 import Link from 'next/link';
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import type { Notification } from "@/types/notifications";
 import {
@@ -27,69 +26,57 @@ export default function UserSettings() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
 
-  const getNotificationKey = (user: {email: string} | null) => {
-    if (!user) return 'notifications';
-    return `notifications_${user.email}`;
-  }
-
   useEffect(() => {
     async function fetchData() {
       const {data: {user}} = await supabase.auth.getUser();
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email! } : null);
+      const userName = user?.user_metadata.full_name || user?.email;
+      if (user && userName) {
+        setCurrentUser({ name: userName, email: user.email! });
 
-      if (user) {
         const { data: allTournaments } = await supabase.from('tournaments').select('*');
         if (allTournaments) {
           const userRegistered = allTournaments.filter(t => 
-            t.registeredPlayers?.includes(user.user_metadata.full_name)
+            t.registeredPlayers?.includes(userName)
           );
           setRegisteredTournaments(userRegistered as Tournament[]);
           
           const userPending = allTournaments.filter(t => 
-            t.pendingPlayers?.includes(user.user_metadata.full_name)
+            t.pendingPlayers?.includes(userName)
           );
           setPendingTournaments(userPending as Tournament[]);
         }
 
-        const notificationKey = getNotificationKey({email: user.email!});
-        const userNotifications = getFromStorage<Notification[]>(notificationKey, []);
-        setNotifications(userNotifications);
+        const { data: notificationsData } = await supabase.from('notifications').select('*').eq('user_name', userName);
+        if(notificationsData) setNotifications(notificationsData as Notification[]);
       }
     }
 
     fetchData();
     
-    const handleStorageChange = () => {
-      if(currentUser) {
-        const notificationKey = getNotificationKey(currentUser);
-        const storedNotifications = getFromStorage<Notification[]>(notificationKey, []);
-        setNotifications(storedNotifications);
-      }
-    };
+    const notificationsSubscription = supabase
+      .channel('public:notifications:user')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
+        fetchData();
+      })
+      .subscribe();
 
-    window.addEventListener('storage', handleStorageChange);
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      supabase.removeChannel(notificationsSubscription);
     };
+  }, []);
 
-  }, [currentUser?.email]);
-
-  const handleMarkAsRead = (id: string) => {
-    if (!currentUser) return;
-    const notificationKey = getNotificationKey(currentUser);
-    const updatedNotifications = notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    setNotifications(updatedNotifications);
-    saveToStorage(notificationKey, updatedNotifications);
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+  const handleMarkAsRead = async (id: number) => {
+    await supabase.from('notifications').update({ read: true }).eq('id', id);
+    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
-  const handleClearAllNotifications = () => {
+  const handleMarkAllAsRead = async () => {
     if (!currentUser) return;
-    const notificationKey = getNotificationKey(currentUser);
-    const updatedNotifications = notifications.map(n => ({...n, read: true}));
-    setNotifications(updatedNotifications);
-    saveToStorage(notificationKey, updatedNotifications);
-    setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if(unreadIds.length > 0) {
+      await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
+      setNotifications(notifications.map(n => ({...n, read: true})));
+    }
   };
 
   return (
@@ -179,10 +166,10 @@ export default function UserSettings() {
              <p className="text-center py-8 text-muted-foreground">You have no notifications.</p>
           )}
         </CardContent>
-        {notifications.length > 0 && (
+        {notifications.some(n => !n.read) && (
             <CardFooter>
-                <Button variant="outline" onClick={handleClearAllNotifications}>
-                    <Trash2 className="mr-2 h-4 w-4" />
+                <Button variant="outline" onClick={handleMarkAllAsRead}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
                     Mark All as Read
                 </Button>
             </CardFooter>

@@ -7,9 +7,9 @@ import Header from '@/components/layout/header';
 import BottomNav from './bottom-nav';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getFromStorage } from '@/lib/storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AdminSettingsTabsMobile } from '../settings/admin-settings';
+import { supabase } from '@/lib/supabase';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,13 +17,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const checkUserRole = () => {
-      const userData = getFromStorage<{isAdmin?: boolean} | null>('userData', null);
-      setIsAdmin(!!userData?.isAdmin);
+    const checkUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsAdmin(user?.email === 'admin@gmail.com');
     }
     checkUserRole();
-    window.addEventListener('storage', checkUserRole);
-    return () => window.removeEventListener('storage', checkUserRole);
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      checkUserRole();
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const showAdminNav = isMobile && isAdmin && pathname === '/settings';

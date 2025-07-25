@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import { useRouter } from 'next/navigation';
 import AdminSettings from "@/components/settings/admin-settings";
 import UserSettings from "@/components/settings/user-settings";
+import { supabase } from "@/lib/supabase";
 
 export default function SettingsPage() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
@@ -13,13 +13,16 @@ export default function SettingsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-    if (userData) {
-      setIsAuthorized(true);
-      setIsAdmin(!!userData.isAdmin);
-    } else {
-      router.push('/login');
-    }
+    const checkUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setIsAuthorized(true);
+        setIsAdmin(user.email === 'admin@gmail.com');
+      } else {
+        router.push('/login');
+      }
+    };
+    checkUserRole();
   }, [router]);
 
   if (isAuthorized === null) {

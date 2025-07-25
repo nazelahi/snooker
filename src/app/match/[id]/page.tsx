@@ -4,7 +4,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from 'next/navigation';
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Player } from "@/app/players/page";
 import {
   Card,
@@ -136,17 +135,13 @@ export default function MatchDetailsPage() {
         mentionedNames.push(matchResult[1]);
     }
 
-    const mentionedEmails = mentionedNames
-        .map(name => allPlayers.find(p => p.name.toLowerCase() === name.toLowerCase())?.name) // using name as a proxy for email until we have a proper user/player link
-        .filter((email): email is string => !!email);
-
     const newCommentObject: Comment = {
         id: Date.now().toString(),
         authorName: currentUser.name,
         authorEmail: currentUser.email,
         content: content,
         date: new Date().toISOString(),
-        mentions: mentionedEmails,
+        mentions: mentionedNames, // Storing names as Supabase doesn't have a direct user-player email link table yet
         likes: [],
         dislikes: [],
         image: image || undefined,
@@ -188,53 +183,45 @@ export default function MatchDetailsPage() {
     
     if (data) {
         setMatch(data as Match);
-        // --- Send Notifications (Local Storage part) ---
-        if (parentId && replyAuthorName && replyAuthorName !== currentUser.name) {
-             const replyAuthor = allPlayers.find(p => p.name === replyAuthorName);
-             if (!replyAuthor) return;
-             // This part still relies on local storage notifications. A full migration needs a DB table.
-             const userNotifications = getFromStorage<Notification[]>(`notifications_${replyAuthor.name}`, []); // using name as key
-             const newNotification: Notification = {
-                id: Date.now().toString() + replyAuthor.name,
-                title: "Someone replied to your comment",
-                description: `${currentUser.name} replied to you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
-                read: false,
-                date: new Date().toISOString(),
-                link: `/match/${match.id}`
-             };
-             saveToStorage(`notifications_${replyAuthor.name}`, [newNotification, ...userNotifications]);
+        // --- Send Notifications via Supabase ---
+        let notificationsToInsert: Omit<Notification, 'id' | 'created_at'>[] = [];
+
+        const createNotification = (playerName: string, title: string, description: string) => {
+          if (playerName !== currentUser.name) {
+            notificationsToInsert.push({
+              user_name: playerName,
+              title,
+              description,
+              read: false,
+              date: new Date().toISOString(),
+              link: `/match/${match.id}`
+            });
+          }
+        };
+
+        if (parentId && replyAuthorName) {
+             createNotification(
+                replyAuthorName,
+                "Someone replied to your comment",
+                `${currentUser.name} replied to you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`
+             );
         } else if (!parentId) {
-            const notifyPlayer = (player: Player | null) => {
-                if (player && player.name !== currentUser.name) {
-                    const userNotifications = getFromStorage<Notification[]>(`notifications_${player.name}`, []);
-                    const newNotification: Notification = {
-                        id: Date.now().toString() + player.name,
-                        title: "New comment on your match",
-                        description: `${currentUser.name} commented on your match against ${player.name === winnerPlayer?.name ? loserPlayer?.name : winnerPlayer?.name}.`,
-                        read: false,
-                        date: new Date().toISOString(),
-                        link: `/match/${match.id}`
-                    };
-                    saveToStorage(`notifications_${player.name}`, [newNotification, ...userNotifications]);
-                }
-            };
-            notifyPlayer(winnerPlayer);
-            notifyPlayer(loserPlayer);
+            if (winnerPlayer) createNotification(winnerPlayer.name, "New comment on your match", `${currentUser.name} commented on your match against ${loserPlayer?.name}.`);
+            if (loserPlayer) createNotification(loserPlayer.name, "New comment on your match", `${currentUser.name} commented on your match against ${winnerPlayer?.name}.`);
         }
-        mentionedEmails.forEach(name => {
-            if(name === currentUser.name) return;
-            const userNotifications = getFromStorage<Notification[]>(`notifications_${name}`, []);
-            const newNotification: Notification = {
-                id: Date.now().toString() + name,
-                title: "You were mentioned in a comment",
-                description: `${currentUser.name} mentioned you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
-                read: false,
-                date: new Date().toISOString(),
-                link: `/match/${match.id}`
-            };
-            saveToStorage(`notifications_${name}`, [newNotification, ...userNotifications]);
+        
+        mentionedNames.forEach(name => {
+            createNotification(
+                name,
+                "You were mentioned in a comment",
+                `${currentUser.name} mentioned you on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`
+            );
         });
-        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+
+        if (notificationsToInsert.length > 0) {
+            await supabase.from('notifications').insert(notificationsToInsert);
+        }
+        
         toast({ title: parentId ? "Reply Posted" : "Comment Posted" });
     }
   };
@@ -250,7 +237,7 @@ export default function MatchDetailsPage() {
                 commentAuthorName = comment.authorName;
                 const likes = comment.likes || [];
                 const dislikes = comment.dislikes || [];
-                const userEmail = currentUser.email; // still using email for reaction uniqueness
+                const userEmail = currentUser.email;
 
                 const hasLiked = likes.includes(userEmail);
                 const hasDisliked = dislikes.includes(userEmail);
@@ -300,19 +287,14 @@ export default function MatchDetailsPage() {
     if(data) {
         setMatch(data as Match);
         if (commentAuthorName && commentAuthorName !== currentUser.name) {
-          const author = allPlayers.find(p => p.name === commentAuthorName);
-          if (!author) return;
-          const userNotifications = getFromStorage<Notification[]>(`notifications_${author.name}`, []);
-          const newNotification: Notification = {
-            id: Date.now().toString() + author.name,
+          await supabase.from('notifications').insert([{
+            user_name: commentAuthorName,
             title: `Someone reacted to your comment`,
             description: `${currentUser.name} ${reaction}d your comment on the match between ${winnerPlayer?.name} and ${loserPlayer?.name}.`,
             read: false,
             date: new Date().toISOString(),
             link: `/match/${match.id}`
-          };
-          saveToStorage(`notifications_${author.name}`, [newNotification, ...userNotifications]);
-          setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+          }]);
         }
     }
   };

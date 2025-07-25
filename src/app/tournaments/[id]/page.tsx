@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
 import type { Tournament } from "@/app/tournaments/page";
 import type { Player } from "@/app/players/page";
 import { Calendar, Users, Shield, ArrowLeft, Save, MapPin, Check, X, Edit, ListChecks, CheckCircle, Swords, ClipboardList, Trophy, Radio, Shuffle } from "lucide-react";
@@ -64,7 +63,8 @@ export default function TournamentDetailsPage() {
     
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
-    setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+    const currentUserName = user?.user_metadata.full_name || user?.email;
+    setCurrentUser(user ? { name: currentUserName, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
 
     const { data: playersData } = await supabase.from('players').select('*');
     if (playersData) setAllPlayers(playersData);
@@ -80,7 +80,7 @@ export default function TournamentDetailsPage() {
     setTournament(tournamentData as Tournament);
     setEditedTournament({ ...tournamentData } as Tournament);
 
-    if (user && ((tournamentData as Tournament).registeredPlayers?.includes(user.email!) || (tournamentData as Tournament).pendingPlayers?.includes(user.email!))) {
+    if (currentUserName && ((tournamentData as Tournament).registeredPlayers?.includes(currentUserName) || (tournamentData as Tournament).pendingPlayers?.includes(currentUserName))) {
       setHasApplied(true);
     }
     if ((tournamentData as Tournament).winner && playersData) {
@@ -88,29 +88,26 @@ export default function TournamentDetailsPage() {
     }
     
     if(playersData) {
-        const allUsersFromPlayers = playersData.map(p => ({name: p.name, email: 'placeholder'}));
-        const getPlayerDetails = (email: string) => {
-            const player = playersData.find(p => p.name.toLowerCase() === allUsersFromPlayers.find(u => u.email === email)?.name.toLowerCase());
-             const matchingUser = allPlayers.find(p => (tournamentData.registeredPlayers?.includes(p.name) || tournamentData.pendingPlayers?.includes(p.name)) )
-            // This part is tricky without a proper users table mapping emails to player names.
-            // This is a temporary solution and might not work perfectly.
-            // A dedicated `profiles` table linking auth users to players is recommended.
-            const p = playersData.find(p => p.name === email); // This is a guess
+        const getPlayerDetails = (playerName: string) => {
+            const p = playersData.find(p => p.name === playerName);
             return {
                 id: p?.id || 0,
-                name: p?.name || email,
+                name: p?.name || playerName,
                 avatar: p?.avatar || '',
                 initials: p?.initials || '?',
-                email: email,
+                email: p?.name || playerName,
             };
         };
         const enrolled = (tournamentData as Tournament).registeredPlayers || [];
         const pending = (tournamentData as Tournament).pendingPlayers || [];
         
-        setEnrolledPlayers(enrolled.map(email => allPlayers.find(p => p.name === email)!).filter(p => p).map(p => ({id: p.id, name: p.name, avatar: p.avatar, initials: p.initials, email: p.name })));
-        setPendingPlayers(pending.map(email => allPlayers.find(p => p.name === email)!).filter(p => p).map(p => ({id: p.id, name: p.name, avatar: p.avatar, initials: p.initials, email: p.name })));
+        setEnrolledPlayers(enrolled.map(getPlayerDetails));
+        setPendingPlayers(pending.map(getPlayerDetails));
     }
     
+    const { data: rulesData } = await supabase.from('settings').select('value').eq('key', 'tournamentRules').single();
+    if(rulesData?.value) setPredefinedRules(rulesData.value);
+
     const { data: matchesData } = await supabase.from('matches').select('*').eq('tournament_id', (tournamentData as Tournament).id);
     if (matchesData) setTournamentMatches(matchesData as Match[]);
     
@@ -123,10 +120,6 @@ export default function TournamentDetailsPage() {
 
   useEffect(() => {
     fetchTournamentData();
-
-    // Still need local storage for rules until migrated
-    const storedRules = getFromStorage<string[]>('tournamentRules', []);
-    setPredefinedRules(storedRules);
     
     const tournamentsSubscription = supabase
       .channel(`tournaments:${id}`)
@@ -199,21 +192,14 @@ export default function TournamentDetailsPage() {
     if(data) {
         setTournament(data as Tournament);
         setEditedTournament(data as Tournament);
-        const playerToNotify = allPlayers.find(p => p.name === playerName);
         
-        // This notification logic still uses local storage.
-        // A full migration would require a notifications table in Supabase.
-        if (playerToNotify) {
-            const userNotifications = getFromStorage<Notification[]>(`notifications_${playerToNotify.name}`, []); // Using name as a key for now
-            const newNotification: Notification = {
-              id: Date.now().toString(),
-              title: `Application ${isApproved ? 'Approved' : 'Rejected'}`,
-              description: `Your application for the "${tournament.name}" tournament has been ${isApproved ? 'approved' : 'rejected'}.`,
-              read: false,
-              date: new Date().toISOString(),
-            };
-            saveToStorage(`notifications_${playerToNotify.name}`, [newNotification, ...userNotifications]);
-        }
+        await supabase.from('notifications').insert([{
+            user_name: playerName,
+            title: `Application ${isApproved ? 'Approved' : 'Rejected'}`,
+            description: `Your application for the "${tournament.name}" tournament has been ${isApproved ? 'approved' : 'rejected'}.`,
+            read: false,
+            date: new Date().toISOString(),
+        }]);
         
         toast({
             title: isApproved ? "Player Approved" : "Player Rejected",
