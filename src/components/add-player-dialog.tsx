@@ -22,7 +22,7 @@ import { ResponsiveDialog } from "@/components/ui/dialog";
 interface AddPlayerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddPlayer: (player: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed' | 'wins' | 'losses' | 'averageBreak'>) => void;
+  onAddPlayer: (player: Omit<Player, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at'>) => void;
 }
 
 export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDialogProps) {
@@ -47,7 +47,7 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
 
   const handleSubmit = () => {
     if (!name) return;
-    onAddPlayer({ name, skillLevel, highestBreak, avatar });
+    onAddPlayer({ name, skill_level: skillLevel, highest_break: highestBreak, avatar });
     onOpenChange(false);
     setName("");
     setSkillLevel("Beginner");

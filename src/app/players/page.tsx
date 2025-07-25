@@ -28,30 +28,23 @@ import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
 import type { Achievement } from "@/types/achievements";
+import { supabase } from "@/lib/supabase";
 
 export interface Player {
   id: number;
   name: string;
-  skillLevel: "Beginner" | "Intermediate" | "Pro";
-  matchesPlayed: number;
-  winRate: string;
-  highestBreak: number;
+  skill_level: "Beginner" | "Intermediate" | "Pro";
+  matches_played: number;
+  win_rate: string;
+  highest_break: number;
   avatar: string;
   initials: string;
   wins?: number;
   losses?: number;
-  averageBreak?: number;
+  average_break?: number;
   achievements?: Achievement[];
+  created_at: string;
 }
-
-const initialPlayers: Player[] = [
-  { id: 1, name: "Ronnie O'Sullivan", skillLevel: "Pro", matchesPlayed: 25, winRate: "88%", highestBreak: 147, avatar: "/avatars/ronnie.png", initials: "RO" },
-  { id: 2, name: "Judd Trump", skillLevel: "Pro", matchesPlayed: 28, winRate: "71%", highestBreak: 147, avatar: "/avatars/judd.png", initials: "JT" },
-  { id: 3, name: "Mark Selby", skillLevel: "Pro", matchesPlayed: 26, winRate: "73%", highestBreak: 145, avatar: "/avatars/mark.png", initials: "MS" },
-  { id: 4, name: "Neil Robertson", skillLevel: "Pro", matchesPlayed: 24, winRate: "75%", highestBreak: 147, avatar: "/avatars/neil.png", initials: "NR" },
-  { id: 5, name: "Alice Johnson", skillLevel: "Intermediate", matchesPlayed: 40, winRate: "60%", highestBreak: 92, avatar: "/avatars/alice.png", initials: "AJ" },
-  { id: 6, name: "Bob Williams", skillLevel: "Beginner", matchesPlayed: 15, winRate: "40%", highestBreak: 45, avatar: "/avatars/bob.png", initials: "BW" },
-];
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -59,52 +52,60 @@ export default function PlayersPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
   const [playersToShow, setPlayersToShow] = useState(10);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPlayers = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from('players').select('*');
+    if (data) {
+        setPlayers(data);
+    }
+    setLoading(false);
+  }
 
   useEffect(() => {
-    const storedPlayers = getFromStorage('players', initialPlayers);
-    setPlayers(storedPlayers);
-
-    if (localStorage.getItem('players') === null) {
-      saveToStorage('players', initialPlayers);
-    }
+    fetchPlayers();
   }, []);
 
-  const handleAddPlayer = (newPlayer: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed'>) => {
-    setPlayers(prevPlayers => {
-      const highestBreak = newPlayer.highestBreak;
-      const prevHighestBreakPlayer = prevPlayers.length > 0
-        ? prevPlayers.reduce((prev, curr) => prev.highestBreak > curr.highestBreak ? prev : curr)
-        : { highestBreak: 0 };
-
-      if (highestBreak > prevHighestBreakPlayer.highestBreak) {
-         const allUsers = getFromStorage<{name:string, email:string}[]>('users', []);
+  const handleAddPlayer = async (newPlayerData: Omit<Player, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at'>) => {
+    
+    // Check for new high score
+    const highestBreak = newPlayerData.highest_break;
+    const prevHighestBreakPlayer = players.length > 0
+        ? players.reduce((prev, curr) => prev.highest_break > curr.highest_break ? prev : curr)
+        : { highest_break: 0 };
+    if (highestBreak > prevHighestBreakPlayer.highest_break) {
+        const allUsers = getFromStorage<{name:string, email:string}[]>('users', []);
          allUsers.forEach(user => {
             const notifications = getFromStorage<Notification[]>(`notifications_${user.email}`, []);
             const newNotification: Notification = {
                 id: Date.now().toString() + user.email,
                 title: "New Club Record!",
-                description: `${newPlayer.name} has set a new high break of ${highestBreak}!`,
+                description: `${newPlayerData.name} has set a new high break of ${highestBreak}!`,
                 read: false,
                 date: new Date().toISOString()
             };
             saveToStorage(`notifications_${user.email}`, [newNotification, ...notifications]);
          });
          setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-      }
+    }
+    
+    const { data, error } = await supabase
+        .from('players')
+        .insert([{ 
+            ...newPlayerData,
+            initials: newPlayerData.name.split(' ').map(n => n[0]).join(''),
+            matches_played: 0,
+            win_rate: "0%",
+            wins: 0,
+            losses: 0,
+            average_break: 0,
+        }])
+        .select();
 
-      const newPlayers = [...prevPlayers, {
-        ...newPlayer,
-        id: prevPlayers.length > 0 ? Math.max(...prevPlayers.map(p => p.id)) + 1 : 1,
-        initials: newPlayer.name.split(' ').map(n => n[0]).join(''),
-        matchesPlayed: 0,
-        winRate: "0%",
-        wins: 0,
-        losses: 0,
-        averageBreak: 0,
-      }];
-      saveToStorage('players', newPlayers);
-      return newPlayers;
-    });
+    if (data) {
+        setPlayers(prev => [...prev, ...data]);
+    }
   };
 
   const filteredPlayers = players.filter(player =>
@@ -186,13 +187,13 @@ export default function PlayersPage() {
                         </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                        <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'}>
-                        {player.skillLevel}
+                        <Badge variant={player.skill_level === 'Pro' ? 'default' : player.skill_level === 'Intermediate' ? 'secondary' : 'outline'}>
+                        {player.skill_level}
                         </Badge>
                     </TableCell>
-                    <TableCell className="text-center">{player.matchesPlayed}</TableCell>
-                    <TableCell className="text-center">{player.winRate}</TableCell>
-                    <TableCell className="text-center font-semibold text-primary hidden lg:table-cell">{player.highestBreak}</TableCell>
+                    <TableCell className="text-center">{player.matches_played}</TableCell>
+                    <TableCell className="text-center">{player.win_rate}</TableCell>
+                    <TableCell className="text-center font-semibold text-primary hidden lg:table-cell">{player.highest_break}</TableCell>
                     </TableRow>
                 ))}
                 </TableBody>
@@ -225,10 +226,10 @@ export default function PlayersPage() {
                     <Link href={`/players/${player.id}`} className="block">
                         <CardTitle className="text-lg hover:underline truncate">{player.name}</CardTitle>
                     </Link>
-                    <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'} className="mt-2">
-                        {player.skillLevel}
+                    <Badge variant={player.skill_level === 'Pro' ? 'default' : player.skill_level === 'Intermediate' ? 'secondary' : 'outline'} className="mt-2">
+                        {player.skill_level}
                     </Badge>
-                    <div className="text-sm text-muted-foreground mt-2">{player.winRate} Win Rate</div>
+                    <div className="text-sm text-muted-foreground mt-2">{player.win_rate} Win Rate</div>
                     </CardContent>
                 </Card>
             ))}
@@ -238,7 +239,7 @@ export default function PlayersPage() {
             )}
         </>
       )}
-       {filteredPlayers.length === 0 && (
+       {filteredPlayers.length === 0 && !loading && (
             <div className="text-center py-16">
                 <h3 className="text-xl font-semibold">No Players Found</h3>
                 <p className="text-muted-foreground mt-2">Your search for "{searchQuery}" did not match any players.</p>

@@ -37,6 +37,7 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 const initialUpcomingMatches = [
   { id: 1, player1: "Ronnie O'Sullivan", player2: "Judd Trump", date: "2024-08-15", time: "19:00", tournamentId: 1 },
@@ -53,15 +54,6 @@ const initialRecentResults = [
 const initialLiveMatches: LiveMatch[] = [
     { id: 1, tournamentId: 1, tournamentName: "Club Championship 2024", player1: "Ronnie O'Sullivan", player2: "Judd Trump", score1: 3, score2: 2 },
     { id: 2, tournamentId: 2, tournamentName: "Summer League", player1: "Mark Selby", player2: "Neil Robertson", score1: 1, score2: 4 },
-];
-
-const initialPlayers: Player[] = [
-    { id: 1, name: "Ronnie O'Sullivan", skillLevel: "Pro", matchesPlayed: 25, winRate: "88%", highestBreak: 147, avatar: "/avatars/ronnie.png", initials: "RO", wins: 22, losses: 3 },
-    { id: 2, name: "Judd Trump", skillLevel: "Pro", matchesPlayed: 28, winRate: "71%", highestBreak: 147, avatar: "/avatars/judd.png", initials: "JT", wins: 20, losses: 8 },
-    { id: 3, name: "Mark Selby", skillLevel: "Pro", matchesPlayed: 26, winRate: "73%", highestBreak: 145, avatar: "/avatars/mark.png", initials: "MS", wins: 19, losses: 7 },
-    { id: 4, name: "Neil Robertson", skillLevel: "Pro", matchesPlayed: 24, winRate: "75%", highestBreak: 147, avatar: "/avatars/neil.png", initials: "NR", wins: 18, losses: 6 },
-    { id: 5, name: "Alice Johnson", skillLevel: "Intermediate", matchesPlayed: 40, winRate: "60%", highestBreak: 92, avatar: "/avatars/alice.png", initials: "AJ", wins: 24, losses: 16 },
-    { id: 6, name: "Bob Williams", skillLevel: "Beginner", matchesPlayed: 15, winRate: "40%", highestBreak: 45, avatar: "/avatars/bob.png", initials: "BW", wins: 6, losses: 9 },
 ];
 
 interface Notice {
@@ -95,21 +87,24 @@ export default function DashboardPage() {
   const inProgressTournamentsPlugin = useRef(Autoplay({ delay: 4500, stopOnInteraction: false, stopOnMouseEnter: true }));
   const finishedTournamentsPlugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true }));
 
-  const fetchDashboardData = () => {
-    const storedPlayers = getFromStorage('players', initialPlayers);
+  const fetchDashboardData = async () => {
+    const { data: playersData, error } = await supabase.from('players').select('*');
+    if (playersData) {
+        setPlayers(playersData);
+        const sortedStandings = [...playersData]
+            .sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0));
+        setPlayerStandings(sortedStandings);
+    }
+    
+    // Remaining data from localStorage
     const storedMatches = getFromStorage('upcomingMatches', initialUpcomingMatches);
     const storedResults = getFromStorage('recentResults', initialRecentResults);
     const storedLiveMatches = getFromStorage('liveMatches', initialLiveMatches);
     const storedTournaments = getFromStorage('tournaments', []);
     const storedNotices = getFromStorage('notices', initialNotices);
     
-    setPlayers(storedPlayers);
     setNotices(storedNotices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     
-    const sortedStandings = [...storedPlayers]
-        .sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0));
-    setPlayerStandings(sortedStandings);
-
 
     const sortedMatches = storedMatches.sort((a, b) => {
         const dateA = new Date(`${a.date}T${a.time}`);
@@ -126,13 +121,9 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    // Initial data load
     fetchDashboardData();
 
     // Set initial values if they don't exist
-    if (localStorage.getItem('players') === null) {
-        saveToStorage('players', initialPlayers);
-    }
     if (localStorage.getItem('upcomingMatches') === null) {
       saveToStorage('upcomingMatches', initialUpcomingMatches);
     }
@@ -192,8 +183,8 @@ export default function DashboardPage() {
                     <CarouselContent>
                         {liveMatches.map((match) => (
                             <CarouselItem key={match.id}>
-                                <div className="p-3 rounded-lg">
-                                    <div className="relative text-center mb-2">
+                                <div className="p-1 rounded-lg">
+                                    <div className="relative text-center mb-1">
                                         <span className="text-xs text-muted-foreground">{match.tournamentName}</span>
                                         <div className="absolute right-0 top-0 flex items-center gap-2">
                                             <span className="relative flex h-2 w-2">
@@ -209,7 +200,7 @@ export default function DashboardPage() {
                                             <AvatarImage src={getPlayerAvatar(match.player1).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player1} />
                                             <AvatarFallback>{getPlayerAvatar(match.player1).initials}</AvatarFallback>
                                         </Avatar>
-                                        <div className="font-bold text-sm text-right"><PlayerLink name={match.player1} /></div>
+                                        <div className="font-bold text-base text-right"><PlayerLink name={match.player1} /></div>
                                     </div>
 
                                     <div className="text-xl font-bold">
@@ -219,7 +210,7 @@ export default function DashboardPage() {
                                     </div>
 
                                     <div className="flex items-center justify-start gap-2">
-                                        <div className="font-bold text-sm text-left"><PlayerLink name={match.player2} /></div>
+                                        <div className="font-bold text-base text-left"><PlayerLink name={match.player2} /></div>
                                         <Avatar className="h-6 w-6">
                                             <AvatarImage src={getPlayerAvatar(match.player2).avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={match.player2} />
                                             <AvatarFallback>{getPlayerAvatar(match.player2).initials}</AvatarFallback>
@@ -458,8 +449,8 @@ export default function DashboardPage() {
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{players.length > 0 ? Math.max(...players.map(p => p.highestBreak)) : 0}</div>
-            <p className="text-xs text-muted-foreground">by {players.length > 0 ? players.reduce((prev, current) => (prev.highestBreak > current.highestBreak) ? prev : current).name : 'N/A'}</p>
+            <div className="text-2xl font-bold">{players.length > 0 ? Math.max(...players.map(p => p.highest_break)) : 0}</div>
+            <p className="text-xs text-muted-foreground">by {players.length > 0 ? players.reduce((prev, current) => (prev.highest_break > current.highest_break) ? prev : current).name : 'N/A'}</p>
           </CardContent>
         </Card>
       </div>
@@ -586,7 +577,7 @@ export default function DashboardPage() {
                         </Link>
                         </div>
                     </TableCell>
-                    <TableCell className="text-center hidden md:table-cell">{player.matchesPlayed}</TableCell>
+                    <TableCell className="text-center hidden md:table-cell">{player.matches_played}</TableCell>
                     <TableCell className="text-green-400 text-center">{player.wins}</TableCell>
                     <TableCell className="text-red-400 text-center hidden md:table-cell">{player.losses}</TableCell>
                     </TableRow>
