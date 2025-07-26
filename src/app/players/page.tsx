@@ -30,8 +30,9 @@ import type { Achievement } from "@/types/achievements";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export interface Player {
-  id: number;
+  id: string; // Changed to string for UUID
   name: string;
+  email?: string | null; // Optional email
   skill_level: "Beginner" | "Intermediate" | "Pro";
   matches_played: number;
   win_rate: string;
@@ -41,7 +42,6 @@ export interface Player {
   wins?: number;
   losses?: number;
   average_break?: number;
-  achievements?: Achievement[];
   created_at: string;
 }
 
@@ -58,7 +58,7 @@ export default function PlayersPage() {
     setLoading(true);
     const { data, error } = await supabase.from('players').select('*');
     if (data) {
-        setPlayers(data);
+        setPlayers(data as Player[]);
     }
     setLoading(false);
   }
@@ -88,22 +88,11 @@ export default function PlayersPage() {
         }
     }
     
-    const { data, error } = await supabase
-        .from('players')
-        .insert([{ 
-            ...newPlayerData,
-            initials: newPlayerData.name.split(' ').map(n => n[0]).join(''),
-            matches_played: 0,
-            win_rate: "0%",
-            wins: 0,
-            losses: 0,
-            average_break: 0,
-        }])
-        .select();
+    // This function is no longer the primary way to add players, as signup handles it.
+    // It's kept for admin purposes. We need to handle this differently.
+    // For now, let's assume this is disabled and player creation is tied to auth.
+    console.warn("Manual player addition is for admins and requires a corresponding auth user.");
 
-    if (data) {
-        setPlayers(prev => [...prev, ...data]);
-    }
   };
 
   const filteredPlayers = players.filter(player =>
@@ -150,10 +139,6 @@ export default function PlayersPage() {
                     <ArrowLeftRight className="mr-2 h-4 w-4"/>
                     Compare
                 </Link>
-            </Button>
-            <Button onClick={() => setIsAddPlayerOpen(true)} className="hidden md:flex shrink-0">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Player
             </Button>
         </div>
       </div>
@@ -245,14 +230,6 @@ export default function PlayersPage() {
         )}
 
       <div className="md:hidden fixed bottom-20 right-4 flex flex-col gap-2">
-         <Button
-            onClick={() => setIsAddPlayerOpen(true)}
-            className="h-14 w-14 rounded-full shadow-lg"
-            size="icon"
-          >
-            <PlusCircle className="h-6 w-6" />
-            <span className="sr-only">Add Player</span>
-          </Button>
           <Button
             asChild
             className="h-14 w-14 rounded-full shadow-lg"
@@ -266,7 +243,6 @@ export default function PlayersPage() {
           </Button>
       </div>
 
-      <AddPlayerDialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen} onAddPlayer={handleAddPlayer} />
     </div>
   );
 }
