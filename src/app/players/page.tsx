@@ -57,7 +57,7 @@ export default function PlayersPage() {
 
   const fetchPlayers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('players').select('*').order('name', { ascending: true });
+    const { data, error } = await supabase.from('players').select('*').neq('email', 'admin@gmail.com').order('name', { ascending: true });
     if (data) {
         setPlayers(data as Player[]);
     }
