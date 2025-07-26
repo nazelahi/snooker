@@ -7,10 +7,10 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function AdminPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
-
+  
   useEffect(() => {
     const checkAdmin = async () => {
+      const supabase = createSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       const isAdmin = user?.email === 'admin@gmail.com';
       if (!isAdmin) {
@@ -20,7 +20,7 @@ export default function AdminPage() {
       }
     };
     checkAdmin();
-  }, [router, supabase]);
+  }, [router]);
  
   return null;
 }

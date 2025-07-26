@@ -96,18 +96,13 @@ export default function MyStatsPage() {
       setEditedLosses(statsToSet.losses);
       setEditedAverageBreak(statsToSet.averageBreak);
 
-      const { data: allMatches } = await supabase.from('matches').select('*');
+      const { data: allMatches } = await supabase.from('matches').select('*').or(`winner.eq.${currentUserData.name},loser.eq.${currentUserData.name}`).order('date', { ascending: false });
       if (allMatches) {
         const matchesForApproval = allMatches.filter(match => 
-          (match.winner === currentUserData.name || match.loser === currentUserData.name) && 
           match.pending_score && match.pending_score.proposed_by !== currentUserData.email
         );
         setPendingMatches(matchesForApproval as Match[]);
-
-        const playerMatches = allMatches.filter(
-            (match) => match.winner === currentUserData.name || match.loser === currentUserData.name
-        ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setMatchHistory(playerMatches as Match[]);
+        setMatchHistory(allMatches as Match[]);
       }
     }
   };
