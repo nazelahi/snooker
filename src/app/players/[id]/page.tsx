@@ -162,12 +162,18 @@ export default function PlayerProfilePage() {
         setPlayer(data);
     }
     
-    if(player.name.toLowerCase() === currentUser?.name?.toLowerCase() && editedName !== currentUser.name){
-        await supabase.auth.updateUser({ data: { full_name: editedName }});
+    const isOwnProfile = player.name.toLowerCase() === currentUser?.name?.toLowerCase();
+    if (isOwnProfile) {
+        const userUpdateData: { full_name: string, avatar_url?: string } = { full_name: editedName };
+        if (editedAvatar) {
+            userUpdateData.avatar_url = editedAvatar;
+        }
+        await supabase.auth.updateUser({ data: userUpdateData });
     }
     
     toast({ title: "Success", description: "Player profile has been updated."});
     setIsEditing(false);
+    await fetchPlayerData(id); // Refetch data
   }
 
   const handleOpenScoreDialog = (match: Match) => {
@@ -590,3 +596,5 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
+    

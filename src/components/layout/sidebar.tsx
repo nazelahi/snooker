@@ -49,14 +49,13 @@ const UserMenu = () => {
     const fetchUserData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            const { data: players } = await supabase.from('players').select('avatar,initials').eq('name', user.user_metadata.full_name).single();
-            const fullName = user.user_metadata.full_name || user.email;
+            const fullName = user.user_metadata.full_name || user.email!;
             setCurrentUser({
                 name: fullName,
                 email: user.email!,
                 isAdmin: user.email === 'admin@gmail.com', // Placeholder logic
-                avatar: players?.avatar,
-                initials: players?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
+                avatar: user.user_metadata.avatar_url,
+                initials: fullName.split(' ').map((n:string) => n[0]).join('')
             });
         } else {
             setCurrentUser(null);
@@ -240,3 +239,5 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
+
+    

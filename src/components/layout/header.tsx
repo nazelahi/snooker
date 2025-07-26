@@ -52,15 +52,14 @@ export default function Header() {
   const fetchUserData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-        const { data: player } = await supabase.from('players').select('avatar,initials').eq('name', user.user_metadata.full_name).single();
         const fullName = user.user_metadata.full_name || user.email!;
         
         setCurrentUser({
             name: fullName,
             email: user.email!,
             isAdmin: user.email === 'admin@gmail.com', 
-            avatar: player?.avatar,
-            initials: player?.initials || fullName.split(' ').map((n:string) => n[0]).join('')
+            avatar: user.user_metadata.avatar_url,
+            initials: fullName.split(' ').map((n:string) => n[0]).join('')
         });
 
         const { data: notificationsData } = await supabase
@@ -287,3 +286,5 @@ export default function Header() {
     </header>
   );
 }
+
+    

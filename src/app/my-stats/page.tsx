@@ -158,12 +158,16 @@ export default function MyStatsPage() {
       return;
     }
     
-    if (editedName !== currentUser.name) {
-      await supabase.auth.updateUser({ data: { full_name: editedName } });
+    const userUpdateData: { full_name: string, avatar_url?: string } = { full_name: editedName };
+    if (editedAvatar) {
+        userUpdateData.avatar_url = editedAvatar;
     }
+
+    const { data: { user }, error: userUpdateError } = await supabase.auth.updateUser({ data: userUpdateData });
 
     toast({ title: "Success", description: "Your profile has been updated."});
     setIsEditing(false);
+    await fetchCurrentUserData(); // Refetch data to update UI
   }
   
   const handleAddMatch = async (opponentId: string, myScore: number, opponentScore: number) => {
@@ -491,3 +495,5 @@ export default function MyStatsPage() {
     </div>
   );
 }
+
+    
