@@ -73,31 +73,8 @@ export default function SignupPage() {
     }
 
     if (signUpData.user) {
-        // Manually create player profile to ensure it's available immediately
-        const { error: playerError } = await supabase.from('players').insert({
-          id: signUpData.user.id,
-          name: name,
-          email: email,
-          initials: name.split(' ').map(n => n[0]).join(''),
-          skill_level: 'Beginner',
-          matches_played: 0,
-          win_rate: '0%',
-          highest_break: 0,
-          wins: 0,
-          losses: 0,
-          average_break: 0,
-        });
-
-        if (playerError) {
-             toast({
-              variant: "destructive",
-              title: "Signup Error",
-              description: "Could not create player profile. " + playerError.message,
-            });
-             setLoading(false);
-             return;
-        }
-        
+        // The database trigger 'handle_new_user' will now automatically create the player profile.
+        // We can show a confirmation message and redirect.
         if(signUpData.user.identities && signUpData.user.identities.length === 0) {
             toast({
                 variant: "destructive",

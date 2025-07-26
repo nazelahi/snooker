@@ -92,9 +92,6 @@ export default function PlayerProfilePage() {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user;
       setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
-      if (id) {
-        await fetchPlayerData(id);
-      }
     });
 
     async function initialize() {
@@ -106,8 +103,19 @@ export default function PlayerProfilePage() {
     }
     initialize();
     
+    const channel = supabase
+      .channel(`player-profile:${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `id=eq.${id}` }, (payload) => {
+        fetchPlayerData(id);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
+        fetchPlayerData(id);
+      })
+      .subscribe();
+
     return () => {
       authListener.subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [id, fetchPlayerData, supabase]);
 

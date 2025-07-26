@@ -52,6 +52,7 @@ export default function PlayersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [playersToShow, setPlayersToShow] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const supabase = createSupabaseBrowserClient();
 
   const fetchPlayers = async () => {
@@ -65,6 +66,18 @@ export default function PlayersPage() {
 
   useEffect(() => {
     fetchPlayers();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const user = session?.user;
+        setIsAdmin(user?.email === 'admin@gmail.com');
+    });
+
+    async function initialize() {
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsAdmin(user?.email === 'admin@gmail.com');
+    }
+    initialize();
+
   }, []);
 
   const handleAddPlayer = async (newPlayerData: Omit<Player, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at'>) => {
@@ -274,6 +287,16 @@ export default function PlayersPage() {
         )}
 
       <div className="md:hidden fixed bottom-20 right-4 flex flex-col gap-2">
+          {isAdmin && (
+               <Button
+                onClick={() => setIsAddPlayerOpen(true)}
+                className="h-14 w-14 rounded-full shadow-lg"
+                size="icon"
+                >
+                    <PlusCircle className="h-6 w-6"/>
+                    <span className="sr-only">Add Player</span>
+                </Button>
+          )}
           <Button
             asChild
             className="h-14 w-14 rounded-full shadow-lg"
@@ -286,6 +309,8 @@ export default function PlayersPage() {
             </Link>
           </Button>
       </div>
+
+       <AddPlayerDialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen} onAddPlayer={handleAddPlayer} />
 
     </div>
   );
