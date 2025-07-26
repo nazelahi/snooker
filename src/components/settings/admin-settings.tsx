@@ -116,6 +116,19 @@ export default function AdminSettings() {
 
   useEffect(() => {
     fetchAdminData();
+    const channel = supabase
+      .channel('admin-settings-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchAdminData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () => fetchAdminData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_matches' }, () => fetchAdminData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'upcoming_matches' }, () => fetchAdminData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, () => fetchAdminData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchAdminData())
+      .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    }
   }, []);
 
   const handlePlayerChange = (id: number, field: keyof Player, value: any) => {
@@ -174,9 +187,6 @@ export default function AdminSettings() {
     };
     
     const { data, error } = await supabase.from('upcoming_matches').insert(newMatchData).select().single();
-    if(data) {
-        setUpcomingMatches(prev => [...prev, data as UpcomingMatch]);
-    }
     if (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not add upcoming match.' });
     }
@@ -193,9 +203,6 @@ export default function AdminSettings() {
         tournament_name: inProgressTournaments[0]?.name || "Tournament",
     };
     const { data, error } = await supabase.from('live_matches').insert(newMatchData).select().single();
-    if(data) {
-        setLiveMatches(prev => [...prev, data as LiveMatch]);
-    }
     if(error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not add live match.' });
     }
@@ -207,13 +214,6 @@ export default function AdminSettings() {
       if (error) {
         toast({ title: 'Error', description: `Failed to remove item from ${tableName}.` });
       } else {
-        switch(tableName) {
-          case 'players': setPlayers(prev => prev.filter(item => item.id !== id)); break;
-          case 'tournaments': setTournaments(prev => prev.filter(item => item.id !== id)); break;
-          case 'live_matches': setLiveMatches(prev => prev.filter(item => item.id !== id)); break;
-          case 'upcoming_matches': setUpcomingMatches(prev => prev.filter(item => item.id !== id)); break;
-          case 'notices': setNotices(prev => prev.filter(item => item.id !== id)); break;
-        }
         toast({ title: "Success", description: `Item removed from ${tableName}.`});
       }
   };
@@ -293,10 +293,6 @@ export default function AdminSettings() {
     if (error) {
       toast({ variant: 'destructive', title: 'Error posting notice', description: error.message });
       return;
-    }
-    
-    if (data) {
-      setNotices([data as Notice, ...notices]);
     }
 
     setNewNoticeTitle("");

@@ -24,6 +24,14 @@ export default function SettingsPage() {
       }
     };
     checkUserRole();
+
+     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      checkUserRole();
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [router, supabase]);
 
   if (isAuthorized === null) {

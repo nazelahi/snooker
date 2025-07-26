@@ -27,48 +27,50 @@ export default function UserSettings() {
   const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
   const supabase = createSupabaseBrowserClient();
 
-  useEffect(() => {
-    async function fetchData() {
-      const {data: {user}} = await supabase.auth.getUser();
-      const userName = user?.user_metadata.full_name || user?.email;
-      if (user && userName) {
-        setCurrentUser({ name: userName, email: user.email! });
+  const fetchData = async () => {
+    const {data: {user}} = await supabase.auth.getUser();
+    const userName = user?.user_metadata.full_name || user?.email;
+    if (user && userName) {
+      setCurrentUser({ name: userName, email: user.email! });
 
-        const { data: allTournaments } = await supabase.from('tournaments').select('*');
-        if (allTournaments) {
-          const userRegistered = allTournaments.filter(t => 
-            t.registeredPlayers?.includes(userName)
-          );
-          setRegisteredTournaments(userRegistered as Tournament[]);
-          
-          const userPending = allTournaments.filter(t => 
-            t.pendingPlayers?.includes(userName)
-          );
-          setPendingTournaments(userPending as Tournament[]);
-        }
-
-        const { data: notificationsData } = await supabase.from('notifications').select('*').eq('user_name', userName);
-        if(notificationsData) setNotifications(notificationsData as Notification[]);
+      const { data: allTournaments } = await supabase.from('tournaments').select('*');
+      if (allTournaments) {
+        const userRegistered = allTournaments.filter(t => 
+          t.registeredPlayers?.includes(userName)
+        );
+        setRegisteredTournaments(userRegistered as Tournament[]);
+        
+        const userPending = allTournaments.filter(t => 
+          t.pendingPlayers?.includes(userName)
+        );
+        setPendingTournaments(userPending as Tournament[]);
       }
-    }
 
+      const { data: notificationsData } = await supabase.from('notifications').select('*').eq('user_name', userName);
+      if(notificationsData) setNotifications(notificationsData as Notification[]);
+    }
+  }
+
+  useEffect(() => {
     fetchData();
     
-    const notificationsSubscription = supabase
-      .channel('public:notifications:user')
+    const channel = supabase
+      .channel('user-settings-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
-        fetchData();
+        if((payload.new as Notification).user_name === currentUser?.name) {
+            fetchData();
+        }
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(notificationsSubscription);
+      supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, [supabase, currentUser]);
 
   const handleMarkAsRead = async (id: number) => {
     await supabase.from('notifications').update({ read: true }).eq('id', id);
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
   const handleMarkAllAsRead = async () => {
@@ -76,7 +78,6 @@ export default function UserSettings() {
     const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
     if(unreadIds.length > 0) {
       await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
-      setNotifications(notifications.map(n => ({...n, read: true})));
     }
   };
 

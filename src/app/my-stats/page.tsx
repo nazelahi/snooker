@@ -105,6 +105,16 @@ export default function MyStatsPage() {
   };
 
   useEffect(() => {
+    const channel = supabase
+        .channel('my-stats-page')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
+            fetchCurrentUserData();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, (payload) => {
+            fetchCurrentUserData();
+        })
+        .subscribe();
+
     fetchCurrentUserData();
     
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -115,6 +125,7 @@ export default function MyStatsPage() {
 
     return () => {
       authListener.subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, []);
 
@@ -153,7 +164,6 @@ export default function MyStatsPage() {
 
     toast({ title: "Success", description: "Your profile has been updated."});
     setIsEditing(false);
-    fetchCurrentUserData();
   }
   
   const handleAddMatch = async (opponentId: number, myScore: number, opponentScore: number) => {
@@ -195,7 +205,6 @@ export default function MyStatsPage() {
     }]);
 
     toast({ title: "Match Reported", description: "Your new match has been reported and is awaiting approval from your opponent."});
-    fetchCurrentUserData();
   };
 
   const handleApproval = async (matchId: number, approve: boolean) => {
@@ -249,7 +258,6 @@ export default function MyStatsPage() {
         date: new Date().toISOString()
     }]);
     
-    fetchCurrentUserData();
   }
 
   if(loading || !currentUser) return <p>Loading...</p>

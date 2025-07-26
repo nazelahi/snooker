@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -93,6 +94,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
+
+    const channel = supabase
+      .channel('dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'upcoming_matches' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_matches' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, () => fetchDashboardData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const getPlayerAvatar = (name: string) => {

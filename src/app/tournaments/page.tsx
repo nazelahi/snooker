@@ -50,20 +50,21 @@ export default function TournamentsPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const supabase = createSupabaseBrowserClient();
 
+  const fetchData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+      
+      const { data: tournamentsData } = await supabase.from('tournaments').select('*');
+      if (tournamentsData) setTournaments(tournamentsData);
+
+      const { data: liveMatchesData } = await supabase.from('live_matches').select('*');
+      if (liveMatchesData) setLiveMatches(liveMatchesData as LiveMatch[]);
+
+      const { data: playersData } = await supabase.from('players').select('*');
+      if(playersData) setPlayers(playersData);
+  }
+
   useEffect(() => {
-    async function fetchData() {
-        const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
-        
-        const { data: tournamentsData } = await supabase.from('tournaments').select('*');
-        if (tournamentsData) setTournaments(tournamentsData);
-
-        const { data: liveMatchesData } = await supabase.from('live_matches').select('*');
-        if (liveMatchesData) setLiveMatches(liveMatchesData as LiveMatch[]);
-
-        const { data: playersData } = await supabase.from('players').select('*');
-        if(playersData) setPlayers(playersData);
-    }
     fetchData();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -71,8 +72,11 @@ export default function TournamentsPage() {
     });
 
     const tournamentsSubscription = supabase
-      .channel('custom-all-channel')
+      .channel('tournaments-page')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, (payload) => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_matches' }, (payload) => {
         fetchData();
       })
       .subscribe();
@@ -92,9 +96,6 @@ export default function TournamentsPage() {
       bracket: [],
     }]).select();
 
-    if (data) {
-      setTournaments(prev => [...prev, ...data]);
-    }
     if (error) {
       console.error('Error adding tournament:', error);
     }

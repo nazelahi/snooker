@@ -89,8 +89,16 @@ export default function MatchDetailsPage() {
     }
     initialize();
 
+    const channel = supabase
+      .channel(`match-details:${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
+          fetchMatchData(id);
+      })
+      .subscribe();
+
     return () => {
       authListener.subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [id, fetchMatchData, supabase]);
 
@@ -120,7 +128,7 @@ export default function MatchDetailsPage() {
       if (error) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
       } else if(data) {
-        setMatch(data as Match);
+        // Realtime will update state
         toast({ title: "Media Uploaded", description: "Your photo/video has been added to the match."});
       }
     }
@@ -183,7 +191,6 @@ export default function MatchDetailsPage() {
     }
     
     if (data) {
-        setMatch(data as Match);
         // --- Send Notifications via Supabase ---
         let notificationsToInsert: Omit<Notification, 'id' | 'created_at'>[] = [];
 
@@ -286,7 +293,6 @@ export default function MatchDetailsPage() {
     }
     
     if(data) {
-        setMatch(data as Match);
         if (commentAuthorName && commentAuthorName !== currentUser.name) {
           await supabase.from('notifications').insert([{
             user_name: commentAuthorName,
