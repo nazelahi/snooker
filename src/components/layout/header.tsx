@@ -169,62 +169,64 @@ export default function Header() {
 
       <div className="flex items-center justify-end gap-2 md:gap-4">
         <ThemeSwitcher />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <Badge
-                  variant="default"
-                  className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs"
-                >
-                  {unreadCount}
-                </Badge>
-              )}
-              <span className="sr-only">Toggle notifications</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="flex justify-between items-center">
-                <span>Notifications</span>
+        {currentUser && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                    <Button variant="ghost" size="sm" onClick={handleMarkAllRead} className="h-auto p-1 text-xs">
-                        <CheckCheck className="mr-1 h-3 w-3"/>
-                        Mark all as read
-                    </Button>
+                  <Badge
+                    variant="default"
+                    className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs"
+                  >
+                    {unreadCount}
+                  </Badge>
                 )}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {notifications.length === 0 ? (
-                 <DropdownMenuItem disabled>
-                    <div className="flex flex-col">
-                        <p className="text-sm text-muted-foreground">
-                        No new notifications.
-                        </p>
-                    </div>
-                </DropdownMenuItem>
-            ) : (
-                notifications.slice(0, 5).map(notification => (
-                    <DropdownMenuItem 
-                      key={notification.id} 
-                      className={!notification.read ? 'font-semibold' : ''}
-                      onClick={() => handleNotificationClick(notification)}
-                    >
-                        <div className="flex flex-col">
-                            <p className={!notification.read ? 'font-bold' : 'font-semibold'}>{notification.title}</p>
-                            <p className="text-sm text-muted-foreground">
-                            {notification.description}
-                            </p>
-                        </div>
-                    </DropdownMenuItem>
-                ))
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/notifications" className="justify-center">View all notifications</Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <span className="sr-only">Toggle notifications</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel className="flex justify-between items-center">
+                  <span>Notifications</span>
+                  {unreadCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={handleMarkAllRead} className="h-auto p-1 text-xs">
+                          <CheckCheck className="mr-1 h-3 w-3"/>
+                          Mark all as read
+                      </Button>
+                  )}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {notifications.length === 0 ? (
+                   <DropdownMenuItem disabled>
+                      <div className="flex flex-col">
+                          <p className="text-sm text-muted-foreground">
+                          No new notifications.
+                          </p>
+                      </div>
+                  </DropdownMenuItem>
+              ) : (
+                  notifications.slice(0, 5).map(notification => (
+                      <DropdownMenuItem 
+                        key={notification.id} 
+                        className={!notification.read ? 'font-semibold' : ''}
+                        onClick={() => handleNotificationClick(notification)}
+                      >
+                          <div className="flex flex-col">
+                              <p className={!notification.read ? 'font-bold' : 'font-semibold'}>{notification.title}</p>
+                              <p className="text-sm text-muted-foreground">
+                              {notification.description}
+                              </p>
+                          </div>
+                      </DropdownMenuItem>
+                  ))
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/notifications" className="justify-center">View all notifications</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
