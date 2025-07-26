@@ -37,7 +37,7 @@ export default function SignupPage() {
         }
     };
     fetchSiteName();
-  }, []);
+  }, [supabase]);
 
   const handleCreateAccount = async () => {
     setLoading(true);
@@ -57,8 +57,8 @@ export default function SignupPage() {
       options: {
         data: {
           full_name: name,
-          email_confirm: true,
         },
+        email_confirm: true,
       },
     });
 
@@ -74,6 +74,7 @@ export default function SignupPage() {
             id: data.user.id,
             name: name,
             email: email,
+            role: 'player',
             initials: name.split(' ').map(n => n[0]).join(''),
             skill_level: 'Beginner',
             matches_played: 0,
@@ -95,7 +96,7 @@ export default function SignupPage() {
                 title: "Success!",
                 description: "Your account has been created.",
             });
-            router.push('/login');
+            router.refresh();
         }
     }
     setLoading(false);
