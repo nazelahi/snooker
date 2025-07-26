@@ -52,6 +52,8 @@ export default function SignupPage() {
       return;
     }
 
+    // With email confirmation disabled in Supabase, this will
+    // create the user and log them in directly.
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -72,24 +74,16 @@ export default function SignupPage() {
        return;
     }
 
+    // The 'handle_new_user' trigger in the database will create the player profile.
+    // If signup is successful and email confirmation is off, the user is already logged in.
     if (signUpData.user) {
-        // The database trigger 'handle_new_user' will automatically create the player profile.
-        // We can now log the user in directly.
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        
-        if(signInError) {
-            toast({
-                variant: "destructive",
-                title: "Login after signup failed.",
-                description: signInError.message,
-            });
-        } else {
-             toast({
-                title: "Welcome!",
-                description: "Your account has been created and you are now logged in.",
-            });
-            router.push('/');
-        }
+        toast({
+            title: "Welcome!",
+            description: "Your account has been created successfully.",
+        });
+        // Since the user is logged in, redirect them to the home page.
+        router.push('/');
+        router.refresh(); // Force a refresh to update layout and user state
     }
      setLoading(false);
   };
