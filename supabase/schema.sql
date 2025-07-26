@@ -1,179 +1,228 @@
 
--- Enable HTTP extension
-create extension if not exists http with schema extensions;
+-- Enable UUID generation
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create a table for public profiles
-create table players (
-  id uuid references auth.users(id) not null primary key,
-  name text,
-  email text,
-  skill_level text,
-  matches_played integer,
-  win_rate text,
-  highest_break integer,
-  avatar text,
-  initials text,
-  wins integer,
-  losses integer,
-  average_break integer,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- Create a function to check if a user is an admin
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN (
+    SELECT 'admin@gmail.com'
+  ) = auth.jwt()->>'email';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+--
+-- Create the players table
+--
+CREATE TABLE
+  public.players (
+    id uuid NOT NULL DEFAULT uuid_generate_v4 (),
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    name text NOT NULL,
+    skill_level text NOT NULL,
+    matches_played integer NOT NULL,
+    win_rate text NOT NULL,
+    highest_break integer NOT NULL,
+    avatar text NULL,
+    initials text NULL,
+    wins integer NULL,
+    losses integer NULL,
+    average_break integer NULL,
+    email text NULL,
+    CONSTRAINT players_pkey PRIMARY KEY (id),
+    CONSTRAINT players_id_fkey FOREIGN KEY (id) REFERENCES auth.users (id) ON DELETE CASCADE
+  );
+
+-- RLS policies for players table
+ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view all players" ON public.players;
+CREATE POLICY "Users can view all players" ON public.players FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can insert their own player profile" ON public.players;
+CREATE POLICY "Users can insert their own player profile" ON public.players FOR INSERT WITH CHECK (auth.uid() = id OR is_admin());
+DROP POLICY IF EXISTS "Users can update their own player profile" ON public.players;
+CREATE POLICY "Users can update their own player profile" ON public.players FOR UPDATE USING (auth.uid() = id OR is_admin()) WITH CHECK (auth.uid() = id OR is_admin());
+DROP POLICY IF EXISTS "Admins can manage player profiles" ON public.players;
+CREATE POLICY "Admins can manage player profiles" ON public.players FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+
+--
+-- Create the tournaments table
+--
+CREATE TABLE public.tournaments (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    format TEXT NOT NULL,
+    players INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    rules TEXT[],
+    image TEXT,
+    pendingPlayers TEXT[],
+    registeredPlayers TEXT[],
+    location TEXT,
+    winner TEXT,
+    bracket JSONB
 );
 
--- Create a table for tournaments
-create table tournaments (
-  id serial primary key,
-  name text,
-  format text,
-  players integer,
-  status text,
-  rules text[],
-  image text,
-  pendingPlayers text[],
-  registeredPlayers text[],
-  location text,
-  winner text,
-  bracket jsonb
+-- RLS policies for tournaments table
+ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view all tournaments" ON public.tournaments;
+CREATE POLICY "Users can view all tournaments" ON public.tournaments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins can manage tournaments" ON public.tournaments;
+CREATE POLICY "Admins can manage tournaments" ON public.tournaments FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+--
+-- Create the matches table
+--
+CREATE TABLE public.matches (
+    id SERIAL PRIMARY KEY,
+    winner TEXT NOT NULL,
+    loser TEXT NOT NULL,
+    score TEXT NOT NULL,
+    date TIMESTAMP WITH TIME ZONE NOT NULL,
+    media TEXT[],
+    comments JSONB,
+    pending_score JSONB,
+    tournament_id INTEGER REFERENCES public.tournaments(id)
 );
 
--- Create a table for matches
-create table matches (
-    id serial primary key,
-    winner text,
-    loser text,
-    score text,
-    date timestamp with time zone,
-    media text[],
-    comments jsonb,
-    pending_score jsonb,
-    tournament_id integer references tournaments(id)
-);
-
--- Create table for upcoming matches
-create table upcoming_matches (
-    id serial primary key,
-    player1 text,
-    player2 text,
-    date date,
-    time time,
-    tournament_id integer references tournaments(id)
-);
-
--- Create a view for live matches
-create or replace view public.live_matches as
-select
-    um.id,
-    um.tournament_id,
-    t.name as tournament_name,
-    um.player1,
-    um.player2,
-    (random() * 5)::int as score1,
-    (random() * 5)::int as score2
-from
-    public.upcoming_matches um
-join
-    public.tournaments t on um.tournament_id = t.id
-where
-    t.status = 'In Progress'
-    and um.date = current_date
-limit 5;
-
-
--- Create a table for notices
-create table notices (
-  id serial primary key,
-  title text,
-  content text,
-  date timestamp with time zone default now()
-);
-
--- Create a table for notifications
-create table notifications (
-    id serial primary key,
-    user_name text,
-    title text,
-    description text,
-    read boolean default false,
-    date timestamp with time zone default now(),
-    link text,
-    created_at timestamp with time zone default now()
+-- RLS policies for matches table
+ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view all matches" ON public.matches;
+CREATE POLICY "Users can view all matches" ON public.matches FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins can manage matches" ON public.matches;
+CREATE POLICY "Admins can manage matches" ON public.matches FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+DROP POLICY IF EXISTS "Users can manage their own matches" ON public.matches;
+CREATE POLICY "Users can manage their own matches" ON public.matches FOR ALL USING (
+  (SELECT name FROM public.players WHERE id = auth.uid()) IN (winner, loser)
+) WITH CHECK (
+  (SELECT name FROM public.players WHERE id = auth.uid()) IN (winner, loser)
 );
 
 
--- Create a table for settings
-create table settings (
-  key text primary key,
-  value jsonb
+--
+-- Create the upcoming_matches table
+--
+CREATE TABLE public.upcoming_matches (
+    id SERIAL PRIMARY KEY,
+    player1 TEXT NOT NULL,
+    player2 TEXT NOT NULL,
+    date DATE NOT NULL,
+    "time" TIME WITHOUT TIME ZONE NOT NULL,
+    tournament_id INTEGER REFERENCES public.tournaments(id)
 );
 
--- Set up Row Level Security (RLS)
--- See https://supabase.com/docs/guides/auth/row-level-security
-alter table players
-  enable row level security;
+-- RLS policies for upcoming_matches table
+ALTER TABLE public.upcoming_matches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view all upcoming matches" ON public.upcoming_matches;
+CREATE POLICY "Users can view all upcoming matches" ON public.upcoming_matches FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins can manage upcoming matches" ON public.upcoming_matches;
+CREATE POLICY "Admins can manage upcoming matches" ON public.upcoming_matches FOR ALL USING (is_admin()) WITH CHECK (is_admin());
 
-create policy "Public profiles are viewable by everyone." on players
-  for select using (true);
+--
+-- Create the live_matches table
+--
+CREATE TABLE public.live_matches (
+    id SERIAL PRIMARY KEY,
+    tournament_id INTEGER REFERENCES public.tournaments(id),
+    tournament_name TEXT,
+    player1 TEXT NOT NULL,
+    player2 TEXT NOT NULL,
+    score1 INTEGER NOT NULL,
+    score2 INTEGER NOT NULL
+);
 
-create policy "Users can insert their own profile." on players
-  for insert with check (auth.uid() = id);
-
-create policy "Users can update own profile." on players
-  for update using (auth.uid() = id);
-
--- Function to check if a user is an admin
-create or replace function is_admin()
-returns boolean as $$
-begin
-  return (select auth.jwt()->>'email') = 'admin@gmail.com';
-end;
-$$ language plpgsql security definer;
-
-
--- RLS for tournaments
-alter table tournaments enable row level security;
-create policy "Tournaments are viewable by everyone." on tournaments for select using (true);
-create policy "Admins can insert tournaments." on tournaments for insert with check (is_admin());
-create policy "Admins can update tournaments." on tournaments for update with check (is_admin());
-create policy "Admins can delete tournaments." on tournaments for delete using (is_admin());
-
--- RLS for matches
-alter table matches enable row level security;
-create policy "Matches are viewable by everyone." on matches for select using (true);
-create policy "Users can insert matches." on matches for insert with check (auth.role() = 'authenticated');
-create policy "Users can update their own matches." on matches for update with check (auth.role() = 'authenticated');
-create policy "Admins can delete matches." on matches for delete using (is_admin());
-
--- RLS for upcoming_matches
-alter table upcoming_matches enable row level security;
-create policy "Upcoming matches are viewable by everyone." on upcoming_matches for select using (true);
-create policy "Admins can manage upcoming matches." on upcoming_matches for all using (is_admin());
-
--- RLS for notices
-alter table notices enable row level security;
-create policy "Notices are viewable by everyone." on notices for select using (true);
-create policy "Admins can manage notices." on notices for all using (is_admin());
-
--- RLS for notifications
-alter table notifications enable row level security;
-create policy "Users can view their own notifications." on notifications for select using ((select auth.jwt()->>'email') = user_name or is_admin());
-create policy "Users can update their own notifications." on notifications for update using ((select auth.jwt()->>'email') = user_name or is_admin());
-create policy "Users can delete their own notifications." on notifications for delete using ((select auth.jwt()->>'email') = user_name or is_admin());
-create policy "System can insert notifications." on notifications for insert with check (true);
-
--- RLS for settings
-alter table settings enable row level security;
-create policy "Settings are viewable by everyone." on settings for select using (true);
-create policy "Admins can manage settings." on settings for all using (is_admin());
+-- RLS policies for live_matches table
+ALTER TABLE public.live_matches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view all live matches" ON public.live_matches;
+CREATE POLICY "Users can view all live matches" ON public.live_matches FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins can manage live matches" ON public.live_matches;
+CREATE POLICY "Admins can manage live matches" ON public.live_matches FOR ALL USING (is_admin()) WITH CHECK (is_admin());
 
 
--- Set up Storage!
-insert into storage.buckets (id, name, public)
-  values ('avatars', 'avatars', true);
+--
+-- Create the settings table
+--
+CREATE TABLE public.settings (
+    key TEXT PRIMARY KEY,
+    value JSONB
+);
 
-create policy "Avatar images are publicly accessible." on storage.objects
-  for select using (bucket_id = 'avatars');
+-- RLS policies for settings table
+ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view all settings" ON public.settings;
+CREATE POLICY "Users can view all settings" ON public.settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins can manage settings" ON public.settings;
+CREATE POLICY "Admins can manage settings" ON public.settings FOR ALL USING (is_admin()) WITH CHECK (is_admin());
 
-create policy "Anyone can upload an avatar." on storage.objects
-  for insert with check (bucket_id = 'avatars');
 
-create policy "Anyone can update their own avatar." on storage.objects
-  for update using (auth.uid() = owner) with check (bucket_id = 'avatars');
+--
+-- Create the notices table
+--
+CREATE TABLE public.notices (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- RLS policies for notices table
+ALTER TABLE public.notices ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view all notices" ON public.notices;
+CREATE POLICY "Users can view all notices" ON public.notices FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins can manage notices" ON public.notices;
+CREATE POLICY "Admins can manage notices" ON public.notices FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+--
+-- Create the notifications table
+--
+CREATE TABLE public.notifications (
+    id SERIAL PRIMARY KEY,
+    user_name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    read BOOLEAN NOT NULL DEFAULT FALSE,
+    date TIMESTAMP WITH TIME ZONE NOT NULL,
+    link TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- RLS policies for notifications table
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can only see their own notifications" ON public.notifications;
+CREATE POLICY "Users can only see their own notifications" ON public.notifications FOR ALL
+USING ((SELECT name FROM public.players WHERE id = auth.uid()) = user_name)
+WITH CHECK ((SELECT name FROM public.players WHERE id = auth.uid()) = user_name);
+
+
+--
+-- Function and Trigger to create a player profile when a new user signs up
+--
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.players (id, name, email, initials, skill_level, matches_played, win_rate, highest_break, wins, losses, average_break)
+  VALUES (
+    new.id,
+    new.raw_user_meta_data->>'full_name',
+    new.email,
+    LEFT(new.raw_user_meta_data->>'full_name', 1) || LEFT(SPLIT_PART(new.raw_user_meta_data->>'full_name', ' ', -1), 1),
+    'Beginner', 0, '0%', 0, 0, 0, 0
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Seed initial data
+INSERT INTO public.settings (key, value)
+VALUES
+  ('siteSettings', '{"name": "CueScore", "description": "The ultimate snooker club management app."}'),
+  ('tournamentRules', '["Standard WBSA rules apply", "Best of 3 frames for early rounds", "Best of 5 frames for semi-finals", "Best of 7 frames for the final", "Players must be present 15 minutes before match time", "Foul and a miss rule is in effect"]')
+ON CONFLICT (key) DO NOTHING;
