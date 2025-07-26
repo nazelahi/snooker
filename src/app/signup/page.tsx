@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { SiteLogo } from '@/components/site-logo';
 
 export default function SignupPage() {
@@ -56,6 +56,7 @@ export default function SignupPage() {
       options: {
         data: {
           full_name: name,
+          email_confirm: true,
         },
       },
     });
@@ -67,16 +68,31 @@ export default function SignupPage() {
         description: error.message,
       });
     } else if (data.user) {
-        if (data.user.identities?.length === 0) {
-            toast({
+        // Create a corresponding player profile
+        const { error: playerError } = await supabase.from('players').insert({
+            id: data.user.id,
+            name: name,
+            email: email,
+            initials: name.split(' ').map(n => n[0]).join(''),
+            skill_level: 'Beginner',
+            matches_played: 0,
+            win_rate: '0%',
+            highest_break: 0,
+            wins: 0,
+            losses: 0,
+            average_break: 0,
+        });
+
+        if (playerError) {
+             toast({
                 variant: "destructive",
-                title: "Error",
-                description: "An account with this email already exists but is unconfirmed.",
+                title: "Signup incomplete",
+                description: "Could not create your player profile. " + playerError.message,
             });
         } else {
-            toast({
+             toast({
                 title: "Success!",
-                description: "Your account has been created. Please check your email to verify your account.",
+                description: "Your account has been created.",
             });
             router.push('/login');
         }
@@ -89,7 +105,7 @@ export default function SignupPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback`,
+        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
       },
     });
      if (error) {
