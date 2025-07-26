@@ -23,6 +23,7 @@ import { AddMatchDialog } from "@/components/add-match-dialog";
 import type { Notification } from "@/types/notifications";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { useAuthContext } from "@/components/auth-provider";
 
 interface Match {
   id: number;
@@ -53,6 +54,7 @@ const initialStats = {
 };
 
 export default function MyStatsPage() {
+  const { user, profile, loading, isAuthenticated } = useAuthContext();
   const [userStats, setUserStats] = useState(initialStats);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, avatar?: string} | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -70,9 +72,21 @@ export default function MyStatsPage() {
 
   const { toast } = useToast();
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [loading, isAuthenticated, router]);
+
   const fetchCurrentUserData = () => {
-    const userData = getFromStorage<{name: string, email: string} | null>('userData', null);
-    if (userData) {
+    // Use the authenticated user data instead of localStorage
+    if (profile) {
+      const userData = {
+        name: profile.full_name,
+        email: profile.email,
+        avatar: ""
+      };
       
       const players = getFromStorage<Player[]>('players', []);
       setAllPlayers(players);
@@ -126,7 +140,9 @@ export default function MyStatsPage() {
   };
 
   useEffect(() => {
-    fetchCurrentUserData();
+    if (profile) {
+      fetchCurrentUserData();
+    }
     
     const handleStorageChange = () => {
         fetchCurrentUserData();
@@ -134,7 +150,30 @@ export default function MyStatsPage() {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [profile]);
+
+  // Show loading while auth is being checked
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading your stats...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-muted-foreground">Please log in to view your stats.</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -174,7 +213,6 @@ export default function MyStatsPage() {
         saveToStorage('players', players);
 
         const newUserData = { ...currentUser, name: editedName };
-        saveToStorage('userData', newUserData);
         setCurrentUser(newUserData);
         
         setUserStats(prev => ({

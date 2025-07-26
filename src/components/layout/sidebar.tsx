@@ -21,7 +21,8 @@ import { getFromStorage } from "@/lib/storage";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "../ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import type { Player } from "@/app/players/page";
+import type { Player } from "@/lib/playersService";
+import { useAuthContext } from "@/components/auth-provider";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -35,39 +36,15 @@ const bottomNavItems = [
 ];
 
 const UserMenu = () => {
-    const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean, avatar?: string, initials?: string} | null>(null);
+    const { user, profile, isAuthenticated, logout } = useAuthContext();
     const router = useRouter();
 
-    useEffect(() => {
-        const fetchUserData = () => {
-            const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-            if (userData) {
-                const players = getFromStorage<Player[]>('players', []);
-                const player = players.find(p => p.name.toLowerCase() === userData.name.toLowerCase());
-                setCurrentUser({
-                    ...userData,
-                    avatar: player?.avatar,
-                    initials: player?.initials || userData.name.split(' ').map(n => n[0]).join('')
-                });
-            } else {
-                setCurrentUser(null);
-            }
-        };
-
-        fetchUserData();
-        window.addEventListener('storage', fetchUserData);
-        return () => window.removeEventListener('storage', fetchUserData);
-    }, []);
-
-
     const handleLogout = () => {
-        localStorage.removeItem('userData');
-        setCurrentUser(null);
-        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+        logout();
         router.push('/login');
     };
 
-    if (!currentUser) {
+    if (!isAuthenticated) {
         return (
             <SidebarMenu>
               <SidebarMenuItem>
@@ -88,15 +65,15 @@ const UserMenu = () => {
                 <SidebarMenuButton className="h-auto p-2" size="lg">
                    <div className="flex items-center gap-2">
                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={currentUser.avatar || ''} alt={currentUser.name} />
-                        <AvatarFallback>{currentUser.initials}</AvatarFallback>
+                        <AvatarImage src={profile?.avatar || ''} alt={profile?.full_name || ''} />
+                        <AvatarFallback>{profile?.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                      </Avatar>
-                     <span className="font-semibold">{currentUser.name}</span>
+                     <span className="font-semibold">{profile?.full_name}</span>
                    </div>
                 </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="mb-2 w-56">
-                <DropdownMenuLabel>{currentUser.isAdmin ? 'Admin' : 'My Account'}</DropdownMenuLabel>
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
@@ -131,19 +108,14 @@ const UserMenu = () => {
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
+  const { isAuthenticated } = useAuthContext();
   const [clubName, setClubName] = useState("CueScore");
 
   useEffect(() => {
-    const userData = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-    setCurrentUser(userData);
-
     const siteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
     setClubName(siteSettings.name);
 
     const handleStorageChange = () => {
-        const user = getFromStorage<{name: string, email: string, isAdmin?: boolean} | null>('userData', null);
-        setCurrentUser(user);
         const newSiteSettings = getFromStorage('siteSettings', { name: 'CueScore' });
         setClubName(newSiteSettings.name);
     };
@@ -182,7 +154,7 @@ export default function AppSidebar() {
           ))}
           <Separator className="my-2" />
           {bottomNavItems.map((item) => {
-            if (item.auth && !currentUser) return null;
+            if (item.auth && !isAuthenticated) return null;
             return (
                 <SidebarMenuItem key={item.label}>
                 <Link href={item.href} passHref>

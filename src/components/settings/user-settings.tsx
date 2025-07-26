@@ -19,45 +19,57 @@ import { Button } from "@/components/ui/button";
 import { Settings, Bell, Trophy, Trash2, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { format } from 'date-fns';
+import { useAuthContext } from "@/components/auth-provider";
 
 export default function UserSettings() {
+  const { user, profile, isAuthenticated } = useAuthContext();
   const [registeredTournaments, setRegisteredTournaments] = useState<Tournament[]>([]);
   const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  const getNotificationKey = (user: {email: string} | null) => {
-    if (!user) return 'notifications';
-    return `notifications_${user.email}`;
+  const getNotificationKey = (userEmail: string | null) => {
+    if (!userEmail) return 'notifications';
+    return `notifications_${userEmail}`;
   }
 
+  // Set mounted state
   useEffect(() => {
-    const userData = getFromStorage<{name: string, email: string} | null>('userData', null);
-    setCurrentUser(userData);
+    setMounted(true);
+  }, []);
 
-    if (userData) {
+  useEffect(() => {
+    if (!mounted) return; // Don't run on server
+
+    if (isAuthenticated && profile?.email) {
       const allTournaments = getFromStorage<Tournament[]>('tournaments', []);
       const userRegistered = allTournaments.filter(t => 
-        t.registeredPlayers?.includes(userData.email)
+        t.registeredPlayers?.includes(profile.email)
       );
       setRegisteredTournaments(userRegistered);
       
       const userPending = allTournaments.filter(t => 
-        t.pendingPlayers?.includes(userData.email)
+        t.pendingPlayers?.includes(profile.email)
       );
       setPendingTournaments(userPending);
 
-      const notificationKey = getNotificationKey(userData);
+      const notificationKey = getNotificationKey(profile.email);
       const userNotifications = getFromStorage<Notification[]>(notificationKey, []);
       setNotifications(userNotifications);
+    } else {
+      // Clear data when not authenticated
+      setRegisteredTournaments([]);
+      setPendingTournaments([]);
+      setNotifications([]);
     }
     
     const handleStorageChange = () => {
-      const user = getFromStorage<{name: string, email: string} | null>('userData', null);
-      if (user) {
-        const notificationKey = getNotificationKey(user);
+      if (isAuthenticated && profile?.email) {
+        const notificationKey = getNotificationKey(profile.email);
         const storedNotifications = getFromStorage<Notification[]>(notificationKey, []);
         setNotifications(storedNotifications);
+      } else {
+        setNotifications([]);
       }
     };
 
@@ -66,11 +78,12 @@ export default function UserSettings() {
       window.removeEventListener('storage', handleStorageChange);
     };
 
-  }, []);
+  }, [mounted, isAuthenticated, profile?.email]);
 
   const handleMarkAsRead = (id: string) => {
-    if (!currentUser) return;
-    const notificationKey = getNotificationKey(currentUser);
+    if (!isAuthenticated || !profile?.email) return;
+    
+    const notificationKey = getNotificationKey(profile.email);
     const updatedNotifications = notifications.map(n => n.id === id ? { ...n, read: true } : n);
     setNotifications(updatedNotifications);
     saveToStorage(notificationKey, updatedNotifications);
@@ -78,13 +91,60 @@ export default function UserSettings() {
   };
 
   const handleClearAllNotifications = () => {
-    if (!currentUser) return;
-    const notificationKey = getNotificationKey(currentUser);
+    if (!isAuthenticated || !profile?.email) return;
+    
+    const notificationKey = getNotificationKey(profile.email);
     const updatedNotifications = notifications.map(n => ({...n, read: true}));
     setNotifications(updatedNotifications);
     saveToStorage(notificationKey, updatedNotifications);
     setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
   };
+
+  // Show loading state while mounting
+  if (!mounted) {
+    return (
+      <div className="max-w-4xl mx-auto flex flex-col gap-8">
+        <div className="flex items-center gap-4">
+          <Settings className="h-10 w-10 text-primary" />
+          <div className="hidden md:block">
+            <h1 className="text-3xl font-bold">User Settings</h1>
+            <p className="text-muted-foreground">Manage your tournament registrations and notifications.</p>
+          </div>
+        </div>
+        
+        <Card>
+          <CardContent className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground mt-4">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show message if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-4xl mx-auto flex flex-col gap-8">
+        <div className="flex items-center gap-4">
+          <Settings className="h-10 w-10 text-primary" />
+          <div className="hidden md:block">
+            <h1 className="text-3xl font-bold">User Settings</h1>
+            <p className="text-muted-foreground">Manage your tournament registrations and notifications.</p>
+          </div>
+        </div>
+        
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground mb-4">Please log in to view your settings.</p>
+            <Button asChild>
+              <Link href="/login">Log In</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">

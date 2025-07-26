@@ -26,15 +26,17 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [clubName, setClubName] = useState("CueScore");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
     setClubName(storedSettings.name);
   }, []);
 
-  const handleCreateAccount = () => {
-    if (!name || !email || !password) {
+  const handleCreateAccount = async () => {
+    if (!name || !email || !password || !username) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -43,31 +45,47 @@ export default function SignupPage() {
       return;
     }
 
-    const users = getFromStorage<any[]>('users', []);
-    
-    if (users.find(user => user.email === email)) {
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/custom-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          username,
+          fullName: name,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // Store the JWT token
+      localStorage.setItem('custom_jwt', data.token);
+
+      toast({
+        title: "Success!",
+        description: "Your account has been created successfully.",
+      });
+
+      // Redirect to my-stats page
+      router.push('/my-stats');
+
+    } catch (error) {
+      console.error('Registration error:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "An account with this email already exists.",
+        title: "Registration Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });
-      return;
+    } finally {
+      setIsLoading(false);
     }
-
-    const newUser = {
-      name,
-      email,
-      password, // In a real app, hash and salt this!
-    };
-    
-    saveToStorage('users', [...users, newUser]);
-
-    toast({
-      title: "Success!",
-      description: "Your account has been created. Please log in.",
-    });
-    
-    router.push('/login');
   };
 
   return (
@@ -83,13 +101,25 @@ export default function SignupPage() {
         <CardContent>
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
                 placeholder="John Doe"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                placeholder="johndoe"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="grid gap-2">
@@ -101,6 +131,7 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="grid gap-2">
@@ -111,12 +142,18 @@ export default function SignupPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
               />
             </div>
-            <Button type="button" className="w-full" onClick={handleCreateAccount}>
-              Create account
+            <Button 
+              type="button" 
+              className="w-full" 
+              onClick={handleCreateAccount}
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" disabled={isLoading}>
               Sign up with Google
             </Button>
           </div>

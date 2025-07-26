@@ -15,18 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Player } from "@/app/players/page";
+import type { Player } from "@/lib/playersService";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ResponsiveDialog } from "@/components/ui/dialog";
 
 interface AddPlayerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddPlayer: (player: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed' | 'wins' | 'losses' | 'averageBreak'>) => void;
+  onAddPlayer: (player: Omit<Player, 'id' | 'created_at' | 'updated_at'>) => void;
 }
 
 export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDialogProps) {
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [skillLevel, setSkillLevel] = useState<"Beginner" | "Intermediate" | "Pro">("Beginner");
   const [highestBreak, setHighestBreak] = useState(0);
   const [avatar, setAvatar] = useState("");
@@ -46,10 +48,29 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
   };
 
   const handleSubmit = () => {
-    if (!name) return;
-    onAddPlayer({ name, skillLevel, highestBreak, avatar });
+    if (!name || !email || !username) return;
+    
+    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+    
+    onAddPlayer({
+      name,
+      email,
+      username,
+      initials,
+      avatar,
+      skill_level: skillLevel,
+      matches_played: 0,
+      wins: 0,
+      losses: 0,
+      win_rate: '0%',
+      highest_break: highestBreak,
+      average_break: 0
+    });
+    
     onOpenChange(false);
     setName("");
+    setEmail("");
+    setUsername("");
     setSkillLevel("Beginner");
     setHighestBreak(0);
     setAvatar("");
@@ -96,6 +117,31 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
           />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="email" className="text-right">
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="col-span-3"
+            required
+          />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="username" className="text-right">
+            Username
+          </Label>
+          <Input
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="col-span-3"
+            required
+          />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="skillLevel" className="text-right">
             Skill Level
           </Label>
@@ -128,7 +174,7 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDi
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button type="submit" onClick={handleSubmit} disabled={!name}>Add Player</Button>
+        <Button type="submit" onClick={handleSubmit} disabled={!name || !email || !username}>Add Player</Button>
       </DialogFooter>
     </ResponsiveDialog>
   );

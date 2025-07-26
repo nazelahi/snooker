@@ -3,55 +3,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, List, LayoutGrid, Search, ArrowLeftRight } from "lucide-react";
-import { getFromStorage, saveToStorage } from "@/lib/storage";
-import { AddPlayerDialog } from "@/components/add-player-dialog";
-import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
-import type { Achievement } from "@/types/achievements";
-
-export interface Player {
-  id: number;
-  name: string;
-  skillLevel: "Beginner" | "Intermediate" | "Pro";
-  matchesPlayed: number;
-  winRate: string;
-  highestBreak: number;
-  avatar: string;
-  initials: string;
-  wins?: number;
-  losses?: number;
-  averageBreak?: number;
-  achievements?: Achievement[];
-}
-
-const initialPlayers: Player[] = [
-  { id: 1, name: "Ronnie O'Sullivan", skillLevel: "Pro", matchesPlayed: 25, winRate: "88%", highestBreak: 147, avatar: "/avatars/ronnie.png", initials: "RO" },
-  { id: 2, name: "Judd Trump", skillLevel: "Pro", matchesPlayed: 28, winRate: "71%", highestBreak: 147, avatar: "/avatars/judd.png", initials: "JT" },
-  { id: 3, name: "Mark Selby", skillLevel: "Pro", matchesPlayed: 26, winRate: "73%", highestBreak: 145, avatar: "/avatars/mark.png", initials: "MS" },
-  { id: 4, name: "Neil Robertson", skillLevel: "Pro", matchesPlayed: 24, winRate: "75%", highestBreak: 147, avatar: "/avatars/neil.png", initials: "NR" },
-  { id: 5, name: "Alice Johnson", skillLevel: "Intermediate", matchesPlayed: 40, winRate: "60%", highestBreak: 92, avatar: "/avatars/alice.png", initials: "AJ" },
-  { id: 6, name: "Bob Williams", skillLevel: "Beginner", matchesPlayed: 15, winRate: "40%", highestBreak: 45, avatar: "/avatars/bob.png", initials: "BW" },
-];
+import { Badge } from "@/components/ui/badge";
+import { Search, Grid3X3, List, Plus, Trophy, BarChart, Percent, Activity } from "lucide-react";
+import { AddPlayerDialog } from "@/components/add-player-dialog";
+import { useToast } from "@/hooks/use-toast";
+import type { Player } from "@/lib/playersService";
+import { playersService } from "@/lib/playersService";
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -59,215 +20,201 @@ export default function PlayersPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
   const [playersToShow, setPlayersToShow] = useState(10);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchPlayers = async () => {
+    try {
+      setLoading(true);
+      const fetchedPlayers = await playersService.getAllPlayers();
+      setPlayers(fetchedPlayers);
+    } catch (error) {
+      console.error('Error fetching players:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load players. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const storedPlayers = getFromStorage('players', initialPlayers);
-    setPlayers(storedPlayers);
-
-    if (localStorage.getItem('players') === null) {
-      saveToStorage('players', initialPlayers);
-    }
+    fetchPlayers();
   }, []);
 
-  const handleAddPlayer = (newPlayer: Omit<Player, 'id' | 'initials' | 'winRate' | 'matchesPlayed'>) => {
-    setPlayers(prevPlayers => {
-      const highestBreak = newPlayer.highestBreak;
-      const prevHighestBreakPlayer = prevPlayers.length > 0
-        ? prevPlayers.reduce((prev, curr) => prev.highestBreak > curr.highestBreak ? prev : curr)
-        : { highestBreak: 0 };
-
-      if (highestBreak > prevHighestBreakPlayer.highestBreak) {
-         const allUsers = getFromStorage<{name:string, email:string}[]>('users', []);
-         allUsers.forEach(user => {
-            const notifications = getFromStorage<Notification[]>(`notifications_${user.email}`, []);
-            const newNotification: Notification = {
-                id: Date.now().toString() + user.email,
-                title: "New Club Record!",
-                description: `${newPlayer.name} has set a new high break of ${highestBreak}!`,
-                read: false,
-                date: new Date().toISOString()
-            };
-            saveToStorage(`notifications_${user.email}`, [newNotification, ...notifications]);
-         });
-         setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-      }
-
-      const newPlayers = [...prevPlayers, {
-        ...newPlayer,
-        id: prevPlayers.length > 0 ? Math.max(...prevPlayers.map(p => p.id)) + 1 : 1,
-        initials: newPlayer.name.split(' ').map(n => n[0]).join(''),
-        matchesPlayed: 0,
-        winRate: "0%",
-        wins: 0,
-        losses: 0,
-        averageBreak: 0,
-      }];
-      saveToStorage('players', newPlayers);
-      return newPlayers;
-    });
+  const handleAddPlayer = async (newPlayer: Omit<Player, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const createdPlayer = await playersService.createPlayer(newPlayer);
+      setPlayers(prevPlayers => [...prevPlayers, createdPlayer]);
+      
+      toast({
+        title: "Success",
+        description: "Player added successfully.",
+      });
+    } catch (error) {
+      console.error('Error adding player:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add player. Please try again.",
+      });
+    }
   };
 
   const filteredPlayers = players.filter(player =>
-    player.name.toLowerCase().includes(searchQuery.toLowerCase())
+    player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    player.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
-  const paginatedPlayers = filteredPlayers.slice(0, playersToShow);
 
-  const ViewMoreButton = () => {
-    if (playersToShow >= filteredPlayers.length) return null;
+  const displayedPlayers = filteredPlayers.slice(0, playersToShow);
+
+  if (loading) {
     return (
-        <Button onClick={() => setPlayersToShow(playersToShow + 10)} variant="secondary" className="w-full">
-            View More
-        </Button>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading players...</p>
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="hidden md:block">
-            <h1 className="text-3xl font-bold">Players</h1>
-            <p className="text-muted-foreground">Manage player profiles and view statistics.</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Players</h1>
+          <p className="text-muted-foreground">Manage your snooker club members</p>
         </div>
-        <div className="flex items-center gap-2 w-full">
-             <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Search players..."
-                    className="pl-8"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-            </div>
-            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')} className="shrink-0">
-                <List className="h-5 w-5" />
-            </Button>
-            <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')} className="shrink-0">
-                <LayoutGrid className="h-5 w-5" />
-            </Button>
-             <Button asChild className="hidden md:flex shrink-0">
-                <Link href="/compare">
-                    <ArrowLeftRight className="mr-2 h-4 w-4"/>
-                    Compare
-                </Link>
-            </Button>
-            <Button onClick={() => setIsAddPlayerOpen(true)} className="hidden md:flex shrink-0">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Player
-            </Button>
-        </div>
+        <Button onClick={() => setIsAddPlayerOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Player
+        </Button>
       </div>
-      {view === 'list' && (
-        <Card>
-            <CardContent className="pt-6">
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Player</TableHead>
-                    <TableHead className="hidden sm:table-cell">Skill Level</TableHead>
-                    <TableHead className="text-center">Matches</TableHead>
-                    <TableHead className="text-center">Win Rate</TableHead>
-                    <TableHead className="text-center hidden lg:table-cell">Highest Break</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {paginatedPlayers.map((player) => (
-                    <TableRow key={player.id}>
-                    <TableCell>
-                        <div className="flex items-center gap-3">
-                        <Avatar>
-                            <AvatarImage src={player.avatar || `https://placehold.co/40x40.png`} data-ai-hint="player portrait" alt={player.name} />
-                            <AvatarFallback>{player.initials}</AvatarFallback>
-                        </Avatar>
-                        <Link href={`/players/${player.id}`} className="font-medium hover:underline">
-                            {player.name}
-                        </Link>
-                        </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                        <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'}>
-                        {player.skillLevel}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">{player.matchesPlayed}</TableCell>
-                    <TableCell className="text-center">{player.winRate}</TableCell>
-                    <TableCell className="text-center font-semibold text-primary hidden lg:table-cell">{player.highestBreak}</TableCell>
-                    </TableRow>
-                ))}
-                </TableBody>
-            </Table>
-            </CardContent>
-             {filteredPlayers.length > playersToShow && (
-                <CardFooter>
-                  <ViewMoreButton />
-                </CardFooter>
-            )}
-        </Card>
-      )}
 
-       {view === 'grid' && (
-        <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {paginatedPlayers.map((player) => (
-                <Card key={player.id} className="overflow-hidden">
-                    <CardHeader className="p-0">
-                    <Link href={`/players/${player.id}`}>
-                        <div className="relative aspect-square bg-muted">
-                            <Avatar className="h-full w-full rounded-none">
-                                <AvatarImage src={player.avatar || `https://placehold.co/400x400.png`} data-ai-hint="player portrait" alt={player.name} className="object-cover" />
-                                <AvatarFallback className="text-4xl rounded-none">{player.initials}</AvatarFallback>
-                            </Avatar>
-                        </div>
-                    </Link>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                    <Link href={`/players/${player.id}`} className="block">
-                        <CardTitle className="text-lg hover:underline truncate">{player.name}</CardTitle>
-                    </Link>
-                    <Badge variant={player.skillLevel === 'Pro' ? 'default' : player.skillLevel === 'Intermediate' ? 'secondary' : 'outline'} className="mt-2">
-                        {player.skillLevel}
-                    </Badge>
-                    <div className="text-sm text-muted-foreground mt-2">{player.winRate} Win Rate</div>
-                    </CardContent>
-                </Card>
-            ))}
-            </div>
-             {filteredPlayers.length > playersToShow && (
-                <ViewMoreButton />
-            )}
-        </>
-      )}
-       {filteredPlayers.length === 0 && (
-            <div className="text-center py-16">
-                <h3 className="text-xl font-semibold">No Players Found</h3>
-                <p className="text-muted-foreground mt-2">Your search for "{searchQuery}" did not match any players.</p>
-            </div>
-        )}
-
-      <div className="md:hidden fixed bottom-20 right-4 flex flex-col gap-2">
-         <Button
-            onClick={() => setIsAddPlayerOpen(true)}
-            className="h-14 w-14 rounded-full shadow-lg"
-            size="icon"
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search players..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={view === 'grid' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setView('grid')}
           >
-            <PlusCircle className="h-6 w-6" />
-            <span className="sr-only">Add Player</span>
+            <Grid3X3 className="h-4 w-4" />
           </Button>
           <Button
-            asChild
-            className="h-14 w-14 rounded-full shadow-lg"
-            size="icon"
-            variant="outline"
+            variant={view === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setView('list')}
           >
-             <Link href="/compare">
-                <ArrowLeftRight className="h-6 w-6"/>
-                <span className="sr-only">Compare Players</span>
-            </Link>
+            <List className="h-4 w-4" />
           </Button>
+        </div>
       </div>
 
-      <AddPlayerDialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen} onAddPlayer={handleAddPlayer} />
+      {view === 'grid' ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {displayedPlayers.map((player) => (
+            <Card key={player.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="text-center pb-2">
+                <Avatar className="h-16 w-16 mx-auto">
+                  <AvatarImage src={player.avatar || `https://placehold.co/80x80.png`} alt={player.name} />
+                  <AvatarFallback>{player.initials}</AvatarFallback>
+                </Avatar>
+                <CardTitle className="text-lg">{player.name}</CardTitle>
+                <CardDescription>{player.email}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Skill Level</span>
+                  <Badge variant="outline">{player.skill_level}</Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Win Rate</span>
+                  <span className="font-medium">{player.win_rate}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Matches</span>
+                  <span className="font-medium">{player.matches_played}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Highest Break</span>
+                  <span className="font-medium">{player.highest_break}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {displayedPlayers.map((player) => (
+            <Card key={player.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={player.avatar || `https://placehold.co/80x80.png`} alt={player.name} />
+                      <AvatarFallback>{player.initials}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold">{player.name}</h3>
+                      <p className="text-sm text-muted-foreground">{player.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Trophy className="h-4 w-4 text-muted-foreground" />
+                      <span>{player.win_rate}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Activity className="h-4 w-4 text-muted-foreground" />
+                      <span>{player.matches_played}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <BarChart className="h-4 w-4 text-muted-foreground" />
+                      <span>{player.highest_break}</span>
+                    </div>
+                    <Badge variant="outline">{player.skill_level}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {filteredPlayers.length > playersToShow && (
+        <div className="text-center">
+          <Button
+            variant="outline"
+            onClick={() => setPlayersToShow(prev => prev + 10)}
+          >
+            Load More Players
+          </Button>
+        </div>
+      )}
+
+      {displayedPlayers.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No players found.</p>
+        </div>
+      )}
+
+      <AddPlayerDialog
+        open={isAddPlayerOpen}
+        onOpenChange={setIsAddPlayerOpen}
+        onAddPlayer={handleAddPlayer}
+      />
     </div>
   );
 }

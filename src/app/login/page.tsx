@@ -25,13 +25,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [clubName, setClubName] = useState("CueScore");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const storedSettings = getFromStorage('siteSettings', { name: 'CueScore' });
     setClubName(storedSettings.name);
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast({
@@ -41,38 +42,46 @@ export default function LoginPage() {
       });
       return;
     }
-    
-    const adminEmail = "admin@gmail.com";
-    const adminPassword = "123456";
 
-    if (email === adminEmail && password === adminPassword) {
-        toast({
-            title: "Success!",
-            description: "Admin logged in successfully.",
-        });
-        saveToStorage('userData', { name: 'Admin', email: adminEmail, isAdmin: true });
-        setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
-        router.push('/admin');
-        return;
-    }
+    setIsLoading(true);
 
-    const storedUsers = getFromStorage<{name: string, email: string, password: string}[]>('users', []);
-    const user = storedUsers.find(u => u.email === email && u.password === password);
+    try {
+      console.log('Attempting login with:', { email });
+      
+      const res = await fetch('/api/custom-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      const data = await res.json();
+      console.log('Login response:', data);
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
 
-    if (user) {
+      // Store the JWT token
+      localStorage.setItem('custom_jwt', data.token);
+      console.log('Token stored:', data.token);
+      console.log('Stored token from localStorage:', localStorage.getItem('custom_jwt'));
+
       toast({
         title: "Success!",
-        description: "You have been logged in.",
+        description: "You have been logged in successfully.",
       });
-      saveToStorage('userData', { name: user.name, email: user.email, isAdmin: false });
-      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+
       router.push('/my-stats');
-    } else {
+
+    } catch (error) {
+      console.error('Login error:', error);
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
+        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -98,6 +107,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -116,12 +126,13 @@ export default function LoginPage() {
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
-                <Button type="submit" className="w-full">
-                  Login
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Logging in..." : "Login"}
                 </Button>
-                <Button variant="outline" className="w-full" type="button">
+                <Button variant="outline" className="w-full" type="button" disabled={isLoading}>
                   Login with Google
                 </Button>
               </div>
