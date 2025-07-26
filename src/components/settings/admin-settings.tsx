@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Player } from "@/app/players/page";
 import type { Tournament } from "@/app/tournaments/page";
-import { Trash2, PlusCircle, CheckCircle, Megaphone, Users, Trophy, Radio, Calendar, Settings2, ListChecks, ShieldCheck, Save } from "lucide-react";
+import { Trash2, PlusCircle, CheckCircle, Megaphone, Users, Trophy, Radio, Calendar, Settings2, ListChecks, ShieldCheck, Save, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +26,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 import Image from 'next/image';
 import { SiteLogo } from '../site-logo';
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 interface SiteSettings {
   name: string;
@@ -39,6 +40,10 @@ interface Notice {
   content: string;
   date: string;
   created_at: string;
+}
+
+interface Admin {
+  user_id: string;
 }
 
 const adminTabs = [
@@ -83,10 +88,15 @@ export default function AdminSettings() {
   const [newNoticeTitle, setNewNoticeTitle] = useState("");
   const [newNoticeContent, setNewNoticeContent] = useState("");
   const [activeTab, setActiveTab] = useState("players");
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const supabase = createSupabaseBrowserClient();
   
   const fetchAdminData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if(user) setCurrentUserId(user.id);
+    
     const { data: playersData } = await supabase.from('players').select('*');
     if (playersData) setPlayers(playersData);
 
@@ -112,6 +122,9 @@ export default function AdminSettings() {
     if(rulesData?.value){
       setRules(rulesData.value);
     }
+
+    const { data: adminsData } = await supabase.from('admins').select('user_id');
+    if (adminsData) setAdmins(adminsData);
   }
 
   useEffect(() => {
@@ -124,6 +137,7 @@ export default function AdminSettings() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'upcoming_matches' }, () => fetchAdminData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, () => fetchAdminData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchAdminData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admins' }, () => fetchAdminData())
       .subscribe();
 
     return () => {
@@ -131,7 +145,7 @@ export default function AdminSettings() {
     }
   }, []);
 
-  const handlePlayerChange = (id: number, field: keyof Player, value: any) => {
+  const handlePlayerChange = (id: string, field: keyof Player, value: any) => {
     setPlayers(prevPlayers => {
         return prevPlayers.map(p => {
             if (p.id === id) {
@@ -309,12 +323,18 @@ export default function AdminSettings() {
             toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
         }
     } else {
-        const { error } = await supabase.from(key).upsert(data, { onConflict: 'id' });
-        if (error) {
-            toast({ variant: 'destructive', title: "Save Failed!", description: error.message });
-            return;
+        const updatePromises = data.map((item: any) =>
+            supabase.from(key).update(item).eq('id', item.id)
+        );
+        const results = await Promise.all(updatePromises);
+        const hasError = results.some(res => res.error);
+
+        if (hasError) {
+            toast({ variant: 'destructive', title: "Save Failed!", description: "Some changes could not be saved." });
+            console.error('Save errors:', results.map(r => r.error).filter(Boolean));
+        } else {
+            toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
         }
-        toast({ title: "Saved!", description: `Your changes to ${name} have been saved.` });
     }
   };
 
@@ -330,6 +350,29 @@ export default function AdminSettings() {
       reader.readAsDataURL(file);
     }
   };
+  
+  const handleToggleAdmin = async (player: Player) => {
+    const adminUserIds = admins.map(a => a.user_id);
+    const isCurrentlyAdmin = adminUserIds.includes(player.id);
+    
+    if(isCurrentlyAdmin) {
+        // Revoke admin
+        const { error } = await supabase.from('admins').delete().eq('user_id', player.id);
+        if (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not revoke admin status.'});
+        } else {
+            toast({ title: 'Admin Revoked', description: `${player.name} is no longer an admin.`});
+        }
+    } else {
+        // Grant admin
+        const { error } = await supabase.from('admins').insert({ user_id: player.id });
+         if (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not grant admin status.'});
+        } else {
+            toast({ title: 'Admin Granted', description: `${player.name} is now an admin.`});
+        }
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8">
@@ -357,38 +400,51 @@ export default function AdminSettings() {
                     <CardDescription>Edit player details below. Changes are saved when you click the "Save Changes" button for this section.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                    <div className="hidden md:grid grid-cols-5 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
+                    <div className="hidden md:grid grid-cols-6 gap-4 items-center font-semibold text-sm text-muted-foreground px-2">
                         <span className="col-span-2">Name</span>
                         <span>Highest Break</span>
-                        <div className="col-span-2 grid grid-cols-3 gap-2">
-                            <span>Wins</span>
-                            <span>Losses</span>
-                            <span className="text-right">Actions</span>
-                        </div>
+                        <span>Wins</span>
+                        <span>Losses</span>
+                        <span className="text-right">Actions</span>
                     </div>
-                    {players.map(player => (
-                        <div key={player.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center p-2 rounded-lg bg-muted/50">
+                    {players.map(player => {
+                        const isPlayerAdmin = admins.some(a => a.user_id === player.id);
+                        return (
+                        <div key={player.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center p-2 rounded-lg bg-muted/50">
                              <div className="md:col-span-2 space-y-1">
                                 <Label htmlFor={`player-name-${player.id}`} className="md:hidden">Name</Label>
-                                <Input id={`player-name-${player.id}`} placeholder="Name" value={player.name} onChange={e => handlePlayerChange(player.id, 'name', e.target.value)} />
+                                <div className="flex items-center gap-2">
+                                     <Avatar className="h-8 w-8">
+                                        <AvatarImage src={player.avatar || ''} alt={player.name} />
+                                        <AvatarFallback>{player.initials}</AvatarFallback>
+                                     </Avatar>
+                                     <div className="flex flex-col">
+                                        <Input id={`player-name-${player.id}`} placeholder="Name" value={player.name} onChange={e => handlePlayerChange(player.id, 'name', e.target.value)} />
+                                        <span className="text-xs text-muted-foreground">{player.email}</span>
+                                     </div>
+                                </div>
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor={`player-break-${player.id}`} className="md:hidden">Highest Break</Label>
                                 <Input id={`player-break-${player.id}`} placeholder="Highest Break" value={player.highest_break} type="number" onChange={e => handlePlayerChange(player.id, 'highest_break', parseInt(e.target.value))} />
                             </div>
-                            <div className="md:col-span-2 grid grid-cols-3 gap-2 items-center">
-                                <div className="space-y-1">
-                                    <Label htmlFor={`player-wins-${player.id}`} className="md:hidden">Wins</Label>
-                                    <Input id={`player-wins-${player.id}`} placeholder="Wins" value={player.wins ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'wins', parseInt(e.target.value))} />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor={`player-losses-${player.id}`} className="md:hidden">Losses</Label>
-                                    <Input id={`player-losses-${player.id}`} placeholder="Losses" value={player.losses ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'losses', parseInt(e.target.value))} />
-                                </div>
+                            <div className="space-y-1">
+                                <Label htmlFor={`player-wins-${player.id}`} className="md:hidden">Wins</Label>
+                                <Input id={`player-wins-${player.id}`} placeholder="Wins" value={player.wins ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'wins', parseInt(e.target.value))} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor={`player-losses-${player.id}`} className="md:hidden">Losses</Label>
+                                <Input id={`player-losses-${player.id}`} placeholder="Losses" value={player.losses ?? 0} type="number" onChange={e => handlePlayerChange(player.id, 'losses', parseInt(e.target.value))} />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                                <Button variant={isPlayerAdmin ? "secondary" : "outline"} size="icon" onClick={() => handleToggleAdmin(player)} disabled={player.id === currentUserId} title={isPlayerAdmin ? "Revoke Admin" : "Make Admin"}>
+                                    <ShieldCheck className={cn("h-4 w-4", isPlayerAdmin ? "text-primary" : "text-muted-foreground")} />
+                                </Button>
                                 <Button variant="destructive" size="icon" onClick={() => handleDelete(player.id, 'players')} className="justify-self-end"><Trash2 className="h-4 w-4" /></Button>
                             </div>
                         </div>
-                    ))}
+                        )
+                    })}
                     </CardContent>
                     <CardFooter>
                        <Button onClick={() => handleSaveData('players', players, 'Players')}><Save className="h-4 w-4 mr-2" />Save Player Changes</Button>
@@ -701,3 +757,5 @@ export default function AdminSettings() {
     </div>
   );
 }
+
+    
