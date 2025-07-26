@@ -30,7 +30,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export interface Player {
-  id: number;
+  id: string;
   name: string;
   email?: string | null; // Optional email
   skill_level: "Beginner" | "Intermediate" | "Pro";

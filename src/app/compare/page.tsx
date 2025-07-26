@@ -81,12 +81,12 @@ export default function ComparePlayersPage() {
   }, [player1, player2, allMatches]);
 
   const handleSelectPlayer1 = (id: string) => {
-    const selected = players.find(p => p.id === parseInt(id));
+    const selected = players.find(p => p.id === id);
     setPlayer1(selected || null);
   };
 
   const handleSelectPlayer2 = (id: string) => {
-    const selected = players.find(p => p.id === parseInt(id));
+    const selected = players.find(p => p.id === id);
     setPlayer2(selected || null);
   };
   

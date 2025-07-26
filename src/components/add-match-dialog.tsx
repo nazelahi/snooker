@@ -21,13 +21,13 @@ import { ResponsiveDialog } from "@/components/ui/dialog";
 interface AddMatchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddMatch: (opponentId: number, myScore: number, opponentScore: number) => void;
+  onAddMatch: (opponentId: string, myScore: number, opponentScore: number) => void;
   players: Player[];
   currentUser: { name: string; email: string, avatar?: string };
 }
 
 export function AddMatchDialog({ open, onOpenChange, onAddMatch, players, currentUser }: AddMatchDialogProps) {
-  const [opponentId, setOpponentId] = useState<number | null>(null);
+  const [opponentId, setOpponentId] = useState<string | null>(null);
   const [myScore, setMyScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
   
@@ -55,7 +55,7 @@ export function AddMatchDialog({ open, onOpenChange, onAddMatch, players, curren
               Opponent
             </Label>
             <Select
-              onValueChange={(value: string) => setOpponentId(parseInt(value))}
+              onValueChange={(value: string) => setOpponentId(value)}
             >
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Select a player" />

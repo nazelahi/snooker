@@ -166,7 +166,7 @@ export default function MyStatsPage() {
     setIsEditing(false);
   }
   
-  const handleAddMatch = async (opponentId: number, myScore: number, opponentScore: number) => {
+  const handleAddMatch = async (opponentId: string, myScore: number, opponentScore: number) => {
     if (!currentUser) return;
 
     const opponent = allPlayers.find(p => p.id === opponentId);
