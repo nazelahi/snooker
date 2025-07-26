@@ -111,6 +111,10 @@ export default function DashboardPage() {
     return <Link href={`/players/${player.id}`} className={cn("font-medium hover:underline", className)}>{name}</Link>
   }
 
+  const activeTournamentsByType = inProgressTournaments.reduce((acc, t) => {
+    acc[t.format] = (acc[t.format] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="flex flex-col gap-8">
@@ -374,8 +378,12 @@ export default function DashboardPage() {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tournaments.filter(t => t.status === "In Progress").length}</div>
-            <p className="text-xs text-muted-foreground">2 Knockout, 2 League</p>
+            <div className="text-2xl font-bold">{inProgressTournaments.length}</div>
+            <p className="text-xs text-muted-foreground">
+                {Object.entries(activeTournamentsByType)
+                    .map(([format, count]) => `${count} ${format}`)
+                    .join(', ') || 'None in progress'}
+            </p>
           </CardContent>
         </Card>
         <Card>
