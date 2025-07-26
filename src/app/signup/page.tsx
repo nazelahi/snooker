@@ -52,7 +52,7 @@ export default function SignupPage() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -62,15 +62,43 @@ export default function SignupPage() {
       },
     });
 
-    setLoading(false);
-    if (error) {
+    if (signUpError) {
        toast({
         variant: "destructive",
         title: "Signup Failed",
-        description: error.message,
+        description: signUpError.message,
       });
-    } else if (data.user) {
-        if(data.user.identities && data.user.identities.length === 0) {
+       setLoading(false);
+       return;
+    }
+
+    if (signUpData.user) {
+        // Manually create player profile to ensure it's available immediately
+        const { error: playerError } = await supabase.from('players').insert({
+          id: signUpData.user.id,
+          name: name,
+          email: email,
+          initials: name.split(' ').map(n => n[0]).join(''),
+          skill_level: 'Beginner',
+          matches_played: 0,
+          win_rate: '0%',
+          highest_break: 0,
+          wins: 0,
+          losses: 0,
+          average_break: 0,
+        });
+
+        if (playerError) {
+             toast({
+              variant: "destructive",
+              title: "Signup Error",
+              description: "Could not create player profile. " + playerError.message,
+            });
+             setLoading(false);
+             return;
+        }
+        
+        if(signUpData.user.identities && signUpData.user.identities.length === 0) {
             toast({
                 variant: "destructive",
                 title: "Signup Error",
@@ -84,6 +112,7 @@ export default function SignupPage() {
             router.push('/login');
         }
     }
+     setLoading(false);
   };
   
    const handleGoogleSignup = async () => {

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -28,6 +27,7 @@ import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
 import type { Achievement } from "@/types/achievements";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface Player {
   id: number;
@@ -56,7 +56,7 @@ export default function PlayersPage() {
 
   const fetchPlayers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('players').select('*');
+    const { data, error } = await supabase.from('players').select('*').order('name', { ascending: true });
     if (data) {
         setPlayers(data as Player[]);
     }
@@ -69,29 +69,22 @@ export default function PlayersPage() {
 
   const handleAddPlayer = async (newPlayerData: Omit<Player, 'id' | 'initials' | 'win_rate' | 'matches_played' | 'wins' | 'losses' | 'average_break' | 'created_at'>) => {
     
-    // Check for new high score
-    const highestBreak = newPlayerData.highest_break;
-    const prevHighestBreakPlayer = players.length > 0
-        ? players.reduce((prev, curr) => prev.highest_break > curr.highest_break ? prev : curr)
-        : { highest_break: 0 };
-    if (highestBreak > prevHighestBreakPlayer.highest_break) {
-        const { data: allPlayers } = await supabase.from('players').select('name');
-        if (allPlayers) {
-            const notifications = allPlayers.map(p => ({
-                user_name: p.name,
-                title: "New Club Record!",
-                description: `${newPlayerData.name} has set a new high break of ${highestBreak}!`,
-                read: false,
-                date: new Date().toISOString()
-            }));
-            await supabase.from('notifications').insert(notifications);
-        }
+    // This is now primarily for admin use, signup handles user creation.
+    const { error } = await supabase.from('players').insert([{
+        ...newPlayerData,
+        initials: newPlayerData.name.split(' ').map(n => n[0]).join(''),
+        win_rate: '0%',
+        matches_played: 0,
+        wins: 0,
+        losses: 0,
+        average_break: 0
+    }]);
+
+    if (error) {
+        // Handle error, maybe show a toast
+    } else {
+        fetchPlayers(); // Refresh the list
     }
-    
-    // This function is no longer the primary way to add players, as signup handles it.
-    // It's kept for admin purposes. We need to handle this differently.
-    // For now, let's assume this is disabled and player creation is tied to auth.
-    console.warn("Manual player addition is for admins and requires a corresponding auth user.");
 
   };
 
@@ -109,6 +102,57 @@ export default function PlayersPage() {
         </Button>
     );
   };
+
+  const PlayerListSkeleton = () => (
+    <Card>
+      <CardContent className="pt-6">
+        <Table>
+          <TableHeader>
+            <TableRow>
+                <TableHead>Player</TableHead>
+                <TableHead className="hidden sm:table-cell">Skill Level</TableHead>
+                <TableHead className="text-center">Matches</TableHead>
+                <TableHead className="text-center">Win Rate</TableHead>
+                <TableHead className="text-center hidden lg:table-cell">Highest Break</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[...Array(5)].map((_, i) => (
+              <TableRow key={i}>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-20" /></TableCell>
+                <TableCell className="text-center"><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
+                <TableCell className="text-center"><Skeleton className="h-4 w-12 mx-auto" /></TableCell>
+                <TableCell className="text-center hidden lg:table-cell"><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
+  const PlayerGridSkeleton = () => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        {[...Array(8)].map((_, i) => (
+            <Card key={i}>
+                <CardHeader className="p-0">
+                    <Skeleton className="aspect-square w-full" />
+                </CardHeader>
+                <CardContent className="p-4">
+                    <Skeleton className="h-5 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                </CardContent>
+            </Card>
+        ))}
+    </div>
+  );
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -142,7 +186,9 @@ export default function PlayersPage() {
             </Button>
         </div>
       </div>
-      {view === 'list' && (
+      {loading ? (
+        view === 'list' ? <PlayerListSkeleton /> : <PlayerGridSkeleton />
+      ) : view === 'list' ? (
         <Card>
             <CardContent className="pt-6">
             <Table>
@@ -188,9 +234,7 @@ export default function PlayersPage() {
                 </CardFooter>
             )}
         </Card>
-      )}
-
-       {view === 'grid' && (
+      ) : (
         <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {paginatedPlayers.map((player) => (

@@ -20,6 +20,7 @@ import type { Player } from "@/app/players/page";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match, UpcomingMatch } from "@/types/matches";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AllMatchesPage() {
   const [allMatches, setAllMatches] = useState<Match[]>([]);
@@ -81,6 +82,44 @@ export default function AllMatchesPage() {
         return <span className={cn("font-medium", className)}>{name}</span>;
     }
     return <Link href={`/players/${player.id}`} className={cn("font-medium hover:underline", className)}>{name}</Link>
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="hidden md:block">
+              <Skeleton className="h-8 w-48 mb-2" />
+              <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-full md:w-64" />
+        </div>
+        <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40 mb-2" />
+              <Skeleton className="h-4 w-56" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40 mb-2" />
+              <Skeleton className="h-4 w-56" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </CardContent>
+        </Card>
+      </div>
+    );
   }
 
 

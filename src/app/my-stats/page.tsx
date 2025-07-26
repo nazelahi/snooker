@@ -26,8 +26,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
 
 const initialStats = {
-  name: "John Doe",
-  initials: "JD",
+  name: "Player",
+  initials: "P",
   avatar: "",
   matchesPlayed: 0,
   wins: 0,
@@ -39,72 +39,69 @@ const initialStats = {
 };
 
 export default function MyStatsPage() {
+  const [playerData, setPlayerData] = useState<Player | null>(null);
   const [userStats, setUserStats] = useState(initialStats);
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string, avatar?: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{name: string, email: string, id: string} | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddMatchOpen, setIsAddMatchOpen] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedAvatar, setEditedAvatar] = useState("");
   const [avatarPreview, setAvatarPreview] = useState("");
-  const [editedWins, setEditedWins] = useState(0);
-  const [editedLosses, setEditedLosses] = useState(0);
-  const [editedAverageBreak, setEditedAverageBreak] = useState(0);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-
   const { toast } = useToast();
 
   const fetchCurrentUserData = async () => {
+    setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push('/login');
       return;
     }
+    
+    const currentUserData = { name: user.user_metadata.full_name || user.email!, email: user.email!, id: user.id };
+    setCurrentUser(currentUserData);
 
-    const { data: playersData } = await supabase.from('players').select('*');
-    if (playersData) {
-      setAllPlayers(playersData);
-      const player = playersData.find(p => p.name.toLowerCase() === (user.user_metadata.full_name || "").toLowerCase());
-
-      const currentUserData = { name: user.user_metadata.full_name || user.email!, email: user.email!, avatar: player?.avatar };
-      setCurrentUser(currentUserData);
-      
-      let statsToSet;
-      if (player) {
-        statsToSet = {
-            name: player.name,
-            initials: player.initials,
-            avatar: player.avatar,
-            matchesPlayed: player.matches_played,
-            wins: player.wins ?? 0,
-            losses: player.losses ?? 0,
-            winRate: player.win_rate,
-            highestBreak: player.highest_break,
-            averageBreak: player.average_break ?? 0,
-            tournamentsWon: player.skill_level === 'Pro' ? 2 : (player.skill_level === 'Intermediate' ? 1 : 0),
-        };
-      } else {
-         statsToSet = {...initialStats, name: currentUserData.name, initials: currentUserData.name.split(' ').map(n => n[0]).join('')};
-      }
+    const { data: player, error: playerError } = await supabase.from('players').select('*').eq('id', user.id).single();
+    
+    if (player) {
+      setPlayerData(player);
+      const statsToSet = {
+          name: player.name,
+          initials: player.initials,
+          avatar: player.avatar,
+          matchesPlayed: player.matches_played,
+          wins: player.wins ?? 0,
+          losses: player.losses ?? 0,
+          winRate: player.win_rate,
+          highestBreak: player.highest_break,
+          averageBreak: player.average_break ?? 0,
+          tournamentsWon: player.skill_level === 'Pro' ? 2 : (player.skill_level === 'Intermediate' ? 1 : 0),
+      };
       setUserStats(statsToSet);
       setEditedName(statsToSet.name);
       setAvatarPreview(statsToSet.avatar);
-      setEditedWins(statsToSet.wins);
-      setEditedLosses(statsToSet.losses);
-      setEditedAverageBreak(statsToSet.averageBreak);
-
-      const { data: allMatches } = await supabase.from('matches').select('*').or(`winner.eq.${currentUserData.name},loser.eq.${currentUserData.name}`).order('date', { ascending: false });
-      if (allMatches) {
-        const matchesForApproval = allMatches.filter(match => 
-          match.pending_score && match.pending_score.proposed_by !== currentUserData.email
-        );
-        setPendingMatches(matchesForApproval as Match[]);
-        setMatchHistory(allMatches as Match[]);
-      }
+    } else {
+       setUserStats({...initialStats, name: currentUserData.name, initials: currentUserData.name.split(' ').map(n => n[0]).join('')});
     }
+
+    const { data: allPlayersData } = await supabase.from('players').select('*');
+    if (allPlayersData) setAllPlayers(allPlayersData);
+
+    const { data: allMatches } = await supabase.from('matches').select('*').or(`winner.eq.${currentUserData.name},loser.eq.${currentUserData.name}`).order('date', { ascending: false });
+    if (allMatches) {
+      const matchesForApproval = allMatches.filter(match => 
+        match.pending_score && match.pending_score.proposed_by !== currentUserData.email
+      );
+      setPendingMatches(matchesForApproval as Match[]);
+      setMatchHistory(allMatches as Match[]);
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -135,40 +132,28 @@ export default function MyStatsPage() {
   };
 
   const handleSaveChanges = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !playerData) return;
     
-    const currentPlayer = allPlayers.find(p => p.name.toLowerCase() === currentUser.name.toLowerCase());
-    if (!currentPlayer) return;
-
-    const matchesPlayed = editedWins + editedLosses;
-    const winRate = matchesPlayed > 0 ? ((editedWins / matchesPlayed) * 100).toFixed(1) + '%' : "0%";
-
     const updatedPlayerData = { 
       name: editedName,
       initials: editedName.split(' ').map(n => n[0]).join(''),
-      avatar: editedAvatar || currentPlayer.avatar,
-      wins: editedWins,
-      losses: editedLosses,
-      average_break: editedAverageBreak,
-      matches_played: matchesPlayed,
-      win_rate: winRate,
+      avatar: editedAvatar || playerData.avatar,
     };
     
-    const { error } = await supabase.from('players').update(updatedPlayerData).eq('id', currentPlayer.id);
+    const { error } = await supabase.from('players').update(updatedPlayerData).eq('id', playerData.id);
 
     if (error) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
       return;
     }
     
-    // Also update user metadata if name changed
     if (editedName !== currentUser.name) {
       await supabase.auth.updateUser({ data: { full_name: editedName } });
     }
 
     toast({ title: "Success", description: "Your profile has been updated."});
     setIsEditing(false);
-    fetchCurrentUserData(); // Refresh all data
+    fetchCurrentUserData();
   }
   
   const handleAddMatch = async (opponentId: number, myScore: number, opponentScore: number) => {
@@ -188,8 +173,8 @@ export default function MyStatsPage() {
         media: [],
         comments: [],
         pending_score: {
-            score1: myScore > opponentScore ? myScore : opponentScore,
-            score2: myScore > opponentScore ? opponentScore : myScore,
+            score1: myScore,
+            score2: opponentScore,
             proposed_by: currentUser.email,
         }
     };
@@ -219,14 +204,14 @@ export default function MyStatsPage() {
     const match = pendingMatches.find(m => m.id === matchId);
     if (!match || !match.pending_score) return;
 
-    const proposerIsWinner = match.winner.toLowerCase() === match.pending_score.proposed_by.toLowerCase();
-    const opponentName = proposerIsWinner ? match.loser : match.winner;
+    const proposer = allPlayers.find(p => p.email === match.pending_score!.proposed_by);
+    if (!proposer) return;
     
     if (approve) {
         const { score1, score2 } = match.pending_score;
         
-        const winnerName = score1 > score2 ? currentUser.name : opponentName;
-        const loserName = score1 > score2 ? opponentName : currentUser.name;
+        const winnerName = score1 > score2 ? currentUser.name : proposer.name;
+        const loserName = score1 > score2 ? proposer.name : currentUser.name;
 
         // Update match to be confirmed
         const { error: matchUpdateError } = await supabase
@@ -244,7 +229,6 @@ export default function MyStatsPage() {
           return;
         }
 
-        // Update player stats
         const winner = allPlayers.find(p => p.name === winnerName)!;
         const loser = allPlayers.find(p => p.name === loserName)!;
         
@@ -253,24 +237,22 @@ export default function MyStatsPage() {
         
         toast({ title: "Approved", description: "The match score has been updated." });
     } else {
-        // Delete rejected match report
         await supabase.from('matches').delete().eq('id', matchId);
         toast({ title: "Rejected", description: "The score has been rejected and the match report removed." });
     }
 
     await supabase.from('notifications').insert([{
-        user_name: opponentName,
+        user_name: proposer.name,
         title: `Match Result ${approve ? 'Approved' : 'Rejected'}`,
         description: `${currentUser.name} has ${approve ? 'approved' : 'rejected'} the score for your recent match.`,
         read: false,
         date: new Date().toISOString()
     }]);
     
-    // Refresh all data
     fetchCurrentUserData();
   }
 
-  if(!currentUser) return <p>Loading...</p>
+  if(loading || !currentUser) return <p>Loading...</p>
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
@@ -306,18 +288,12 @@ export default function MyStatsPage() {
                     {pendingMatches.map(match => {
                         if(!match.pending_score) return null;
                         
-                        const proposerIsWinner = match.winner.toLowerCase() === match.pending_score.proposed_by.toLowerCase();
-                        const opponentName = proposerIsWinner ? match.loser : match.winner;
+                        const proposer = allPlayers.find(p => p.email === match.pending_score!.proposed_by);
+                        if (!proposer) return null;
 
-                        let myProposedScore, opponentProposedScore;
-                        
-                        if(proposerIsWinner) {
-                           myProposedScore = match.pending_score.score2;
-                           opponentProposedScore = match.pending_score.score1;
-                        } else {
-                           myProposedScore = match.pending_score.score1;
-                           opponentProposedScore = match.pending_score.score2;
-                        }
+                        const opponentName = proposer.name;
+                        const myProposedScore = match.winner === opponentName ? match.pending_score.score2 : match.pending_score.score1;
+                        const opponentProposedScore = match.winner === opponentName ? match.pending_score.score1 : match.pending_score.score2;
 
                         return (
                             <li key={match.id} className="p-4 rounded-lg bg-muted/50">
@@ -343,7 +319,7 @@ export default function MyStatsPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Edit Your Profile</CardTitle>
-                <CardDescription>Update your name, avatar, and performance details here.</CardDescription>
+                <CardDescription>Update your name and avatar here. Other stats are updated automatically.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -358,20 +334,6 @@ export default function MyStatsPage() {
                             <AvatarFallback>{editedName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarChange} />
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="wins">Wins</Label>
-                        <Input id="wins" type="number" value={editedWins} onChange={(e) => setEditedWins(parseInt(e.target.value, 10) || 0)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="losses">Losses</Label>
-                        <Input id="losses" type="number" value={editedLosses} onChange={(e) => setEditedLosses(parseInt(e.target.value, 10) || 0)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="averageBreak">Average Break</Label>
-                        <Input id="averageBreak" type="number" value={editedAverageBreak} onChange={(e) => setEditedAverageBreak(parseInt(e.target.value, 10) || 0)} />
                     </div>
                 </div>
                 <Button onClick={handleSaveChanges}>
@@ -428,7 +390,6 @@ export default function MyStatsPage() {
        <Card>
         <CardHeader>
           <CardTitle>
-            <Swords />
             My Match History
           </CardTitle>
         </CardHeader>
@@ -438,8 +399,7 @@ export default function MyStatsPage() {
               {matchHistory.map((match) => {
                 const isWinner = match.winner === currentUser?.name;
                 const opponentName = isWinner ? match.loser : match.winner;
-                const opponent = allPlayers.find(p => p.name === opponentName);
-
+                
                 return (
                   <li 
                     key={match.id} 
@@ -523,4 +483,3 @@ export default function MyStatsPage() {
     </div>
   );
 }
-    

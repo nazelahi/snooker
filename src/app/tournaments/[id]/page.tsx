@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TournamentBracket, type Matchup, type Round } from "@/components/tournament-bracket";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
 
 
@@ -57,6 +57,7 @@ export default function TournamentDetailsPage() {
   const id = params.id as string;
   const { toast } = useToast();
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   const fetchTournamentData = async () => {
     if (!id) return;
@@ -132,7 +133,7 @@ export default function TournamentDetailsPage() {
       supabase.removeChannel(tournamentsSubscription);
     };
 
-  }, [id, toast]);
+  }, [id, toast, supabase]);
 
   const getPlayerAvatar = (name: string) => {
     const player = allPlayers.find(p => p.name === name);

@@ -38,6 +38,7 @@ import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match, UpcomingMatch, LiveMatch } from "@/types/matches";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Notice {
   id: string;
@@ -47,15 +48,15 @@ interface Notice {
 }
 
 export default function DashboardPage() {
-  const [playerStandings, setPlayerStandings] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [recentResults, setRecentResults] = useState<Match[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [upcomingToShow, setUpcomingToShow] = useState(5);
   const [recentToShow, setRecentToShow] = useState(5);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
   const supabase = createSupabaseBrowserClient();
   
   const liveMatchesPlugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true }));
@@ -66,11 +67,11 @@ export default function DashboardPage() {
   const finishedTournamentsPlugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true }));
 
   const fetchDashboardData = async () => {
+    setLoading(true);
     // Fetch all data from Supabase
     const { data: playersData } = await supabase.from('players').select('*').order('wins', { ascending: false });
     if (playersData) {
         setPlayers(playersData);
-        setPlayerStandings(playersData);
     }
 
     const { data: upcomingData } = await supabase.from('upcoming_matches').select('*').order('date').order('time').limit(10);
@@ -87,6 +88,7 @@ export default function DashboardPage() {
     
     const { data: noticesData } = await supabase.from('notices').select('*').order('date', { ascending: false }).limit(5);
     if (noticesData) setNotices(noticesData as Notice[]);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -115,6 +117,22 @@ export default function DashboardPage() {
     acc[t.format] = (acc[t.format] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-8">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-48 w-full" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -516,7 +534,7 @@ export default function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {playerStandings.map((player, index) => (
+              {players.map((player, index) => (
                 <TableRow key={player.id} className="bg-muted/50 rounded-lg">
                     <TableCell className="font-medium text-center">{index + 1}</TableCell>
                     <TableCell>
