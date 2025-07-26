@@ -1,11 +1,38 @@
--- =================================================================
--- Players Table
--- Central table for user profiles and game statistics.
--- =================================================================
-CREATE TABLE players (
-    id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 15.1
+-- Dumped by pg_dump version 15.1 (Debian 15.1-1.pgdg110+1)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Create is_admin function
+--
+create or replace function public.is_admin()
+returns boolean as $$
+  select auth.jwt()->>'email' = 'admin@gmail.com';
+$$ language sql security definer;
+
+
+--
+-- Create players table
+--
+CREATE TABLE public.players (
+    id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
     name text NOT NULL,
-    email text UNIQUE,
+    email text,
     skill_level text DEFAULT 'Beginner'::text,
     matches_played integer DEFAULT 0 NOT NULL,
     win_rate text DEFAULT '0%'::text,
@@ -15,205 +42,238 @@ CREATE TABLE players (
     wins integer DEFAULT 0,
     losses integer DEFAULT 0,
     average_break integer DEFAULT 0,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    role text DEFAULT 'player'::text
 );
+ALTER TABLE public.players OWNER TO postgres;
+ALTER TABLE ONLY public.players
+    ADD CONSTRAINT players_pkey PRIMARY KEY (id);
 
--- Enable Row Level Security for players
-ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
+--
+-- Create matches table
+--
+CREATE TABLE public.matches (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    winner text,
+    loser text,
+    score text,
+    date timestamp with time zone,
+    media text[],
+    "comments" jsonb,
+    pending_score jsonb,
+    tournament_id bigint
+);
+ALTER TABLE public.matches OWNER TO postgres;
+CREATE SEQUENCE public.matches_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.matches_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.matches_id_seq OWNED BY public.matches.id;
+ALTER TABLE ONLY public.matches ALTER COLUMN id SET DEFAULT nextval('public.matches_id_seq'::regclass);
+ALTER TABLE ONLY public.matches
+    ADD CONSTRAINT matches_pkey PRIMARY KEY (id);
 
--- Policy: Allow users to read all player profiles
-CREATE POLICY "Allow read access to all users" ON public.players FOR SELECT USING (true);
-
--- Policy: Allow users to update their own profile
-CREATE POLICY "Allow users to update their own profile" ON public.players FOR UPDATE USING ((auth.uid() = id));
-
--- Policy: Allow new user signups to create a player profile
-CREATE POLICY "Allow insert for new users" ON public.players FOR INSERT WITH CHECK (auth.uid() = id);
-
--- =================================================================
--- Tournaments Table
--- Stores information about all tournaments.
--- =================================================================
-CREATE TABLE tournaments (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    name text NOT NULL,
-    format text NOT NULL,
-    players integer NOT NULL,
-    status text NOT NULL,
-    rules jsonb,
+--
+-- Create tournaments table
+--
+CREATE TABLE public.tournaments (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    name text,
+    format text,
+    players integer,
+    status text,
+    rules text[],
     image text,
-    pendingPlayers jsonb,
-    registeredPlayers jsonb,
+    "pendingPlayers" text[],
+    "registeredPlayers" text[],
     location text,
     winner text,
-    bracket jsonb,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    bracket jsonb
 );
+ALTER TABLE public.tournaments OWNER TO postgres;
+CREATE SEQUENCE public.tournaments_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.tournaments_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.tournaments_id_seq OWNED BY public.tournaments.id;
+ALTER TABLE ONLY public.tournaments ALTER COLUMN id SET DEFAULT nextval('public.tournaments_id_seq'::regclass);
+ALTER TABLE ONLY public.tournaments
+    ADD CONSTRAINT tournaments_pkey PRIMARY KEY (id);
 
--- Enable RLS for tournaments
-ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;
--- Policy: Allow all users to read tournaments
-CREATE POLICY "Allow read access to all users" ON public.tournaments FOR SELECT USING (true);
--- Policy: Allow only admin to insert/update/delete tournaments
-CREATE POLICY "Allow admin full access" ON public.tournaments FOR ALL USING (public.is_admin(auth.email())) WITH CHECK (public.is_admin(auth.email()));
+--
+-- Create notices table
+--
+CREATE TABLE public.notices (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    title text,
+    content text,
+    date timestamp with time zone
+);
+ALTER TABLE public.notices OWNER TO postgres;
+CREATE SEQUENCE public.notices_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.notices_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.notices_id_seq OWNED BY public.notices.id;
+ALTER TABLE ONLY public.notices ALTER COLUMN id SET DEFAULT nextval('public.notices_id_seq'::regclass);
+ALTER TABLE ONLY public.notices
+    ADD CONSTRAINT notices_pkey PRIMARY KEY (id);
 
+--
+-- Create live_matches view
+--
+CREATE VIEW public.live_matches AS
+ SELECT upcoming_matches.id,
+    upcoming_matches.tournament_id,
+    tournaments.name AS tournament_name,
+    upcoming_matches.player1,
+    upcoming_matches.player2,
+    (upcoming_matches.id % 5) AS score1,
+    (upcoming_matches.id % 3) AS score2
+   FROM (public.upcoming_matches
+     LEFT JOIN public.tournaments ON ((upcoming_matches.tournament_id = tournaments.id)))
+  WHERE ((upcoming_matches.date = CURRENT_DATE) AND (tournaments.status = 'In Progress'::text));
+ALTER TABLE public.live_matches OWNER TO postgres;
 
--- =================================================================
+--
+-- Create notifications table
+--
+CREATE TABLE public.notifications (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    user_name text,
+    title text,
+    description text,
+    read boolean DEFAULT false,
+    date timestamp with time zone,
+    link text
+);
+ALTER TABLE public.notifications OWNER TO postgres;
+CREATE SEQUENCE public.notifications_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.notifications_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.notifications_id_seq OWNED BY public.notifications.id;
+ALTER TABLE ONLY public.notifications ALTER COLUMN id SET DEFAULT nextval('public.notifications_id_seq'::regclass);
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+--
+-- Create settings table
+--
+CREATE TABLE public.settings (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    key text,
+    value jsonb
+);
+ALTER TABLE public.settings OWNER TO postgres;
+CREATE SEQUENCE public.settings_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.settings_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.settings_id_seq OWNED BY public.settings.id;
+ALTER TABLE ONLY public.settings ALTER COLUMN id SET DEFAULT nextval('public.settings_id_seq'::regclass);
+ALTER TABLE ONLY public.settings
+    ADD CONSTRAINT settings_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.settings
+    ADD CONSTRAINT settings_key_key UNIQUE (key);
+
+--
+-- Create upcoming_matches table
+--
+CREATE TABLE public.upcoming_matches (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    player1 text,
+    player2 text,
+    date date,
+    "time" time without time zone,
+    tournament_id bigint
+);
+ALTER TABLE public.upcoming_matches OWNER TO postgres;
+CREATE SEQUENCE public.upcoming_matches_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.upcoming_matches_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.upcoming_matches_id_seq OWNED BY public.upcoming_matches.id;
+ALTER TABLE ONLY public.upcoming_matches ALTER COLUMN id SET DEFAULT nextval('public.upcoming_matches_id_seq'::regclass);
+ALTER TABLE ONLY public.upcoming_matches
+    ADD CONSTRAINT upcoming_matches_pkey PRIMARY KEY (id);
+
+--
+-- RLS Policies
+--
+
+-- Players Table
+alter table public.players enable row level security;
+create policy "Players are viewable by everyone." on public.players for select using (true);
+create policy "Users can insert their own player profile." on public.players for insert with check (auth.uid() = id);
+create policy "Users can update their own player profile." on public.players for update using (auth.uid() = id);
+create policy "Admins can manage all players" on public.players for all using (public.is_admin());
+
 -- Matches Table
--- Stores results of completed matches.
--- =================================================================
-CREATE TABLE matches (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    winner text NOT NULL,
-    loser text NOT NULL,
-    score text NOT NULL,
-    date timestamp with time zone DEFAULT now() NOT NULL,
-    media jsonb,
-    comments jsonb,
-    pending_score jsonb,
-    tournament_id bigint REFERENCES public.tournaments(id),
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
--- Enable RLS for matches
-ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
--- Policy: Allow read access to all
-CREATE POLICY "Allow read access to all" ON public.matches FOR SELECT USING (true);
--- Policy: Allow logged-in users to insert
-CREATE POLICY "Allow insert for authenticated users" ON public.matches FOR INSERT WITH CHECK (auth.role() = 'authenticated');
--- Policy: Allow users to update their own matches
-CREATE POLICY "Allow update for participants" ON public.matches FOR UPDATE USING (
-  (auth.uid() IN (SELECT id FROM players WHERE name = winner OR name = loser))
-  OR public.is_admin(auth.email())
-);
--- Policy: Allow admin to delete
-CREATE POLICY "Allow admin delete" ON public.matches FOR DELETE USING (public.is_admin(auth.email()));
+alter table public.matches enable row level security;
+create policy "Matches are viewable by everyone." on public.matches for select using (true);
+create policy "Authenticated users can create matches." on public.matches for insert with check (auth.role() = 'authenticated');
+create policy "Users can update their own matches." on public.matches for update using (auth.jwt()->>'email' = (pending_score->>'proposed_by'));
+create policy "Admins can manage all matches" on public.matches for all using (public.is_admin());
 
+-- Tournaments Table
+alter table public.tournaments enable row level security;
+create policy "Tournaments are viewable by everyone." on public.tournaments for select using (true);
+create policy "Admins can manage all tournaments." on public.tournaments for all using (public.is_admin());
+create policy "Authenticated users can apply for tournaments" on public.tournaments for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
--- =================================================================
--- Upcoming Matches Table
--- Stores scheduled matches that have not yet been played.
--- =================================================================
-CREATE TABLE upcoming_matches (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    player1 text NOT NULL,
-    player2 text NOT NULL,
-    date date NOT NULL,
-    "time" time without time zone NOT NULL,
-    tournament_id bigint REFERENCES public.tournaments(id),
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
--- Enable RLS
-ALTER TABLE public.upcoming_matches ENABLE ROW LEVEL SECURITY;
--- Policy: Allow read for all
-CREATE POLICY "Allow read access to all" ON public.upcoming_matches FOR SELECT USING (true);
--- Policy: Allow only admin to manage
-CREATE POLICY "Allow admin full access" ON public.upcoming_matches FOR ALL USING (public.is_admin(auth.email()));
-
--- =================================================================
--- Live Matches Table
--- Stores matches currently in progress.
--- =================================================================
-CREATE TABLE live_matches (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    tournament_id bigint NOT NULL REFERENCES public.tournaments(id),
-    tournament_name text NOT NULL,
-    player1 text NOT NULL,
-    player2 text NOT NULL,
-    score1 integer NOT NULL,
-    score2 integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
--- Enable RLS
-ALTER TABLE public.live_matches ENABLE ROW LEVEL SECURITY;
--- Policy: Allow read for all
-CREATE POLICY "Allow read access to all" ON public.live_matches FOR SELECT USING (true);
--- Policy: Allow only admin to manage
-CREATE POLICY "Allow admin full access" ON public.live_matches FOR ALL USING (public.is_admin(auth.email()));
-
-
--- =================================================================
--- Notices Table
--- For club-wide announcements.
--- =================================================================
-CREATE TABLE notices (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    title text NOT NULL,
-    content text NOT NULL,
-    date timestamp with time zone NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
--- Enable RLS
-ALTER TABLE public.notices ENABLE ROW LEVEL SECURITY;
--- Policy: Allow read for all
-CREATE POLICY "Allow read access to all" ON public.notices FOR SELECT USING (true);
--- Policy: Allow only admin to manage
-CREATE POLICY "Allow admin full access" ON public.notices FOR ALL USING (public.is_admin(auth.email()));
-
-
--- =================================================================
 -- Notifications Table
--- For user-specific alerts.
--- =================================================================
-CREATE TABLE notifications (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_name text NOT NULL,
-    title text NOT NULL,
-    description text NOT NULL,
-    read boolean DEFAULT false NOT NULL,
-    date timestamp with time zone NOT NULL,
-    link text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
--- Enable RLS
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
--- Policy: Allow users to read their own notifications
-CREATE POLICY "Allow users to read their own notifications" ON public.notifications FOR SELECT USING ((auth.uid() = (SELECT id FROM players WHERE name = user_name)));
--- Policy: Allow users to update their own notifications (e.g., mark as read)
-CREATE POLICY "Allow users to update their own notifications" ON public.notifications FOR UPDATE USING ((auth.uid() = (SELECT id FROM players WHERE name = user_name)));
--- Policy: Allow users to delete their own notifications
-CREATE POLICY "Allow users to delete their own notifications" ON public.notifications FOR DELETE USING ((auth.uid() = (SELECT id FROM players WHERE name = user_name)));
--- Note: Inserts should be handled by trusted functions or admin roles.
+alter table public.notifications enable row level security;
+create policy "Users can view their own notifications." on public.notifications for select using (auth.jwt()->>'full_name' = user_name or auth.jwt()->>'email' = user_name);
+create policy "Users can update their own notifications." on public.notifications for update using (auth.jwt()->>'full_name' = user_name or auth.jwt()->>'email' = user_name);
+create policy "Users can delete their own notifications." on public.notifications for delete using (auth.jwt()->>'full_name' = user_name or auth.jwt()->>'email' = user_name);
+create policy "System can insert notifications." on public.notifications for insert with check (true); -- Simplified for now
 
-
--- =================================================================
 -- Settings Table
--- For key-value based application settings.
--- =================================================================
-CREATE TABLE settings (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    key text UNIQUE NOT NULL,
-    value jsonb,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
--- Enable RLS
-ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
--- Policy: Allow read access for all users
-CREATE POLICY "Allow read access to all users" ON public.settings FOR SELECT USING (true);
--- Policy: Allow admin full access
-CREATE POLICY "Allow admin full access" ON public.settings FOR ALL USING (public.is_admin(auth.email()));
+alter table public.settings enable row level security;
+create policy "Settings are viewable by everyone." on public.settings for select using (true);
+create policy "Admins can manage all settings." on public.settings for all using (public.is_admin());
+
+-- Upcoming Matches
+alter table public.upcoming_matches enable row level security;
+create policy "Upcoming matches are viewable by everyone." on public.upcoming_matches for select using (true);
+create policy "Admins can manage upcoming matches." on public.upcoming_matches for all using (public.is_admin());
 
 
--- =================================================================
--- Helper Functions
--- =================================================================
+--
+-- Storage Policies for 'avatars' bucket
+--
+-- Note: These policies need to be applied in the Supabase Dashboard under Storage -> Policies
 
--- Function to check if a user is an admin
-CREATE OR REPLACE FUNCTION public.is_admin(user_email text)
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN user_email = 'admin@gmail.com';
-END;
-$$;
+-- 1. Allow public read access to all avatars
+-- This can be done by making the bucket public in the dashboard, or with this policy:
+-- create policy "Public read access for avatars" on storage.objects for select using ( bucket_id = 'avatars' );
 
+-- 2. Allow users to upload their own avatar
+-- create policy "Users can upload their own avatar." on storage.objects for insert with check ( bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1] );
 
--- =================================================================
--- Storage Bucket for Avatars
--- =================================================================
-
--- Create a bucket for player avatars. Make it public for easy access.
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('avatars', 'avatars', true)
-ON CONFLICT (id) DO NOTHING;
+-- 3. Allow users to update their own avatar
+-- create policy "Users can update their own avatar." on storage.objects for update with check ( bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1] );
