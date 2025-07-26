@@ -5,12 +5,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import AdminSettings from "@/components/settings/admin-settings";
 import UserSettings from "@/components/settings/user-settings";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -23,7 +24,7 @@ export default function SettingsPage() {
       }
     };
     checkUserRole();
-  }, [router]);
+  }, [router, supabase]);
 
   if (isAuthorized === null) {
     return (

@@ -18,13 +18,14 @@ import { Button } from "@/components/ui/button";
 import { Settings, Bell, Trophy, Trash2, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { format } from 'date-fns';
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function UserSettings() {
   const [registeredTournaments, setRegisteredTournaments] = useState<Tournament[]>([]);
   const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string} | null>(null);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     async function fetchData() {
@@ -63,7 +64,7 @@ export default function UserSettings() {
     return () => {
       supabase.removeChannel(notificationsSubscription);
     };
-  }, []);
+  }, [supabase]);
 
   const handleMarkAsRead = async (id: number) => {
     await supabase.from('notifications').update({ read: true }).eq('id', id);

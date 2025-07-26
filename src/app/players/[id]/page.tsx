@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
 
 
@@ -58,6 +58,7 @@ export default function PlayerProfilePage() {
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
+  const supabase = createSupabaseBrowserClient();
 
   const fetchPlayerData = useCallback(async (playerId: string) => {
     const { data: playerData, error: playerError } = await supabase.from('players').select('*').eq('id', parseInt(playerId)).single();
@@ -84,7 +85,7 @@ export default function PlayerProfilePage() {
     if (matchesData) {
       setMatchHistory(matchesData as Match[]);
     }
-  }, []);
+  }, [supabase]);
 
 
   useEffect(() => {
@@ -108,7 +109,7 @@ export default function PlayerProfilePage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [id, fetchPlayerData]);
+  }, [id, fetchPlayerData, supabase]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
