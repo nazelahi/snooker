@@ -58,7 +58,7 @@ export default function SignupPage() {
         data: {
           full_name: name,
         },
-        email_confirm: true,
+        emailRedirectTo: `${location.origin}/api/auth/callback`,
       },
     });
 
@@ -74,7 +74,6 @@ export default function SignupPage() {
             id: data.user.id,
             name: name,
             email: email,
-            role: 'player',
             initials: name.split(' ').map(n => n[0]).join(''),
             skill_level: 'Beginner',
             matches_played: 0,
@@ -94,9 +93,9 @@ export default function SignupPage() {
         } else {
              toast({
                 title: "Success!",
-                description: "Your account has been created.",
+                description: "Your account has been created. Please check your email to confirm your account.",
             });
-            router.refresh();
+            router.push('/login');
         }
     }
     setLoading(false);
