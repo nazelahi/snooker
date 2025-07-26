@@ -8,6 +8,13 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { useState, useEffect } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { SiteLogoProvider } from '@/components/site-logo-provider';
+import { Inter } from 'next/font/google';
+import { cn } from '@/lib/utils';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
 
 const defaultSettings = { 
   name: 'CueScore', 
@@ -72,11 +79,8 @@ export default function RootLayout({
       <head>
         <title>{siteName}</title>
         <meta name="description" content={siteDescription} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased">
+      <body className={cn("font-sans antialiased", inter.variable)}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
