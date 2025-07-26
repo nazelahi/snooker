@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.2
--- Dumped by pg_dump version 15.2
+-- Dumped from database version 15.1
+-- Dumped by pg_dump version 15.1 (Debian 15.1-1.pgdg110+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -17,103 +17,140 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: is_admin(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: pgsodium; Type: EXTENSION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS boolean
-LANGUAGE sql
-SECURITY DEFINER
-AS $$
-  SELECT (auth.jwt()->>'email') = 'admin@gmail.com';
+CREATE EXTENSION IF NOT EXISTS "pgsodium" WITH SCHEMA "pgsodium";
+
+
+--
+-- Name: pg_graphql; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
+
+
+--
+-- Name: pg_stat_statements; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
+
+
+--
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+
+
+--
+-- Name: pgjwt; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS "pgjwt" WITH SCHEMA "extensions";
+
+
+--
+-- Name: supabase_vault; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
+
+
+--
+-- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
+
+
+--
+-- Name: is_admin(text); Type: FUNCTION; Schema: public; Owner: supabase_admin
+--
+
+CREATE FUNCTION public.is_admin(user_id text) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  user_role TEXT;
+BEGIN
+  SELECT role INTO user_role FROM public.users WHERE id = user_id::UUID;
+  RETURN user_role = 'admin';
+END;
 $$;
 
+
+ALTER FUNCTION public.is_admin(user_id text) OWNER TO supabase_admin;
+
 --
--- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: is_admin(); Type: FUNCTION; Schema: public; Owner: postgres
 --
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-begin
-  -- This is a placeholder for invoking an edge function.
-  -- In a real Supabase project, you would uncomment the following lines and ensure the edge function is deployed.
-  /*
-  perform net.http_post(
-    url:='https://<project_ref>.supabase.co/functions/v1/create-player-profile',
-    headers:='{"Content-Type":"application/json", "Authorization": "Bearer " || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}',
-    body:=json_build_object('record', new)
-  );
-  */
-  -- For local development, we directly insert into players table, bypassing RLS as SECURITY DEFINER.
-  insert into public.players (id, name, email, initials, skill_level, matches_played, win_rate, highest_break, wins, losses, average_break)
-  values (
-    new.id,
-    new.raw_user_meta_data->>'full_name',
-    new.email,
-    substring(new.raw_user_meta_data->>'full_name' from 1 for 1) || substring(split_part(new.raw_user_meta_data->>'full_name', ' ', 2) from 1 for 1),
-    'Beginner',
-    0,
-    '0%',
-    0,
-    0,
-    0,
-    0
-  );
-  return new;
-end;
+
+CREATE FUNCTION public.is_admin() RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN (
+    SELECT (auth.jwt()->>'email')
+  ) = 'admin@gmail.com';
+END;
 $$;
 
+
+ALTER FUNCTION public.is_admin() OWNER TO postgres;
 
 SET default_tablespace = '';
 
-SET default_table_access_method = heap;
+SET default_table_access_method = "heap";
 
 --
--- Name: players; Type: TABLE; Schema: public; Owner: -
+-- Name: players; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.players (
-    id uuid PRIMARY KEY REFERENCES auth.users(id),
+    id uuid DEFAULT auth.uid() NOT NULL,
     name text NOT NULL,
-    email text,
-    skill_level text DEFAULT 'Beginner'::text NOT NULL,
-    matches_played integer DEFAULT 0 NOT NULL,
-    win_rate text DEFAULT '0%'::text NOT NULL,
-    highest_break integer DEFAULT 0 NOT NULL,
+    skill_level text,
+    matches_played integer DEFAULT 0,
+    win_rate text DEFAULT '0%'::text,
+    highest_break integer DEFAULT 0,
     avatar text,
     initials text,
     wins integer DEFAULT 0,
     losses integer DEFAULT 0,
     average_break integer DEFAULT 0,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now(),
+    email text
 );
 
 
+ALTER TABLE public.players OWNER TO postgres;
+
 --
--- Name: tournaments; Type: TABLE; Schema: public; Owner: -
+-- Name: tournaments; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.tournaments (
     id bigint NOT NULL,
     name text NOT NULL,
-    format text DEFAULT 'Knockout'::text NOT NULL,
-    players integer DEFAULT 8 NOT NULL,
-    status text DEFAULT 'Upcoming'::text NOT NULL,
+    format text NOT NULL,
+    players integer NOT NULL,
+    status text NOT NULL,
     rules text[],
     image text,
-    pending_players text[],
-    registered_players text[],
+    "pendingPlayers" text[],
+    "registeredPlayers" text[],
     location text,
     winner text,
-    bracket jsonb,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    bracket jsonb
 );
 
 
+ALTER TABLE public.tournaments OWNER TO postgres;
+
 --
--- Name: tournaments_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: tournaments_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.tournaments ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -127,7 +164,42 @@ ALTER TABLE public.tournaments ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENT
 
 
 --
--- Name: matches; Type: TABLE; Schema: public; Owner: -
+-- Name: upcoming_matches; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.upcoming_matches (
+    id bigint NOT NULL,
+    player1 text NOT NULL,
+    player2 text NOT NULL,
+    date date NOT NULL,
+    "time" time without time zone NOT NULL,
+    tournament_id bigint
+);
+
+
+ALTER TABLE public.upcoming_matches OWNER TO postgres;
+
+--
+-- Name: live_matches; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.live_matches AS
+ SELECT um.id,
+    t.id AS tournament_id,
+    t.name AS tournament_name,
+    um.player1,
+    um.player2,
+    0 AS score1,
+    0 AS score2
+   FROM (public.upcoming_matches um
+     JOIN public.tournaments t ON ((um.tournament_id = t.id)))
+  WHERE ((um.date = CURRENT_DATE) AND (t.status = 'In Progress'::text));
+
+
+ALTER TABLE public.live_matches OWNER TO postgres;
+
+--
+-- Name: matches; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.matches (
@@ -139,11 +211,14 @@ CREATE TABLE public.matches (
     media text[],
     comments jsonb,
     pending_score jsonb,
-    tournament_id bigint REFERENCES public.tournaments(id)
+    tournament_id bigint
 );
 
+
+ALTER TABLE public.matches OWNER TO postgres;
+
 --
--- Name: matches_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: matches_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.matches ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -155,51 +230,9 @@ ALTER TABLE public.matches ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY 
     CACHE 1
 );
 
---
--- Name: upcoming_matches; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.upcoming_matches (
-    id bigint NOT NULL,
-    player1 text NOT NULL,
-    player2 text NOT NULL,
-    date date NOT NULL,
-    "time" time without time zone NOT NULL,
-    tournament_id bigint REFERENCES public.tournaments(id)
-);
 
 --
--- Name: upcoming_matches_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.upcoming_matches ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.upcoming_matches_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
---
--- Name: live_matches; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.live_matches AS
- SELECT um.id,
-    um.tournament_id,
-    t.name AS tournament_name,
-    um.player1,
-    um.player2,
-    0 AS score1,
-    0 AS score2
-   FROM (public.upcoming_matches um
-     LEFT JOIN public.tournaments t ON ((um.tournament_id = t.id)))
-  WHERE ((um.date = CURRENT_DATE) AND (um."time" <= CURRENT_TIME));
-
-
---
--- Name: notices; Type: TABLE; Schema: public; Owner: -
+-- Name: notices; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.notices (
@@ -211,8 +244,10 @@ CREATE TABLE public.notices (
 );
 
 
+ALTER TABLE public.notices OWNER TO postgres;
+
 --
--- Name: notices_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: notices_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.notices ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -226,7 +261,7 @@ ALTER TABLE public.notices ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY 
 
 
 --
--- Name: notifications; Type: TABLE; Schema: public; Owner: -
+-- Name: notifications; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.notifications (
@@ -241,8 +276,10 @@ CREATE TABLE public.notifications (
 );
 
 
+ALTER TABLE public.notifications OWNER TO postgres;
+
 --
--- Name: notifications_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: notifications_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.notifications ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -256,19 +293,21 @@ ALTER TABLE public.notifications ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDE
 
 
 --
--- Name: settings; Type: TABLE; Schema: public; Owner: -
+-- Name: settings; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.settings (
     id bigint NOT NULL,
-    key text NOT NULL UNIQUE,
-    value jsonb,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    key text NOT NULL,
+    value jsonb
 );
 
 
+ALTER TABLE public.settings OWNER TO postgres;
+
 --
--- Name: settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: settings_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.settings ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -282,52 +321,286 @@ ALTER TABLE public.settings ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 
 
 --
--- RLS policies
+-- Name: upcoming_matches_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.upcoming_matches ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.upcoming_matches_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: matches matches_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.matches
+    ADD CONSTRAINT matches_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notices notices_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notices
+    ADD CONSTRAINT notices_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: players players_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.players
+    ADD CONSTRAINT players_email_key UNIQUE (email);
+
+
+--
+-- Name: players players_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.players
+    ADD CONSTRAINT players_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: settings settings_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.settings
+    ADD CONSTRAINT settings_key_key UNIQUE (key);
+
+
+--
+-- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.settings
+    ADD CONSTRAINT settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournaments tournaments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournaments
+    ADD CONSTRAINT tournaments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: upcoming_matches upcoming_matches_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.upcoming_matches
+    ADD CONSTRAINT upcoming_matches_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: matches matches_tournament_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.matches
+    ADD CONSTRAINT matches_tournament_id_fkey FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id);
+
+
+--
+-- Name: players players_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.players
+    ADD CONSTRAINT players_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: upcoming_matches upcoming_matches_tournament_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.upcoming_matches
+    ADD CONSTRAINT upcoming_matches_tournament_id_fkey FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id);
+
+
+--
+-- Name: players; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view player profiles" ON public.players FOR SELECT USING (true);
-CREATE POLICY "Users can insert their own player profile" ON public.players FOR INSERT WITH CHECK (auth.uid() = id);
-CREATE POLICY "Users can update their own player profile" ON public.players FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
-CREATE POLICY "Admins can manage all player profiles" ON public.players FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+--
+-- Name: players players_update_policy; Type: POLICY; Schema: public; Owner: postgres
+--
+
+CREATE POLICY players_update_policy ON public.players FOR UPDATE USING ((auth.uid() = id)) WITH CHECK ((auth.uid() = id));
+
+
+--
+-- Name: players players_admin_all_policy; Type: POLICY; Schema: public; Owner: postgres
+--
+
+CREATE POLICY players_admin_all_policy ON public.players FOR ALL
+   USING (is_admin())
+   WITH CHECK (is_admin());
+
+
+--
+-- Name: matches; Type: ROW SECURITY; Schema: public; Owner: postgres
+--
 
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view all matches" ON public.matches FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can create matches" ON public.matches FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Users can update matches they are in" ON public.matches FOR UPDATE USING (is_admin() OR (auth.jwt() ->> 'email' IN (SELECT email FROM public.players WHERE name = winner OR name = loser)));
 
-ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view all tournaments" ON public.tournaments FOR SELECT USING (true);
-CREATE POLICY "Admins can manage tournaments" ON public.tournaments FOR ALL USING (is_admin()) WITH CHECK (is_admin());
-CREATE POLICY "Authenticated users can update tournament applications" ON public.tournaments FOR UPDATE USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+--
+-- Name: matches matches_policy; Type: POLICY; Schema: public; Owner: postgres
+--
 
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view their own notifications" ON public.notifications FOR SELECT USING ((auth.jwt() ->> 'email' IN (SELECT email FROM public.players WHERE name = user_name)));
-CREATE POLICY "Users can update their own notifications" ON public.notifications FOR UPDATE USING ((auth.jwt() ->> 'email' IN (SELECT email FROM public.players WHERE name = user_name)));
-CREATE POLICY "Authenticated users can insert notifications" ON public.notifications FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Users can delete their own notifications" ON public.notifications FOR DELETE USING ((auth.jwt() ->> 'email' IN (SELECT email FROM public.players WHERE name = user_name)));
+CREATE POLICY matches_policy ON public.matches FOR ALL USING (true) WITH CHECK (true);
+
+
+--
+-- Name: notices; Type: ROW SECURITY; Schema: public; Owner: postgres
+--
 
 ALTER TABLE public.notices ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view all notices" ON public.notices FOR SELECT USING (true);
-CREATE POLICY "Admins can manage notices" ON public.notices FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+--
+-- Name: notices notices_policy; Type: POLICY; Schema: public; Owner: postgres
+--
+
+CREATE POLICY notices_policy ON public.notices FOR ALL USING (true) WITH CHECK (true);
+
+
+--
+-- Name: notifications; Type: ROW SECURITY; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: notifications notifications_policy; Type: POLICY; Schema: public; Owner: postgres
+--
+
+CREATE POLICY notifications_policy ON public.notifications FOR ALL USING (true) WITH CHECK (true);
+
+
+--
+-- Name: settings; Type: ROW SECURITY; Schema: public; Owner: postgres
+--
 
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view settings" ON public.settings FOR SELECT USING (true);
-CREATE POLICY "Admins can manage settings" ON public.settings FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+--
+-- Name: settings settings_policy; Type: POLICY; Schema: public; Owner: postgres
+--
+
+CREATE POLICY settings_policy ON public.settings FOR ALL USING (true) WITH CHECK (true);
+
+
+--
+-- Name: tournaments; Type: ROW SECURITY; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tournaments tournaments_policy; Type: POLICY; Schema: public; Owner: postgres
+--
+
+CREATE POLICY tournaments_policy ON public.tournaments FOR ALL USING (true) WITH CHECK (true);
+
+
+--
+-- Name: upcoming_matches; Type: ROW SECURITY; Schema: public; Owner: postgres
+--
 
 ALTER TABLE public.upcoming_matches ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view all upcoming matches" ON public.upcoming_matches FOR SELECT USING (true);
-CREATE POLICY "Admins can manage upcoming matches" ON public.upcoming_matches FOR ALL USING (is_admin()) WITH CHECK (is_admin());
 
 --
--- Name: on_auth_user_created; Type: TRIGGER; Schema: auth; Owner: -
+-- Name: upcoming_matches upcoming_matches_policy; Type: POLICY; Schema: public; Owner: postgres
 --
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+CREATE POLICY upcoming_matches_policy ON public.upcoming_matches FOR ALL USING (true) WITH CHECK (true);
+
+--
+-- Name: supabase_realtime; Type: PUBLICATION; Schema: -; Owner: postgres
+--
+
+CREATE PUBLICATION supabase_realtime WITH (publish = 'insert, update, delete, truncate');
+
+
+ALTER PUBLICATION supabase_realtime OWNER TO postgres;
 
 --
 -- PostgreSQL database dump complete
 --
+
+--
+-- DDL generated by PostgREST
+--
+
+CREATE SCHEMA IF NOT EXISTS "public";
+
+GRANT USAGE ON SCHEMA "public" TO "postgres";
+GRANT USAGE ON SCHEMA "public" TO "anon";
+GRANT USAGE ON SCHEMA "public" TO "authenticated";
+GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+--
+-- DDL generated by PostgREST
+--
+
+CREATE SCHEMA IF NOT EXISTS "public";
+
+GRANT USAGE ON SCHEMA "public" TO "postgres";
+GRANT USAGE ON SCHEMA "public" TO "anon";
+GRANT USAGE ON SCHEMA "public" TO "authenticated";
+GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+-- Function to create player profile on new user signup
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.players (id, name, email, initials)
+  values (new.id, new.raw_user_meta_data->>'full_name', new.email,
+    substring(new.raw_user_meta_data->>'full_name' from 1 for 1) ||
+    substring(new.raw_user_meta_data->>'full_name' from ' ([^ ]+)$' for 1)
+  );
+  return new;
+end;
+$$;
+
+-- Trigger to call the function on new user signup
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- Storage security rules for avatars
+CREATE POLICY "Avatar images are publicly accessible."
+  ON storage.objects FOR SELECT
+  USING ( bucket_id = 'avatars' );
+
+CREATE POLICY "Anyone can upload an avatar."
+  ON storage.objects FOR INSERT
+  WITH CHECK ( bucket_id = 'avatars' );
+
+CREATE POLICY "Anyone can update their own avatar."
+  ON storage.objects FOR UPDATE
+  USING ( auth.uid() = owner )
+  WITH CHECK ( bucket_id = 'avatars' );
+
+CREATE POLICY "Admins can do anything with avatars"
+  ON storage.objects FOR ALL
+  USING ( is_admin() )
+  WITH CHECK ( is_admin() );
+
