@@ -30,7 +30,7 @@ import type { Achievement } from "@/types/achievements";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export interface Player {
-  id: string; // Changed to string for UUID
+  id: number;
   name: string;
   email?: string | null; // Optional email
   skill_level: "Beginner" | "Intermediate" | "Pro";

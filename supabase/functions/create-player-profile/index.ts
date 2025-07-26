@@ -16,7 +16,6 @@ serve(async (req) => {
     }
 
     const { error } = await supabase.from('players').insert({
-      id: user.id,
       name: user.user_metadata?.full_name || user.email,
       email: user.email,
       initials: (user.user_metadata?.full_name || user.email).split(' ').map(n => n[0]).join(''),
