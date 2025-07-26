@@ -1,12 +1,13 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
     const { record: user } = await req.json()
@@ -19,7 +20,7 @@ serve(async (req) => {
       id: user.id, // Use the user's UUID as the primary key
       name: user.user_metadata?.full_name || user.email,
       email: user.email,
-      initials: (user.user_metadata?.full_name || user.email).split(' ').map(n => n[0]).join(''),
+      initials: (user.user_metadata?.full_name || user.email).split(' ').map((n: string) => n[0]).join(''),
       // Set default values for a new player
       skill_level: 'Beginner',
       matches_played: 0,
@@ -28,6 +29,7 @@ serve(async (req) => {
       wins: 0,
       losses: 0,
       average_break: 0,
+      avatar: user.user_metadata?.avatar_url || '',
     });
 
     if (error) {
