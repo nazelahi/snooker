@@ -52,27 +52,15 @@ export default function SignupPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('players')
-      .insert([
-        { 
-          name, 
-          email, 
-          // Note: Storing passwords in plaintext is insecure. 
-          // This is for demonstration based on the request.
-          // In a real app, you must hash passwords.
-          // password: password, 
-          initials: name.split(' ').map(n => n[0]).join(''),
-          skill_level: 'Beginner',
-          matches_played: 0,
-          win_rate: '0%',
-          highest_break: 0,
-          avatar: '',
-          wins: 0,
-          losses: 0,
-          average_break: 0
-        }
-      ]);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
+    });
 
     setLoading(false);
     if (error) {
@@ -81,12 +69,20 @@ export default function SignupPage() {
         title: "Signup Failed",
         description: error.message,
       });
-    } else {
-        toast({
-            title: "Success!",
-            description: "Your player profile has been created.",
-        });
-        router.push('/login');
+    } else if (data.user) {
+        if(data.user.identities && data.user.identities.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "Signup Error",
+                description: "A user with this email already exists but is unconfirmed. Please check your email for a confirmation link.",
+            });
+        } else {
+             toast({
+                title: "Success!",
+                description: "Your account has been created. Please check your email to confirm your account before logging in.",
+            });
+            router.push('/login');
+        }
     }
   };
   

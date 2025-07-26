@@ -67,6 +67,7 @@ export default function LoginPage() {
             description: "You have been logged in.",
         });
         
+        router.push('/');
         router.refresh();
     }
     setLoading(false);
