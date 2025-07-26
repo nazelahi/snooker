@@ -35,7 +35,7 @@ export default function LoginPage() {
         }
     };
     fetchSiteName();
-  }, []);
+  }, [supabase]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +68,6 @@ export default function LoginPage() {
         });
         
         router.refresh();
-        router.push('/');
     }
     setLoading(false);
   };
