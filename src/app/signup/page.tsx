@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
-import { supabase } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SiteLogo } from '@/components/site-logo';
 
 export default function SignupPage() {
@@ -27,6 +27,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [clubName, setClubName] = useState("CueScore");
   const [loading, setLoading] = useState(false);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchSiteName = async () => {
@@ -105,7 +106,7 @@ export default function SignupPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
+        redirectTo: `${location.origin}/api/auth/callback`,
       },
     });
      if (error) {

@@ -3,10 +3,11 @@
 
 import { useEffect } from "react";
 import { useRouter } from 'next/navigation';
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function AdminPage() {
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -19,7 +20,7 @@ export default function AdminPage() {
       }
     };
     checkAdmin();
-  }, [router]);
+  }, [router, supabase]);
  
   return null;
 }

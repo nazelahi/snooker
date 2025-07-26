@@ -9,12 +9,13 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AdminSettingsTabsMobile } from '../settings/admin-settings';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const [isAdmin, setIsAdmin] = useState(false);
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const checkUserRole = async () => {

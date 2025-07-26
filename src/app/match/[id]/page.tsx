@@ -29,7 +29,7 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CommentInput, CommentThread } from "@/components/comment-thread";
 import type { Comment } from "@/types/comments";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
 
 
@@ -45,6 +45,7 @@ export default function MatchDetailsPage() {
   const id = params.id as string;
   const { toast } = useToast();
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   const fetchMatchData = useCallback(async (matchId: string) => {
     const { data: matchData, error } = await supabase
@@ -67,7 +68,7 @@ export default function MatchDetailsPage() {
       setWinnerPlayer(playersData.find(p => p.name === matchData.winner) || null);
       setLoserPlayer(playersData.find(p => p.name === matchData.loser) || null);
     }
-  }, [toast]);
+  }, [toast, supabase]);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -91,7 +92,7 @@ export default function MatchDetailsPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [id, fetchMatchData]);
+  }, [id, fetchMatchData, supabase]);
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0 && match) {

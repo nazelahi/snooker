@@ -15,12 +15,11 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
-import { getFromStorage } from "@/lib/storage";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "../ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import type { Player } from "@/app/players/page";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SiteLogo } from '../site-logo';
 
 const navItems = [
@@ -45,6 +44,7 @@ interface CurrentUser {
 const UserMenu = () => {
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const router = useRouter();
+    const supabase = createSupabaseBrowserClient();
 
     const fetchUserData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -147,6 +147,7 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const [clubName, setClubName] = useState("CueScore");
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchUserAndSettings = async () => {

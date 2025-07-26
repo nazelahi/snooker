@@ -29,7 +29,7 @@ import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import type { Player } from "@/app/players/page";
 import { ThemeSwitcher } from "../theme-switcher";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { SiteLogo } from "../site-logo";
 import { useSiteLogo } from '../site-logo-provider';
@@ -47,6 +47,7 @@ export default function Header() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const router = useRouter();
   const [siteName, setSiteName] = useState("CueScore");
+  const supabase = createSupabaseBrowserClient();
 
   const fetchUserData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -102,6 +103,9 @@ export default function Header() {
     
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       fetchUserData();
+      if (_event === 'SIGNED_OUT') {
+        router.refresh();
+      }
     });
 
     return () => {

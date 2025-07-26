@@ -17,12 +17,13 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchUserAndNotifications = async () => {
@@ -57,7 +58,7 @@ export default function NotificationsPage() {
     return () => {
       supabase.removeChannel(notificationsSubscription);
     };
-  }, [router]);
+  }, [router, supabase]);
 
   const handleMarkAsRead = async (id: number) => {
     const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
