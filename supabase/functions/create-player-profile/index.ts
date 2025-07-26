@@ -16,6 +16,7 @@ serve(async (req) => {
     }
 
     const { error } = await supabase.from('players').insert({
+      id: user.id, // Use the user's UUID as the primary key
       name: user.user_metadata?.full_name || user.email,
       email: user.email,
       initials: (user.user_metadata?.full_name || user.email).split(' ').map(n => n[0]).join(''),

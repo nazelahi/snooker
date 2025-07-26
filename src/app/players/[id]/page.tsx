@@ -61,7 +61,7 @@ export default function PlayerProfilePage() {
   const supabase = createSupabaseBrowserClient();
 
   const fetchPlayerData = useCallback(async (playerId: string) => {
-    const { data: playerData, error: playerError } = await supabase.from('players').select('*').eq('id', parseInt(playerId)).single();
+    const { data: playerData, error: playerError } = await supabase.from('players').select('*').eq('id', playerId).single();
     
     if (playerError || !playerData) {
       setPlayer(null);
