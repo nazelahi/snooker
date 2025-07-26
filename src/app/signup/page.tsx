@@ -73,20 +73,22 @@ export default function SignupPage() {
     }
 
     if (signUpData.user) {
-        // The database trigger 'handle_new_user' will now automatically create the player profile.
-        // We can show a confirmation message and redirect.
-        if(signUpData.user.identities && signUpData.user.identities.length === 0) {
+        // The database trigger 'handle_new_user' will automatically create the player profile.
+        // We can now log the user in directly.
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        
+        if(signInError) {
             toast({
                 variant: "destructive",
-                title: "Signup Error",
-                description: "A user with this email already exists but is unconfirmed. Please check your email for a confirmation link.",
+                title: "Login after signup failed.",
+                description: signInError.message,
             });
         } else {
              toast({
-                title: "Success!",
-                description: "Your account has been created. Please check your email to confirm your account before logging in.",
+                title: "Welcome!",
+                description: "Your account has been created and you are now logged in.",
             });
-            router.push('/login');
+            router.push('/');
         }
     }
      setLoading(false);
