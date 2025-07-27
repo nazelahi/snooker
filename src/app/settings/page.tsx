@@ -18,7 +18,8 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setIsAuthorized(true);
-        setIsAdmin(user.email === 'admin@gmail.com');
+        const { data: isAdminData } = await supabase.rpc('is_admin');
+        setIsAdmin(isAdminData);
       } else {
         router.push('/login');
       }
@@ -44,3 +45,4 @@ export default function SettingsPage() {
 
   return isAdmin ? <AdminSettings /> : <UserSettings />;
 }
+

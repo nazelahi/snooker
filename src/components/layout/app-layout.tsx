@@ -20,7 +20,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkUserRole = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setIsAdmin(user?.email === 'admin@gmail.com');
+      if(user) {
+        const { data: isAdminData } = await supabase.rpc('is_admin');
+        setIsAdmin(isAdminData);
+      } else {
+        setIsAdmin(false);
+      }
     }
     checkUserRole();
 
@@ -48,3 +53,4 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+

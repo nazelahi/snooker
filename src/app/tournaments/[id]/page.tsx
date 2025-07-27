@@ -62,15 +62,20 @@ export default function TournamentDetailsPage() {
   const fetchTournamentData = async () => {
     if (!id) return;
     
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
-    const currentUserName = user?.user_metadata.full_name || user?.email;
-    setCurrentUser(user ? { name: currentUserName, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+    const { data: { user } } = await supabase.auth.getUser();
+    let currentUserName: string | null = null;
+    if (user) {
+      currentUserName = user.user_metadata.full_name || user.email!;
+      const { data: isAdmin } = await supabase.rpc('is_admin');
+      setCurrentUser({ name: currentUserName, email: user.email!, isAdmin: isAdmin });
+    } else {
+      setCurrentUser(null);
+    }
 
     const { data: playersData } = await supabase.from('players').select('*');
     if (playersData) setAllPlayers(playersData);
 
-    const { data: tournamentData, error } = await supabase.from('tournaments').select('*').eq('id', parseInt(id)).single();
+    const { data: tournamentData, error } } = await supabase.from('tournaments').select('*').eq('id', parseInt(id)).single();
     
     if (error || !tournamentData) {
       toast({ variant: 'destructive', title: 'Error', description: 'Tournament not found.' });
@@ -663,3 +668,4 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
+

@@ -88,19 +88,26 @@ export default function PlayerProfilePage() {
 
 
   useEffect(() => {
+    const setCurrentUserAndAdminStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: isAdmin } = await supabase.rpc('is_admin');
+        setCurrentUser({ 
+          name: user.user_metadata.full_name || user.email!, 
+          email: user.email!, 
+          isAdmin: isAdmin 
+        });
+      } else {
+        setCurrentUser(null);
+      }
+    };
+    
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const user = session?.user;
-      const isAdminUser = admins.some(a => a.user_id === user?.id)
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: isAdminUser } : null);
+      await setCurrentUserAndAdminStatus();
     });
 
-    const admins: { user_id: string }[] = [];
     async function initialize() {
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data: adminsData } = await supabase.from('admins').select('user_id');
-        if(adminsData) admins.push(...adminsData);
-        const isAdminUser = admins.some(a => a.user_id === user?.id)
-        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: isAdminUser } : null);
+        await setCurrentUserAndAdminStatus();
         if (id) {
           await fetchPlayerData(id);
         }
@@ -413,7 +420,7 @@ export default function PlayerProfilePage() {
             <Percent className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userStats.winRate}</div>
+            <div className="text-2xl font-bold">{userStats.win_rate}</div>
             <p className="text-xs text-muted-foreground">Overall performance</p>
           </CardContent>
         </Card>
@@ -607,3 +614,4 @@ export default function PlayerProfilePage() {
     
 
     
+

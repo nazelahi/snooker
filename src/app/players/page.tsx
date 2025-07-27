@@ -55,28 +55,25 @@ export default function PlayersPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const supabase = createSupabaseBrowserClient();
 
-  const fetchPlayers = async () => {
+  const fetchPlayersAndCheckAdmin = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('players').select('*').neq('email', 'admin@gmail.com').order('name', { ascending: true });
+    const { data, error } = await supabase.from('players').select('*').order('name', { ascending: true });
     if (data) {
-        setPlayers(data as Player[]);
+        // Filter out admin user if they exist in players table, just in case
+        const nonAdminPlayers = data.filter((player: Player) => player.email !== 'admin@gmail.com');
+        setPlayers(nonAdminPlayers as Player[]);
     }
+    const { data: isAdminData } = await supabase.rpc('is_admin');
+    setIsAdmin(isAdminData);
     setLoading(false);
   }
 
   useEffect(() => {
-    fetchPlayers();
+    fetchPlayersAndCheckAdmin();
     
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        const user = session?.user;
-        setIsAdmin(user?.email === 'admin@gmail.com');
+        fetchPlayersAndCheckAdmin();
     });
-
-    async function initialize() {
-        const { data: { user } } = await supabase.auth.getUser();
-        setIsAdmin(user?.email === 'admin@gmail.com');
-    }
-    initialize();
 
   }, []);
 
@@ -96,7 +93,7 @@ export default function PlayersPage() {
     if (error) {
         // Handle error, maybe show a toast
     } else {
-        fetchPlayers(); // Refresh the list
+        fetchPlayersAndCheckAdmin(); // Refresh the list
     }
 
   };
@@ -315,3 +312,4 @@ export default function PlayersPage() {
     </div>
   );
 }
+

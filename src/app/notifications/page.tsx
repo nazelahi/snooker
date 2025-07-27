@@ -30,7 +30,8 @@ export default function NotificationsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const userName = user.user_metadata.full_name || user.email!;
-        setCurrentUser({ name: userName, email: user.email!, isAdmin: user.email === 'admin@gmail.com' });
+        const { data: isAdmin } = await supabase.rpc('is_admin');
+        setCurrentUser({ name: userName, email: user.email!, isAdmin });
         
         const { data: notificationsData } = await supabase
           .from('notifications')
@@ -160,3 +161,4 @@ export default function NotificationsPage() {
     </div>
   );
 }
+

@@ -70,10 +70,23 @@ export default function MatchDetailsPage() {
     }
   }, [toast, supabase]);
 
+  const setCurrentUserAndAdminStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: isAdmin } = await supabase.rpc('is_admin');
+        setCurrentUser({ 
+          name: user.user_metadata.full_name || user.email!, 
+          email: user.email!, 
+          isAdmin: isAdmin 
+        });
+      } else {
+        setCurrentUser(null);
+      }
+  };
+
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const user = session?.user;
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+      await setCurrentUserAndAdminStatus();
       if (id) {
         await fetchMatchData(id);
       }
@@ -81,8 +94,7 @@ export default function MatchDetailsPage() {
 
     // Initial fetch
     async function initialize() {
-      const { data: { user } } = await supabase.auth.getUser();
-       setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+      await setCurrentUserAndAdminStatus();
       if (id) {
         await fetchMatchData(id);
       }
@@ -448,3 +460,4 @@ export default function MatchDetailsPage() {
     </div>
   );
 }
+

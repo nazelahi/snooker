@@ -52,7 +52,12 @@ export default function TournamentsPage() {
 
   const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+      if(user) {
+        const { data: isAdmin } = await supabase.rpc('is_admin');
+        setCurrentUser({ name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: isAdmin });
+      } else {
+        setCurrentUser(null);
+      }
       
       const { data: tournamentsData } = await supabase.from('tournaments').select('*');
       if (tournamentsData) setTournaments(tournamentsData);
@@ -221,3 +226,4 @@ export default function TournamentsPage() {
     </div>
   );
 }
+
