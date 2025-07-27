@@ -23,15 +23,12 @@ export default function AdminPage() {
 
       if (error || !isAdmin) {
         // If not an admin, or there's an error,
-        // redirect to their own stats page as a fallback.
-        router.replace('/my-stats');
+        // redirect to the homepage as a fallback.
+        router.replace('/');
       } else {
         // If they are an admin, redirect to the settings dashboard.
         router.replace('/settings');
       }
-      // Although we redirect, we'll set loading to false in case the component
-      // doesn't unmount immediately.
-      setLoading(false);
     };
     checkAdmin();
   }, [router]);
