@@ -25,8 +25,13 @@ export default function SettingsLayout({
         router.push('/login');
         return;
       }
-      const { data: isAdminData } = await supabase.rpc('is_admin');
-      setIsAdmin(isAdminData);
+      const { data: isAdminData, error } = await supabase.rpc('is_admin');
+      
+      if (error || !isAdminData) {
+        router.replace('/');
+      } else {
+        setIsAdmin(true);
+      }
       setLoading(false);
     };
 
@@ -46,9 +51,11 @@ export default function SettingsLayout({
   }
   
   if (!isAdmin) {
+    // This case should ideally not be reached due to the redirect,
+    // but it's a good fallback.
     return (
         <main className="p-4 sm:p-6 lg:p-8">
-            {children}
+            <p>You are not authorized to view this page.</p>
         </main>
     );
   }

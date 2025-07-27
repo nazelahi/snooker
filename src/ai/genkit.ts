@@ -4,8 +4,7 @@
  * @fileoverview This file initializes and configures the Genkit AI library.
  *
  * It sets up the necessary plugins, specifically the Google AI plugin,
- * and exports a single `ai` object that can be used throughout the
-VStack.
+ * and exports a single `ai` object that can be used throughout the application.
  */
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';

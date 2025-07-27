@@ -56,7 +56,7 @@ const handicapAdvisorFlow = ai.defineFlow(
   async (input) => {
     const { output } = await ai.generate({
       prompt: `Based on this player data: {{playerData}}, provide a handicap suggestion.`,
-      model: 'googleai/gemini-2.0-flash',
+      model: 'googleai/gemini-pro',
       output: {
         schema: HandicapAdvisorOutputSchema,
       },
