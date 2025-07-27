@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -12,7 +13,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords, Check, X, Trash2, BrainCircuit } from "lucide-react";
+import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords, Check, X, Trash2 } from "lucide-react";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -35,7 +36,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
-import { getHandicapSuggestion, type HandicapAdvisorOutput } from "@/ai/flows/handicap-advisor-flow";
 
 
 export default function PlayerProfilePage() {
@@ -55,9 +55,6 @@ export default function PlayerProfilePage() {
   const [newScore1, setNewScore1] = useState(0);
   const [newScore2, setNewScore2] = useState(0);
   const [matchesToShow, setMatchesToShow] = useState(5);
-  const [isAiHandicapLoading, setIsAiHandicapLoading] = useState(false);
-  const [aiHandicap, setAiHandicap] = useState<HandicapAdvisorOutput | null>(null);
-  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -314,36 +311,6 @@ export default function PlayerProfilePage() {
     fetchPlayerData(id);
   }
 
-  const handleGetAiHandicap = async () => {
-    if (!player) return;
-    setIsAiHandicapLoading(true);
-    setAiHandicap(null);
-    try {
-        const recentMatches = matchHistory.slice(0, 10).map(m => ({
-            opponent: player.name === m.winner ? m.loser : m.winner,
-            result: player.name === m.winner ? 'win' : 'loss',
-            score: m.score,
-        }));
-
-        const result = await getHandicapSuggestion({
-            playerName: player.name,
-            skillLevel: player.skill_level,
-            winRate: player.win_rate,
-            highestBreak: player.highest_break,
-            averageBreak: player.average_break ?? 0,
-            recentMatches: recentMatches,
-        });
-        setAiHandicap(result);
-        setIsAiDialogOpen(true);
-    } catch (error) {
-        console.error("AI Handicap Error:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not get AI handicap suggestion.' });
-    } finally {
-        setIsAiHandicapLoading(false);
-    }
-  }
-
-
   if (!player) {
     return (
         <div className="text-center">
@@ -381,12 +348,6 @@ export default function PlayerProfilePage() {
           </div>
         </div>
          <div className="flex gap-2 items-center">
-            {isAdmin && (
-                <Button onClick={handleGetAiHandicap} variant="outline" className="hidden md:flex" disabled={isAiHandicapLoading}>
-                    <BrainCircuit className="mr-2 h-4 w-4" />
-                    {isAiHandicapLoading ? "Analyzing..." : "AI Handicap"}
-                </Button>
-            )}
             {(isAdmin || isOwnProfile) && (
                 <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="w-full md:w-auto hidden md:flex">
                     {isEditing ? 'Cancel' : <><Edit className="mr-2 h-4 w-4" /> Edit Profile</>}
@@ -610,12 +571,6 @@ export default function PlayerProfilePage() {
       </Card>
       
        <div className="md:hidden fixed bottom-20 right-4 flex flex-col gap-2">
-            {isAdmin && (
-                <Button onClick={handleGetAiHandicap} className="h-14 w-14 rounded-full shadow-lg" size="icon" variant="outline" disabled={isAiHandicapLoading}>
-                    <BrainCircuit className="h-6 w-6" />
-                    <span className="sr-only">AI Handicap</span>
-                </Button>
-            )}
              {(isAdmin || isOwnProfile) && (
                 <Button
                     onClick={() => setIsEditing(!isEditing)}
@@ -658,31 +613,12 @@ export default function PlayerProfilePage() {
         </>
       )}
       </ResponsiveDialog>
-      
-       <ResponsiveDialog
-        open={isAiDialogOpen}
-        onOpenChange={setIsAiDialogOpen}
-        title="AI Handicap Suggestion"
-        description={`Based on ${player.name}'s performance, here is a suggested handicap.`}
-       >
-        {aiHandicap && (
-            <>
-                <div className="py-4 text-center">
-                    <p className="text-6xl font-bold text-primary">{aiHandicap.handicap}</p>
-                    <p className="text-muted-foreground mt-4">{aiHandicap.reasoning}</p>
-                </div>
-                <DialogFooter>
-                    <Button onClick={() => setIsAiDialogOpen(false)}>Close</Button>
-                </DialogFooter>
-            </>
-        )}
-       </ResponsiveDialog>
-
     </div>
   );
 }
     
 
     
+
 
 
