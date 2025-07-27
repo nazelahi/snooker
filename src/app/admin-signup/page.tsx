@@ -16,7 +16,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { SiteLogo } from '@/components/site-logo';
 import { ShieldCheck } from "lucide-react";
 
 export default function AdminSignupPage() {
