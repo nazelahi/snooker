@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -91,12 +90,17 @@ export default function PlayerProfilePage() {
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user;
-      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+      const isAdminUser = admins.some(a => a.user_id === user?.id)
+      setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: isAdminUser } : null);
     });
 
+    const admins: { user_id: string }[] = [];
     async function initialize() {
         const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: user.email === 'admin@gmail.com' } : null);
+        const { data: adminsData } = await supabase.from('admins').select('user_id');
+        if(adminsData) admins.push(...adminsData);
+        const isAdminUser = admins.some(a => a.user_id === user?.id)
+        setCurrentUser(user ? { name: user.user_metadata.full_name || user.email!, email: user.email!, isAdmin: isAdminUser } : null);
         if (id) {
           await fetchPlayerData(id);
         }
@@ -138,7 +142,7 @@ export default function PlayerProfilePage() {
     const matchesPlayed = editedWins + editedLosses;
     const winRate = matchesPlayed > 0 ? ((editedWins / matchesPlayed) * 100).toFixed(1) + '%' : "0%";
     
-    const updatedPlayer: Omit<Player, 'id' | 'created_at'> = { 
+    const updatedPlayer: Omit<Player, 'id' | 'created_at' | 'email'> = { 
       name: editedName,
       initials: editedName.split(' ').map(n => n[0]).join(''),
       avatar: editedAvatar || player.avatar,
@@ -314,7 +318,7 @@ export default function PlayerProfilePage() {
     matchesPlayed: player.matches_played,
     wins: player.wins ?? 0,
     losses: player.losses ?? 0,
-    winRate: player.win_rate,
+    win_rate: player.win_rate,
     highestBreak: player.highest_break,
     averageBreak: player.average_break ?? 0,
     tournamentsWon: player.skill_level === 'Pro' ? 2 : (player.skill_level === 'Intermediate' ? 1 : 0),
@@ -578,23 +582,28 @@ export default function PlayerProfilePage() {
         title="Request Score Change"
         description={`Propose a new score for your match against ${selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}. The other player will need to approve this change.`}
       >
-        <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="space-y-2">
-                <Label htmlFor="score1">{currentUser?.name.toLowerCase() === selectedMatch?.winner.toLowerCase() || currentUser?.name.toLowerCase() === selectedMatch?.loser.toLowerCase() ? (player?.name === selectedMatch.winner ? selectedMatch.winner : selectedMatch.loser) : player?.name}</Label>
-                <Input id="score1" type="number" value={newScore1} onChange={e => setNewScore1(parseInt(e.target.value, 10) || 0)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="score2">{selectedMatch?.winner === player?.name ? selectedMatch?.loser : selectedMatch?.winner}</Label>
-                <Input id="score2" type="number" value={newScore2} onChange={e => setNewScore2(parseInt(e.target.value, 10) || 0)} />
-            </div>
-        </div>
-        <DialogFooter>
-            <Button variant="outline" onClick={() => setIsScoreDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleScoreChangeRequest}>Send Request</Button>
-        </DialogFooter>
+      {selectedMatch && player && (
+        <>
+          <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                  <Label htmlFor="score1">{player.name}</Label>
+                  <Input id="score1" type="number" value={newScore1} onChange={e => setNewScore1(parseInt(e.target.value, 10) || 0)} />
+              </div>
+              <div className="space-y-2">
+                  <Label htmlFor="score2">{selectedMatch.winner === player.name ? selectedMatch.loser : selectedMatch.winner}</Label>
+                  <Input id="score2" type="number" value={newScore2} onChange={e => setNewScore2(parseInt(e.target.value, 10) || 0)} />
+              </div>
+          </div>
+          <DialogFooter>
+              <Button variant="outline" onClick={() => setIsScoreDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleScoreChangeRequest}>Send Request</Button>
+          </DialogFooter>
+        </>
+      )}
       </ResponsiveDialog>
     </div>
   );
 }
+    
 
     
