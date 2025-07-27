@@ -25,7 +25,6 @@ import { PlusCircle, List, LayoutGrid, Search, ArrowLeftRight } from "lucide-rea
 import { AddPlayerDialog } from "@/components/add-player-dialog";
 import type { Notification } from "@/types/notifications";
 import { Input } from "@/components/ui/input";
-import type { Achievement } from "@/types/achievements";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
