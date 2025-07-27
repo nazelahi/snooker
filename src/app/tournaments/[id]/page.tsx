@@ -75,7 +75,7 @@ export default function TournamentDetailsPage() {
     const { data: playersData } = await supabase.from('players').select('*');
     if (playersData) setAllPlayers(playersData);
 
-    const { data: tournamentData, error } } = await supabase.from('tournaments').select('*').eq('id', parseInt(id)).single();
+    const { data: tournamentData, error } = await supabase.from('tournaments').select('*').eq('id', parseInt(id)).single();
     
     if (error || !tournamentData) {
       toast({ variant: 'destructive', title: 'Error', description: 'Tournament not found.' });
@@ -668,4 +668,3 @@ export default function TournamentDetailsPage() {
     </div>
   );
 }
-
