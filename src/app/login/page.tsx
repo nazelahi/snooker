@@ -68,6 +68,7 @@ export default function LoginPage() {
         });
         
         router.push('/');
+        router.refresh(); // Force a refresh to prevent hydration errors
     }
     setLoading(false);
   };
