@@ -6,7 +6,7 @@
  * This file defines a Genkit flow that takes player statistics as input and
  * returns an AI-generated handicap suggestion and the reasoning behind it.
  *
- * - handicapAdvisorFlow - The main flow function.
+ * - getHandicapSuggestion - The main exported function to call the flow.
  * - HandicapAdvisorInput - The Zod schema for the flow's input.
  * - HandicapAdvisorOutput - The Zod schema for the flow's output.
  */
@@ -17,10 +17,15 @@ import type {Player} from '@/app/players/page';
 
 /**
  * Zod schema for the handicap advisor flow input.
- * Expects a stringified JSON object of player data.
  */
 export const HandicapAdvisorInputSchema = z.object({
-  playerData: z.string().describe('A JSON string representing the player\'s data.'),
+  name: z.string().describe("The player's name."),
+  matches_played: z.number().describe("The number of matches the player has played."),
+  wins: z.number().describe("The number of matches the player has won."),
+  losses: z.number().describe("The number of matches the player has lost."),
+  win_rate: z.string().describe("The player's win rate as a percentage string."),
+  highest_break: z.number().describe("The player's highest break score."),
+  skill_level: z.string().describe("The player's declared skill level (e.g., Beginner, Intermediate, Pro)."),
 });
 export type HandicapAdvisorInput = z.infer<typeof HandicapAdvisorInputSchema>;
 
@@ -43,7 +48,16 @@ export type HandicapAdvisorOutput = z.infer<typeof HandicapAdvisorOutputSchema>;
 * @returns {Promise<HandicapAdvisorOutput>} A promise that resolves to the handicap suggestion and reasoning.
 */
 export async function getHandicapSuggestion(player: Player): Promise<HandicapAdvisorOutput> {
-    return await handicapAdvisorFlow({ playerData: JSON.stringify(player) });
+    const input = {
+        name: player.name,
+        matches_played: player.matches_played,
+        wins: player.wins ?? 0,
+        losses: player.losses ?? 0,
+        win_rate: player.win_rate,
+        highest_break: player.highest_break,
+        skill_level: player.skill_level,
+    };
+    return await handicapAdvisorFlow(input);
 }
 
 
@@ -55,17 +69,21 @@ const handicapAdvisorFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-      prompt: `Based on this player data: {{playerData}}, provide a handicap suggestion.`,
+      prompt: `Based on this player data:
+      - Name: ${input.name}
+      - Matches Played: ${input.matches_played}
+      - Wins: ${input.wins}
+      - Losses: ${input.losses}
+      - Win Rate: ${input.win_rate}
+      - Highest Break: ${input.highest_break}
+      - Skill Level: ${input.skill_level}
+      
+      Provide a handicap suggestion.`,
       model: 'googleai/gemini-pro',
       output: {
         schema: HandicapAdvisorOutputSchema,
       },
-      context: [
-          {
-              role: 'system',
-              content: 'You are a snooker handicap expert. Your role is to analyze player statistics and provide a fair handicap suggestion along with a brief, clear reasoning for your decision. The handicap should be a single numerical value.'
-          }
-      ],
+      system: 'You are a snooker handicap expert. Your role is to analyze player statistics and provide a fair handicap suggestion along with a brief, clear reasoning for your decision. The handicap should be a single numerical value.',
       config: {
         // Optional configuration for the generation call
       },

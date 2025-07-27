@@ -13,7 +13,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords, Check, X, Trash2 } from "lucide-react";
+import { Trophy, BarChart, Percent, Activity, Edit, Save, Swords, Check, X, Trash2, Bot } from "lucide-react";
 import type { Player } from "@/app/players/page";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Match } from "@/types/matches";
+import { getHandicapSuggestion, type HandicapAdvisorOutput } from "@/ai/flows/handicap-advisor-flow";
 
 
 export default function PlayerProfilePage() {
@@ -55,6 +56,9 @@ export default function PlayerProfilePage() {
   const [newScore1, setNewScore1] = useState(0);
   const [newScore2, setNewScore2] = useState(0);
   const [matchesToShow, setMatchesToShow] = useState(5);
+  const [isHandicapDialogOpen, setIsHandicapDialogOpen] = useState(false);
+  const [handicapSuggestion, setHandicapSuggestion] = useState<HandicapAdvisorOutput | null>(null);
+  const [isHandicapLoading, setIsHandicapLoading] = useState(false);
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
@@ -310,6 +314,27 @@ export default function PlayerProfilePage() {
     toast({ title: 'Match Deleted', description: 'The match has been removed and stats updated.'});
     fetchPlayerData(id);
   }
+  
+  const handleGetHandicap = async () => {
+    if (!player) return;
+    setIsHandicapLoading(true);
+    setHandicapSuggestion(null);
+    setIsHandicapDialogOpen(true);
+    try {
+      const suggestion = await getHandicapSuggestion(player);
+      setHandicapSuggestion(suggestion);
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'AI Error',
+        description: 'Could not get handicap suggestion.',
+      });
+      setIsHandicapDialogOpen(false);
+    } finally {
+      setIsHandicapLoading(false);
+    }
+  };
 
   if (!player) {
     return (
@@ -352,6 +377,11 @@ export default function PlayerProfilePage() {
                 <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="w-full md:w-auto hidden md:flex">
                     {isEditing ? 'Cancel' : <><Edit className="mr-2 h-4 w-4" /> Edit Profile</>}
                 </Button>
+            )}
+             {isAdmin && (
+              <Button onClick={handleGetHandicap} variant="outline" className="hidden md:flex">
+                  <Bot className="mr-2 h-4 w-4" /> AI Handicap
+              </Button>
             )}
         </div>
       </div>
@@ -581,6 +611,16 @@ export default function PlayerProfilePage() {
                     <span className="sr-only">{isEditing ? 'Save Changes' : 'Edit Profile'}</span>
                 </Button>
             )}
+             {isAdmin && (
+                <Button
+                    onClick={handleGetHandicap}
+                    className="h-14 w-14 rounded-full shadow-lg"
+                    size="icon"
+                >
+                    <Bot className="h-6 w-6" />
+                    <span className="sr-only">AI Handicap</span>
+                </Button>
+             )}
         </div>
 
 
@@ -613,16 +653,30 @@ export default function PlayerProfilePage() {
         </>
       )}
       </ResponsiveDialog>
+      
+      <ResponsiveDialog
+        open={isHandicapDialogOpen}
+        onOpenChange={setIsHandicapDialogOpen}
+        title="AI Handicap Advisor"
+        description={`Getting a handicap suggestion for ${player.name} based on their current stats.`}
+      >
+        {isHandicapLoading && <p className="text-center p-8">The AI is analyzing the data, please wait...</p>}
+        {handicapSuggestion && (
+          <div className="py-4 space-y-4">
+            <div className="text-center">
+              <p className="text-muted-foreground">Suggested Handicap</p>
+              <p className="text-6xl font-bold text-primary">{handicapSuggestion.handicap}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Reasoning:</p>
+              <p className="text-muted-foreground">{handicapSuggestion.reasoning}</p>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+            <Button variant="outline" onClick={() => setIsHandicapDialogOpen(false)}>Close</Button>
+        </DialogFooter>
+      </ResponsiveDialog>
     </div>
   );
 }
-    
-
-    
-
-
-
-
-
-
-
