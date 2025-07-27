@@ -42,18 +42,18 @@ const prompt = ai.definePrompt({
   prompt: `You are a professional snooker coach and handicap assessor. Your task is to analyze the provided player data and suggest a fair handicap.
 
 Analyze the following player stats:
-- Player Name: {{{playerName}}}
-- Skill Level: {{{skillLevel}}}
-- Win Rate: {{{winRate}}}
-- Highest Break: {{{highestBreak}}}
-- Average Break: {{{averageBreak}}}
+- Player Name: {{playerName}}
+- Skill Level: {{skillLevel}}
+- Win Rate: {{winRate}}
+- Highest Break: {{highestBreak}}
+- Average Break: {{averageBreak}}
 
 Consider their recent match history:
 {{#each recentMatches}}
-- vs {{{opponent}}}: {{result}} ({{score}})
+- vs {{opponent}}: {{result}} ({{score}})
 {{/each}}
 
-Based on all of this data, determine a suitable handicap for {{{playerName}}}. A lower handicap means a better player. A professional might have a handicap of 0-5, while a beginner might have a handicap of 25-50.
+Based on all of this data, determine a suitable handicap for {{playerName}}. A lower handicap means a better player. A professional might have a handicap of 0-5, while a beginner might have a handicap of 25-50.
 
 Provide the suggested handicap and a brief reasoning for your decision.`,
 });
