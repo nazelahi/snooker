@@ -6,39 +6,13 @@ import AppSidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import BottomNav from './bottom-nav';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { AdminSettingsTabsMobile } from '../settings/admin-settings';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const supabase = createSupabaseBrowserClient();
-
-  useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if(user) {
-        const { data: isAdminData } = await supabase.rpc('is_admin');
-        setIsAdmin(isAdminData);
-      } else {
-        setIsAdmin(false);
-      }
-    }
-    checkUserRole();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      checkUserRole();
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const showAdminNav = isMobile && isAdmin && pathname === '/settings';
+  const showMobileNav = !pathname.startsWith('/settings');
 
   return (
     <SidebarProvider>
@@ -48,9 +22,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
             {children}
         </main>
-        {showAdminNav ? null : <BottomNav />}
+        {showMobileNav && <BottomNav />}
       </SidebarInset>
     </SidebarProvider>
   );
 }
-

@@ -1,13 +1,20 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from 'next/navigation';
 import AdminSettings from "@/components/settings/admin-settings";
 import UserSettings from "@/components/settings/user-settings";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function SettingsPage() {
+function AdminSettingsWrapper() {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab') || 'players';
+  return <AdminSettings activeTab={tab} />;
+}
+
+function SettingsPageContent() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
@@ -26,7 +33,7 @@ export default function SettingsPage() {
     };
     checkUserRole();
 
-     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       checkUserRole();
     });
 
@@ -37,12 +44,25 @@ export default function SettingsPage() {
 
   if (isAuthorized === null) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p>Loading settings...</p>
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-1/4" />
+        <Skeleton className="h-4 w-1/2" />
+        <div className="mt-8 space-y-4">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+        </div>
       </div>
     );
   }
 
-  return isAdmin ? <AdminSettings /> : <UserSettings />;
+  return isAdmin ? <Suspense fallback={<p>Loading...</p>}><AdminSettingsWrapper /></Suspense> : <UserSettings />;
 }
 
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center h-full"><p>Loading settings...</p></div>}>
+            <SettingsPageContent />
+        </Suspense>
+    )
+}
